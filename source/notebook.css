@@ -1,0 +1,256 @@
+html {
+	background-color: gray;
+}
+
+body{
+	font-family: Courier, "Courier New", monospace;
+	font-size: 13px;
+	line-height: 16px;
+	color: black;
+	margin: 0px;
+	max-width: 595px; /* A4 */
+	padding-top: 48px;
+	padding-bottom: 48px;
+	padding-left: 48px;
+	padding-right: 48px;
+	background-color: white;
+/*
+	background-size: 12px 12px;
+    background-image:
+    linear-gradient(to right, #ccf 1px, transparent 1px),
+    linear-gradient(to bottom, #ccf 1px, white 1px);
+*/	
+}
+
+header {
+	padding: 0px;
+	font-size: 11px;
+}
+
+h2 {
+	font-weight: bold;
+	font-size: 24px;
+	line-height: 48px;
+	margin-bottom: 0px;
+}
+
+h3 {
+	font-weight: bold;
+	font-size: 20px;
+	line-height: 48px;
+	margin-bottom: 0px;
+}
+
+h4 {
+	font-weight: bold;
+	font-size: 16px;
+	line-height: 48px;
+	margin-bottom: 0px;
+}
+
+button {
+    margin-left: 6px;
+    border: none; 1px solid #888;
+	background-color: white;
+	font-family: Courier, "Courier New", monospace;
+	font-size: 10px;
+    font-weight: bold;
+	cursor: pointer;
+}
+
+button:hover {
+	background-color: lightgray;
+}
+
+.error {
+	color:red;
+	transition:.5s;
+	overflow:hidden;
+	margin: 15px;
+}
+
+table {
+	width:auto;
+	margin:auto;
+	border:1px solid black;
+ 	border-collapse:collapse;
+ 	margin-bottom:10px;
+}
+
+th, td {
+	border:1px solid #777;
+	padding: 2px;
+	font-size: 12px;
+	line-height: 16px;
+}
+
+footer {
+	margin-top: 48px;
+	font-size: 11px;
+	color: #222;
+}
+
+#header {
+	text-align: right;
+}
+
+#header button {
+	display: inline
+}
+
+.cell {
+	width: 100%;
+	margin-top: 10px; 
+}
+
+.cellheader {
+	text-align: right;
+	width: 100%;
+}
+
+.cellsource {
+	font-family: Courier, "Courier New", monospace;
+	border: none;
+    background-color: transparent;
+    resize: none;
+    outline: none;
+	color: gray;
+    width: 100%;
+	margin-top: 12px;
+	font-size: 13px;
+	line-height: 16px;
+	display: none;
+	max-height: 600px;
+}
+
+.cellbak {
+    border: none;
+    background-color: transparent;
+    resize: none;
+    outline: none;
+	color: gray;
+    width: 100%;
+	display: none;
+}
+
+.celloutput {
+	min-height: 12px;
+	margin-top: 12px;
+	width: 100%;
+}
+
+
+
+button.wiki { display : none; }
+button.sql { display : none; }
+button.data { display : none; }
+button.js { display : none; }
+button.ps { display : none;}
+button.cancel { display : none; }
+button.save { display : none;}
+button.up { display : none;}
+button.down { display : none;}
+button.delete { display : none;}
+button.import { display : none;}
+button.dup { display : none;}
+
+div.edit button.wiki { display: inline }
+div.edit button.sql { display: inline }
+div.edit button.data { display: inline }
+div.edit button.js { display: inline }
+div.edit button.ps { display: inline }
+div.edit button.new { display: none }
+div.edit button.dup { display: inline }
+div.edit button.edit { display: none }
+div.edit button.cancel { display: inline }
+div.edit button.save { display: inline }
+div.edit button.up { display: inline }
+div.edit button.down { display: inline }
+div.edit button.delete { display: inline }
+div.edit textarea.cellsource {
+	border: 1px solid black;
+	color: black;
+	outline: default;
+	display: block;
+	height: auto;
+}
+
+div.wiki button.wiki { display: inline; background-color: black; color: white; }
+div.wiki button.run { display: none; }
+div.wiki button.rundown { display: none; }
+div.sql button.sql { display: inline; background-color: black; color: white; }
+div.sql textarea.cellsource {
+	color: #008;
+	display: block;
+	height: auto;
+}
+div.data textarea.cellsource {
+	color: #088;
+	height: auto;
+}
+div.data div.celloutput {
+	color: #088;
+	height: auto;
+}
+
+div.js textarea.cellsource {
+	color: #800;
+	height: auto;
+}
+div.ps textarea.cellsource {
+	color: #080;
+	height: auto;
+}
+div.edit textarea.cellsource {
+	outline: default;
+	display: block;
+	height: auto;
+}
+div.error {
+	background-color: yellow;
+	color: red;
+}
+div.data.edit button.import { display: inline; }
+div.data button.data { display: inline; background-color: black; color: white; }
+div.js button.js { display: inline; background-color: black; color: white; }
+div.ps button.ps { display: inline; background-color: black; color: white; }
+
+div.cellconsole { background-color:  yellow; );
+
+p.link {
+	text-align: left;
+	width: 100%;
+}
+
+output a { 
+}
+
+input[type="file"] {
+    display: none;
+}
+.custom-file-upload {
+    display: inline-block;
+    cursor: pointer;
+	decoration: none;
+    border: 1px solid #444;
+    font-size: 12px;
+    padding: 2px;
+}
+
+
+@media print {
+button { visibility: hidden; }
+input { visibility: hidden; }
+output a { visibility: hidden }
+.cellsource { max-height: 99999px; border: none; }
+.cellheader { display: none }
+div.celloutput a { visibility: hidden }
+html { background-color: none  }
+body { box-shadow: none;
+border: none;
+border-radius: none;}
+header { display: none }
+footer { display: none }
+#shadow-root a { visibility: hidden }
+p.link { display: none }
+}
