@@ -79,11 +79,11 @@ examples['home'] = `
     },
     {
         "type": "wiki",
-        "source": "===Examples===\\nOpen the examples in the example folder."
+        "source": "===Examples===\\nSee https://www.belle-nuit.com/sql-notebook-examples "
     },
     {
         "type": "wiki",
-        "source": "===History===\\n\\n16.03.2025 version 0.1 not published"
+        "source": "===History===\\n\\n16.3.2025 version 0.1 not published.\\n9.4.2025 version 1.0\\n28.4.2025 version 1.1"
     },
     {
         "type": "wiki",

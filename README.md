@@ -79,7 +79,8 @@ You can PostScript to visualize the data or to add illustration. PostScript is r
 The data has to be prepared in a table. Set the first column to the category and the following to the values.
 
 To get the data, use the table command. It has the syntax (tablename) 1 table when the first column is a category, (tablename) 0 table when the first column is also a number. The result in the stack is an array of rows which are arrays of column values.
-$The script has one installed fonts you can use: TGL017.
+
+The script has one installed fonts you can use: TGL017.
 
 
 ## JavaScript code
