@@ -216,6 +216,11 @@ div.js button.js { display: inline; background-color: black; color: white; }
 div.ps button.ps { display: inline; background-color: black; color: white; }
 
 div.cellconsole { background-color:  yellow; );
+	
+div.tablefilter { 
+	width:auto;
+	margin:auto; background-color: blue;
+}
 
 p.link {
 	text-align: left;
@@ -228,6 +233,11 @@ output a {
 input[type="file"] {
     display: none;
 }
+
+input.sortable {
+	width: 100%; 
+}
+
 .custom-file-upload {
     display: inline-block;
     cursor: pointer;

@@ -1910,6 +1910,7 @@ rpnOperators.findfont = function(context) {
     if (!n) return context;
     if (!rpnFonts[n.value]) {
         rpnFonts[n.value] = new rpnTTF(rpnFontBasePath + n.value + ".ttf");
+        console.log(rpnFontBasePath + n.value + ".ttf");
     }
     if (!rpnFonts[n.value]) {
         context.error("invalidfont " );

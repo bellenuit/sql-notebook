@@ -19,21 +19,130 @@ function exportCSV(columns, values) {
 
 // Create an HTML table
 var tableCreate = function () {
-	function valconcat(vals, tagName) {
-		if (vals.length === 0) return '';
-		var open = '<' + tagName + '>', close = '</' + tagName + '>';
-		return open + vals.join(close + open) + close;
-	}
 	return function (columns, values) {
-		var tbl = document.createElement('table');
-		var html = '<thead>' + valconcat(columns, 'th') + '</thead>';
-		var rows = values.map(function (v) { return valconcat(v, 'td'); });
-		html += '<tbody>' + valconcat(rows, 'tr') + '</tbody>';
-		tbl.innerHTML = html;
-		return tbl ;//+ "<p>"+exportCSV(columns, values);
+		const div = document.createElement('div');
+		div.className = 'tablefilter';
+		const id = Math.floor(Math.random() * 1000000);
+		const input = document.createElement('input');
+		input.id = 'tablefilter'+id;
+		input.className = 'sortable';
+		//input.onkeyup = function() {tablefilter(id)};
+		input.setAttribute('onkeyup','tablefilter('+id+');');
+		input.setAttribute('placeholder','Filter...');
+	    const table = document.createElement('table');
+	    table.id = "table"+id;
+	    table.setAttribute('maxgrid',30);
+	    const thead = document.createElement('thead');
+	    for(let c of columns) {
+		    let th = document.createElement('th');
+		    th.innerHTML = c;
+		    thead.appendChild(th);
+	    }
+	    table.appendChild(thead);
+	    const tbody = document.createElement('tbody');
+	    var i = 0;
+	    for (let row of values) {
+		    const tr = document.createElement('tr');
+		    for (let f of row) {
+			    const td = document.createElement('td');
+			    td.innerHTML = f;
+			    tr.appendChild(td);
+		    }
+		    i++;
+		    if (i>30) tr.style.display = "none";
+		    tbody.appendChild(tr);
+	    }
+ 	    table.appendChild(tbody);
+ 	    if (values.length > 50 ) { 
+	 	    input.width = table.width;
+	 	    div.appendChild(input);
+ 	    }
+ 	    div.appendChild(table);
+ 	    
+
+ 	    const button = document.createElement('button');
+ 	    button.setAttribute('type','button');
+ 	    button.id = 'plus'+id;
+ 	    // button.onclick = function() {tableplus(id,50)};
+ 	    button.setAttribute('onclick','tableplus('+id+',30);');
+ 	    button.className = 'sortable';
+ 	    button.href = '#';
+ 	    button.innerHTML = '+';
+ 	    if (values.length > 50 ) {
+	 	    button.style.display = '';
+ 	    } else {
+ 	    	button.style.display = 'none';
+ 	    }
+	 	div.appendChild(button);	    
+	 	    
+ 	    return div;
 	}
 }();
 
+function tableplus(id,rowplus)
+{
+	console.log('tableplus '+id);
+	const theid = id.toString();
+	const input = document.getElementById('tablefilter' + theid);
+	const table = document.getElementById('table' + theid);
+	var maxgrid = table.getAttribute('maxgrid');
+	maxgrid = maxgrid * 1.0 + rowplus * 1.0;;
+	table.setAttribute('maxgrid',maxgrid);
+	tablefilter(id); // call to update rendering
+}
+
+
+function tablefilter(id) {
+  const theid = id.toString();
+  const input = document.getElementById('tablefilter'+theid);
+  const filter = input.value;
+  const table = document.getElementById('table'+theid);
+  const maxgrid = table.getAttribute('maxgrid');
+  
+  const tr = table.getElementsByTagName("tr");
+  console.log('filter '+ filter);
+  try {
+ 	 const regexfiler = new RegExp(filter, "i");
+ 	 
+ 	 var visiblerows = 0;
+     var allvisible = true;
+     
+     for (let i = 0; i < tr.length; i++) {
+	 	let th = tr[i].getElementsByTagName("th");
+	 	if (th.length > 0) continue;
+	
+        // Hide the row initially.
+        tr[i].style.display = "none";
+  
+        const td = tr[i].getElementsByTagName("td");
+        for (let j = 0; j < td.length; j++) {
+            let cell = tr[i].getElementsByTagName("td")[j];
+            if (cell) {
+	            if (cell.innerHTML.match(regexfiler)) {
+		            if (maxgrid == '' || visiblerows < maxgrid) {
+	                	tr[i].style.display = "";
+						visiblerows++;	          
+						break;
+					}
+	            }  else  {
+		        	allvisible = false;
+	        	}
+        	} 
+      	}
+     }
+     const plus = document.getElementById('plus'+theid);
+     if (plus) {
+  	     if (allvisible) {
+  	         plus.style.display = "none"; 
+  	     } else {
+	  	     plus.style.display = "";
+	  	 }
+      } 
+  } catch {
+	return;
+  }
+  
+}
 
 function cellEditor(code, type = "wiki") {
 	const id = Math.floor(Math.random() * 1000000);  // create unique id for console.log
@@ -140,13 +249,6 @@ function cellEditor(code, type = "wiki") {
 	savebutton.className = "save";
 	savebutton.onclick = function() {cellSave(id)};
 	header.appendChild(savebutton);
-	const hidebutton = document.createElement("BUTTON");
-	hidebutton.id = "hide" + id;
-	hidebutton.innerHTML = "Hide";
-	hidebutton.className = "hide";
-	hidebutton.onclick = function() {cellHide(id)};
-	header.appendChild(hidebutton);
-
 
 
 	const source = document.createElement("TEXTAREA");   // build the HTML nodes
@@ -250,20 +352,6 @@ function cellSave(id) {
     source.setAttribute("readonly", true);
 	cell.className = "cell " + cell.getAttribute("type"); 
 	if (cell.getAttribute("type") == "wiki") cellRun(id);
-}
-
-function cellHide(id) { 
-	const button = document.getElementById('hide'+id);
-    const source = document.getElementById('source'+id);
-    const output = document.getElementById('output'+id); 
-    if (button.innerHTML=="Hide") {
-	    button.innerHTML="Show";
-	    output.style.display = "none";
-    } else {
-	    console.log("show")
-	    button.innerHTML="Hide";
-	    output.style.display = "block";
-    }
 }
 
 function cellUp(id) {
@@ -610,6 +698,12 @@ rpnOperators.table = function(context) {
 			   let cols = Object.keys(first);
 			   let values = [];
 			   
+			   list.push('[');
+			   for(key in first) {
+				   list.push('(' + key + ')');
+			   }
+			   list.push(']');
+			   
 			   for(row of elem) {
 				   list.push('[');
 				   var firstcolumn = true;
@@ -825,18 +919,25 @@ function btoaUnicode(s) {
 function saveProject()
 {
 	const result = [];
+	var suggestedTitle = 'notebook';
+	var first = true;;
 	if (zone.hasChildNodes()) {
 		const children = zone.childNodes;
 		for (const cell of children) {
 			const cellid = cell.id.replace("cell","");
 			const source = document.getElementById('source' + cellid);
 			result.push({"type": cell.getAttribute("type"), "source": source.value });
+			if (first) {
+				suggestedTitle = source.value.split('\n').shift().replaceAll('==','').replaceAll(' ','-').toLowerCase();
+			}
+			
+			first = false;
 		}
 	}
 	const link = document.createElement("a");
 	link.href = "data:application/json;base64,"+btoaUnicode(JSON.stringify(result, null, 4));
     const d = new Date();
-	link.download = "notebook_"+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13)+".json";
+	link.download = suggestedTitle + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13)+".json";
 	document.body.appendChild(link); // firefox needs this
 	link.click();
 	link.remove();
@@ -903,6 +1004,8 @@ if (urlParams.get('new') == 1) {
 	cellEdit(cell.id.replace("cell",""));
 } else if (urlParams.get('example')) {
 	readProject(examples[urlParams.get('example')]);
+} else if (urlParams.get('url')) {
+	fetch(urlParams.get('url')).then(response => response.text()).then(body => readProject(body));
 } else {
     readProject(examples["home"]);
 }
