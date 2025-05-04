@@ -808,12 +808,12 @@ rpnSVGDevice = class {
        if (!path.length) return "";
        for (let subpath of path) {
            if (!subpath.length) continue;
-           p.push("M " + (subpath[0][1]) + " " + (this.height - subpath[0][2]));
+           p.push("M " + (Math.round(subpath[0][1]*1000)/1000) + " " + (Math.round((this.height - subpath[0][2])*1000)/1000));
            for (let line of subpath) {
                if (line[0] == "C") {
-                   p.push("C " +(line[3]) + " " + (this.height - line[4]) + " " + (line[5]) + " " + (this.height - line[6]) + " " +(line[7]) + " " + (this.height - line[8]));
+                   p.push("C " +(Math.round(line[3]*1000)/1000) + " " + (Math.round((this.height - line[4])*1000)/1000)+ " " + (Math.round(line[5]*1000)/1000) + " " + (Math.round((this.height - line[6])*1000)/1000) + " " + (Math.round((line[7])*1000)/1000) + " " + (Math.round((this.height - line[8])*1000)/1000));
                } else {
-                   p.push("L "+(line[3]) + " " + (this.height - line[4]));
+                   p.push("L "+(Math.round(line[3]*1000)/1000) + " " + (Math.round((this.height - line[4])*1000)/1000));
                    if (line[0] == "Z") p.push("Z"); 
                 }
            }
@@ -899,8 +899,9 @@ context = this.clip(context);
         const matrix = context.graphics.matrix.slice();
         const decomposed = rpnDecompose2dMatrix(matrix);
         const x = context.graphics.current[0];
-        const y = context.height - context.graphics.current[1];
+        const y = this.height - context.graphics.current[1];
         node.setAttribute("text-anchor","start");
+        node.setAttribute("dominant-baseline","baseline");
         node.setAttribute("transform", "translate(" + x + " " + y  +") rotate(" +  -decomposed.rotation*180/Math.PI + ")" );
         if (targetwidth) {
             node.setAttribute("textLength", targetwidth);
@@ -935,7 +936,7 @@ context = this.clip(context);
         }
         if (context.device.svgurl && this.urlnode) {
             const file = rpnStartTag + "?xml version='1.0' encoding='UTF-8'?" + rpnEndTag + this.node.outerHTML;
-            const url = "data:image/svg+xml;base64," + btoa(file);
+            const url = "data:image/svg+xml;base64," + rpnBbtoaUnicode(file);
             this.urlnode.href = url;
             this.urlnode.setAttribute("download", "PS.svg");
         } 
@@ -3986,6 +3987,14 @@ rpnFontSubstitution = function(font) {
       return "/Courier";
 };
 
+function rpnBbtoaUnicode(s) {
+    return btoa(encodeURIComponent(s).replace( /%([0-9A-F]{2})/g, function toSolidBytes(match, p1) {
+			return String.fromCharCode('0x' + p1);
+		}
+	));
+};
+
+
 /* TINYPS TAG */
 
 
@@ -3997,7 +4006,7 @@ class tinyPStag extends HTMLElement {
     this.shadow = this.attachShadow({mode: "open"});
     this.ready = false;
     const elementToObserve = this;
-    this.observedAttributes = ["innerHTML", "width", "height", "format", "oversampling", "transparent", "interval", "error"];
+    this.observedAttributes = ["innerHTML", "width", "maxwidth", "height", "format", "oversampling", "textmode", "transparent", "interval", "error"];
     this.observer = new MutationObserver(function(mutationsList, observer) {
     const target = mutationsList[0].target;
     target.attributeChangedCallback("innerText","",target.innerHTML);
@@ -4028,6 +4037,7 @@ class tinyPStag extends HTMLElement {
     context.width = this.getAttribute("width") ?? 360;
     context.height = this.getAttribute("height") ?? 360;
     context.device.oversampling = this.getAttribute("oversampling") ?? 1;
+    context.device.textmode = this.getAttribute("textmode") ?? 0;
     context.device.transparent = this.getAttribute("transparent") ?? 0;
     context.device.interval = this.getAttribute("interval") ?? 0;
 	const errorMode = this.getAttribute("error") ?? 0;
@@ -4085,6 +4095,8 @@ class tinyPStag extends HTMLElement {
             node.style.display = "block";
             node.width = context.width;
             node.height = context.height;
+            if (this.getAttribute("maxwidth"))
+            	node.style.maxWidth = this.getAttribute("maxwidth");
             context.nodes.push(new rpnSVGDevice(node, null));
             context.device.svg = 1;
             break;

@@ -247,6 +247,11 @@ input.sortable {
 }
 
 
+tiny-ps {
+	max-width: 100%;
+}
+
+
 @media print {
 button { visibility: hidden; }
 input { visibility: hidden; }

@@ -402,7 +402,7 @@ runner.wiki = function(id, down = false) {
     html = source.value;
 	// 	// http://www.cs.sjsu.edu/faculty/pollett/masters/Semesters/Spring14/eswara/cs298/deliverable3/index1.php
 	html = "\n" + html.replace(/\r\n/g, "\n") + "\n";
-	html = html.replace(/^====(.*?)====$/g, function (match, contents) {
+	html = html.replace(/^====(.*?)====$/gm, function (match, contents) {
         return '<h4>' + contents + '</h4>';
     });
     html = html.replace(/^===(.*?)===$/gm, function (match, contents) {
@@ -798,6 +798,29 @@ rpnOperators.findfont = function(context) {
 };
 
 
+
+readSyncDataURL = function(url, filetype = ""){
+	// override for TTF
+	// URL = rpnFontBasePath + font + ".ttf",
+	if (filetype == 'font/ttf') {
+		let filename = url.replace(rpnFontBasePath,'').replace('.ttf', '');
+		console.log(filename)
+		return fontfiles[filename];
+	}
+	
+    // var url=URL.createObjectURL(file);//Create Object URL
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", url, false);//Synchronous XMLHttpRequest on Object URL
+    xhr.overrideMimeType("text/plain; charset=x-user-defined");//Override MIME Type to prevent UTF-8 related errors
+    xhr.send();
+    URL.revokeObjectURL(url);
+    var returnText = "";
+    for (let i = 0; i < xhr.responseText.length; i++) {
+       returnText += String.fromCharCode(xhr.responseText.charCodeAt(i) & 0xff) ;
+    } //remove higher byte
+    return "data:"+filetype+";base64,"+btoa(returnText); //Generate data URL
+};
+
 rpnProlog = "";
 
 runner.ps = function(id, down = false) {
@@ -808,13 +831,16 @@ runner.ps = function(id, down = false) {
 	scriptnode.setAttribute("width","640");
 	scriptnode.setAttribute("height","360");
 	scriptnode.setAttribute("format","svgurl");
+	scriptnode.setAttribute("textmode","1");
 	scriptnode.innerHTML = code;
 	scriptnode2 = document.createElement("TINY-PS");
 	scriptnode2.id = "ps" + id;
 	scriptnode2.setAttribute("width","640");
 	scriptnode2.setAttribute("height","360");
 	scriptnode2.setAttribute("format","svg");
+	scriptnode2.setAttribute("maxwidth","100%");
 	scriptnode2.setAttribute("error","1");
+	scriptnode2.setAttribute("textmode","1");
 	
     scriptnode2.innerHTML = rpnProlog + " " + code;
 	output.innerHTML = "";	
