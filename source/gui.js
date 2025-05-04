@@ -9,7 +9,11 @@ function exportCSV(columns, values) {
 			if (parseFloat(field) != 0 || field === "0") {
 				line.push(field);
 			} else {
-				line.push('"' + field.replace('"','""') + '"');
+			    if (field) {
+					line.push('"' + field.replace('"','""') + '"');
+				} else {
+					line.push('');
+				}
 			}
 		}
 		lines.push(line.join(';'));
@@ -45,7 +49,9 @@ var tableCreate = function () {
 		    const tr = document.createElement('tr');
 		    for (let f of row) {
 			    const td = document.createElement('td');
-			    td.innerHTML = f;
+				if (typeof f !== 'undefined') {
+					td.innerHTML = f;
+				}
 			    tr.appendChild(td);
 		    }
 		    i++;
@@ -123,6 +129,8 @@ function tablefilter(id) {
 	                	tr[i].style.display = "";
 						visiblerows++;	          
 						break;
+					} else {
+						allvisible = false;
 					}
 	            }  else  {
 		        	allvisible = false;
@@ -182,6 +190,12 @@ function cellEditor(code, type = "wiki") {
 	databutton.onclick = function() {setData(id)};
 	databutton.className = "data";
 	header.appendChild(databutton);
+	const importbutton = document.createElement("BUTTON");
+	importbutton.id = "import" + id;
+	importbutton.innerHTML = "Import";
+	importbutton.onclick = function() {cellImport(id)};
+	importbutton.className = "import";
+	header.appendChild(importbutton);
 	const psbutton = document.createElement("BUTTON");
 	psbutton.id = "ps" + id;
 	psbutton.innerHTML = "PS";
@@ -218,12 +232,6 @@ function cellEditor(code, type = "wiki") {
 	downbutton.onclick = function() {cellDown(id)};
 	downbutton.className = "down";
 	header.appendChild(downbutton); 
-	const importbutton = document.createElement("BUTTON");
-	importbutton.id = "import" + id;
-	importbutton.innerHTML = "Import";
-	importbutton.onclick = function() {cellImport(id)};
-	importbutton.className = "import";
-	header.appendChild(importbutton);
 	const duplicatebutton = document.createElement("BUTTON");
 	duplicatebutton.id = "duplicate" + id;
 	duplicatebutton.innerHTML = "Dup";
@@ -393,18 +401,41 @@ runner.wiki = function(id, down = false) {
     const output = document.getElementById('output'+id);
     html = source.value;
 	// 	// http://www.cs.sjsu.edu/faculty/pollett/masters/Semesters/Spring14/eswara/cs298/deliverable3/index1.php
-	html = parseLists(html);
 	html = "\n" + html.replace(/\r\n/g, "\n") + "\n";
-	html = html.replace(/\n/gi, "<br/>");
-	html = html.replace(/<br\/>====(.*?)====<br\/>/g, function (match, contents) {
+	html = html.replace(/^====(.*?)====$/g, function (match, contents) {
         return '<h4>' + contents + '</h4>';
     });
-    html = html.replace(/<br\/>===(.*?)===<br\/>/g, function (match, contents) {
+    html = html.replace(/^===(.*?)===$/gm, function (match, contents) {
         return '<h3>' + contents + '</h3>';
     });
-	html = html.replace(/<br\/>==(.*?)==<br\/>/g, function (match, contents) {
+	html = html.replace(/^==(.*?)==$/gm, function (match, contents) {
         return '<h2>' + contents + '</h2>';
     });
+    html = html.replace(/^\*\*\*(.*?)$/gm, function (match, contents) {
+        return '<ul><ul><ul><li>' + contents + '</li></ul></ul></ul>';
+    });
+    html = html.replace(/^\*\*(.*?)$/gm, function (match, contents) {
+        return '<ul><ul><li>' + contents + '</li></ul></ul>';
+    });
+    html = html.replace(/^\*(.*?)$/gm, function (match, contents) {
+        return '<ul><li>' + contents + '</li></ul>';
+    });
+    // clean-up
+    html = html.replaceAll('</ul>\n','</ul>');
+    html = html.replaceAll('</ul><ul>','');
+     html = html.replace(/^###(.*?)$/gm, function (match, contents) {
+        return '<ol><ol><ol><li>' + contents + '</li></ol></ol></ol>';
+    });
+    html = html.replace(/^##(.*?)$/gm, function (match, contents) {
+        return '<ol><ol><li>' + contents + '</li></ol></ol>';
+    });
+    html = html.replace(/^#(.*?)$/gm, function (match, contents) {
+        return '<ol><li>' + contents + '</li></ol>';
+    });
+    // clean-up
+    html = html.replaceAll('</ol>\n','</ol>');
+    html = html.replaceAll('</ol><ol>','');
+    
 	html = html.replace(/'''''(.*?)'''''/g, function (match, contents) {
         return '<b><i>' + contents + '</i></b>';
     });
@@ -414,15 +445,16 @@ runner.wiki = function(id, down = false) {
     html = html.replace(/''(.*?)''/g, function (match, contents) {
         return '<i>' + contents + '</i>';
     });
-	html = html.replace(/https:\/\/(\S+)/g, function (match, contents) {
+	html = html.replace(/https:\/\/(\S+)/gm, function (match, contents) {
         return '<a href="https://' + contents +'" target="_blank">https://' + contents + '</a>'; 
     });
-	html = html.replace(/notebook:\/\/(\S+)/g, function (match, contents) {
-        return '<a href="index.html?' + contents +'" target="_blank">' + contents + '</a>'; 
+	html = html.replace(/notebook:\/\/(\S+)/gm, function (match, contents) {
+        return '<a href="index.html?' + content +'" target="_blank">' + content + '</a>'; 
     });
-	
+	html = html.replace(/\n/gi, "<br/>");
     output.innerHTML = html;
-	output.style.backgroundColor = 'white';
+	const cell = document.getElementById('cell'+id);
+	cell.style.backgroundColor = 'white';
     output.outerHTML = output.outerHTML; 
 	
 	if (down) {
@@ -431,8 +463,12 @@ runner.wiki = function(id, down = false) {
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
 				cellRun(nextid, true);
+			} else {
+			console.log("run end");
 			}
 			
+		} else {
+			console.log("run end");
 		}
 }
 
@@ -444,7 +480,7 @@ runner.sql = function(id, down = false) {
 	// if there were single statements, then we have to make an array of it.
 	// workaround: we add a dummy statement to the commands to force multiple statements
 	alasql.promise(source.value+"; SET dummy = 1;")
-	.then(function(results){
+	.then(function(results){ console.log((Date.now() - timerstart) +" ms sql");
 		var s = "";
 		for(elem of results) {
 		   if (Array.isArray(elem)) {
@@ -471,23 +507,31 @@ runner.sql = function(id, down = false) {
 		
 		
 		output.innerHTML = s;
-		output.style.backgroundColor = 'white';
+		const cell = document.getElementById('cell'+id);
+		cell.style.backgroundColor = 'white';
 		output.outerHTML = output.outerHTML; // force
 		
-		if (down) { console.log("down "+id);
+		console.log((Date.now() - timerstart) +" ms html");
+		
+		if (down) { 
 			let cell = document.getElementById("cell"+id);
 			let nextcell = cell.nextSibling;
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
 				if (nextid != id)
 					cellRun(nextid, true);
+			} else {
+			console.log("run end");
 			}
 			
+		} else {
+			console.log("run end");
 		}
 		
 	}).catch(function(reason){
 		console.log(reason);
-		output.style.backgroundColor = 'white';
+		const cell = document.getElementById('cell'+id);
+		cell.style.backgroundColor = 'white';
 		output.innerHTML = '<pre class="error">'+reason+'<pre>';
 		output.outerHTML = output.outerHTML; // force
 	});
@@ -573,16 +617,14 @@ runner.data = function(id, down = false) {
 	const lines = source.value.split(/\r?\n/);
 	const tablename = lines.shift();
 	const data = lines.join("\n");
-	console.log(data);
 	const list = parseCSV(data);
-	
-    console.log(parseCSV(data));
 	const header = lines.shift();
 	var separator = ",";
 	if (header.indexOf(";") > -1) separator = ";";
 	if (header.indexOf("\t") > -1) separator = "\t";
 	try {
-	    console.log('DROP TABLE IF EXISTS '+tablename+'; CREATE TABLE '+tablename+"("+header.split(separator).join(",")+")");
+	    const sql = 'DROP TABLE IF EXISTS '+tablename+'; CREATE TABLE '+tablename+"("+header.split(separator).join(",")+")";
+		console.log(sql);
 		alasql('DROP TABLE IF EXISTS '+tablename+'; CREATE TABLE '+tablename+"("+header.split(separator).join(",")+")"); 
 		for(let elem of list){
 			// clean data type- after space
@@ -594,59 +636,58 @@ runner.data = function(id, down = false) {
 					elem2[key2] = parseFloat(elem[key]);
 				else
 					elem2[key2] = elem[key];
-			}			
-			console.log(elem2);
+			}
 			alasql("INSERT INTO "+tablename+" VALUES ?", [elem2]);
 		}
 	}
 	catch(reason){
 		console.log(reason);
-		output.style.backgroundColor = 'white';
+		const cell = document.getElementById('cell'+id);
+		cell.style.backgroundColor = 'white';
 		output.innerHTML = '<pre class="error">'+reason+'<pre>';
 		output.outerHTML = output.outerHTML; // force
 		return;
 	};
+	
+	console.log((Date.now() - timerstart) +" ms insert");
 
-	const statement = "SELECT * FROM "+tablename;
-	alasql.promise(statement+"; SET dummy = 1;")
-	.then(function(results){
+	const statement = "SELECT count(*) AS c FROM "+tablename +"; SHOW COLUMNS FROM " + tablename;
+	alasql.promise(statement)
+	.then(function(results){ console.log(results);
 		var s = "";
-		for(elem of results) {
-		   if (Array.isArray(elem)) {
-			   let first = elem[0];
-			   if (typeof first === 'object') {
-			   let cols = Object.keys(first);
-			   let values = [];
-			   for(row of elem) {
-				   let fields = [];
-				   for(key in row) fields.push(row[key]);
-				   values.push(fields);
-			   }
-			   //alert(JSON.stringify(values));
-			   let table = tableCreate(cols, values);
-			   s += '<p>table '+tablename;
-			   s += '<br>columns '+header;
-			   s += '<br>rows '+values.length;
-			   }
-		   }
+		s += '<p>table '+tablename;		
+		const cols = [];
+		for (row of results[1]) {
+			cols.push(row.columnid);
 		}
+		s += '<br>columns ' + cols.join(", ");
+		s += '<br>rows ' + results[0][0].c; console.log(results[0][0]);
+		
 		output.innerHTML = s;
-		output.style.backgroundColor = 'white';
+		const cell = document.getElementById('cell'+id);
+		cell.style.backgroundColor = 'white';
 		output.outerHTML = output.outerHTML; // force
 		
-		if (down) { console.log("down");
+		console.log((Date.now() - timerstart) +" ms");
+		
+		if (down) { 
 			let cell = document.getElementById("cell"+id);
 			let nextcell = cell.nextSibling;
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
 				cellRun(nextid, true);
+			} else {
+			console.log("run end");
 			}
 			
+		} else {
+			console.log("run end");
 		}
 		
 	}).catch(function(reason){
 		console.log(reason);
-		output.style.backgroundColor = 'white';
+		const cell = document.getElementById('cell'+id);
+		cell.style.backgroundColor = 'white';
 		output.innerHTML = '<pre class="error">'+reason+'<pre>';
 		output.outerHTML = output.outerHTML; // force
 	});
@@ -662,10 +703,12 @@ runner.js = function(id, down = false) {
 	echo = function(s) {
 		output.innerHTML += s;
 	}
-	output.style.backgroundColor = 'white';
+	const cell = document.getElementById('cell'+id);
+	cell.style.backgroundColor = 'white';
 	const scriptnode = document.createElement("SCRIPT"); 
     scriptnode.innerHTML = "try { " + code + " } catch(reason) { console.log(reason); const c = document.getElementById('output'+"+id+"); c.innerHTML = '<pre class=error>'+reason+'</pre>'; c.style.backgroundColor = 'white'; }";
 	document.body.appendChild(scriptnode);
+	console.log((Date.now() - timerstart) +" ms");
 	
 	if (down) {
 			let cell = document.getElementById("cell"+id);
@@ -673,8 +716,12 @@ runner.js = function(id, down = false) {
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
 				cellRun(nextid, true);
+			} else {
+			console.log("run end");
 			}
 			
+		} else {
+			console.log("run end");
 		}
 }
 
@@ -689,7 +736,6 @@ rpnOperators.table = function(context) {
 	}
 	list = [];
 	list.push('[');
-	console.log(results);
 	elem = results;
 	  
 	   if (Array.isArray(elem)) {
@@ -755,7 +801,6 @@ rpnOperators.findfont = function(context) {
 rpnProlog = "";
 
 runner.ps = function(id, down = false) {
-	console.log("ps");
     const source = document.getElementById('source'+id);
     const output = document.getElementById('output'+id);
     const code = source.value;
@@ -774,11 +819,12 @@ runner.ps = function(id, down = false) {
     scriptnode2.innerHTML = rpnProlog + " " + code;
 	output.innerHTML = "";	
 	
-	output.style.backgroundColor = 'white';
+	const cell = document.getElementById('cell'+id);
+	cell.style.backgroundColor = 'white';
 	output.appendChild(scriptnode2);
 	output.appendChild(scriptnode);
 	
-	
+	console.log((Date.now() - timerstart) +" ms");
 	
 	if (down) {
 			let cell = document.getElementById("cell"+id);
@@ -786,8 +832,12 @@ runner.ps = function(id, down = false) {
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
 				cellRun(nextid, true);
+			} else {
+			console.log("run end");
 			}
 			
+		} else {
+			console.log("run end");
 		}
 }
 
@@ -795,9 +845,13 @@ runner.ps = function(id, down = false) {
 function cellRun(id, down = false) {
 
 	 const cell = document.getElementById('cell'+id);
-	 const output = document.getElementById('output'+id);
-	 output.style.backgroundColor = 'yellow';
-     runner[cell.getAttribute("type")](id, down); 	 
+	 const type = cell.getAttribute("type");
+	 if (type != "wiki") {
+		console.log("cellRun " + type + " " + id);
+		timerstart = Date.now();
+		cell.style.backgroundColor = 'yellow';
+	}
+	setTimeout(function() {runner[type](id, down);}, 25 ); 	
      
 }
 
@@ -898,14 +952,15 @@ function openProject() {
 function readProject(json) {
 	const zone = document.getElementById('cellzone');
 	zone.innerHTML = "";
-	console.log(json);
 	const list = JSON.parse(json);
+	console.log(list);
 		for(const elem of list) {
 			const cell = cellEditor(elem.source, elem.type);
 			zone.appendChild(cell);
 			const id = cell.getAttribute("id").replace("cell","");
 			if (elem.type == 'wiki') cellRun(id);
 		}
+	
 }
 
 function btoaUnicode(s) {
@@ -944,58 +999,10 @@ function saveProject()
 
 }
 
-
 const zone = document.getElementById('cellzone');
-/*
-cell = cellEditor(`DROP TABLE IF EXISTS employees;
-CREATE TABLE employees( id          integer,  name    text,
-                          designation text,     manager integer,
-                          hired_on    date,     salary  integer,
-                          commission  float,    dept    integer);
-
-  INSERT INTO employees VALUES (1,'JOHNSON','ADMIN',6,'1990-12-17',18000,NULL,4);
-  INSERT INTO employees VALUES (2,'HARDING','MANAGER',9,'1998-02-02',52000,300,3);
-  INSERT INTO employees VALUES (3,'TAFT','SALES I',2,'1996-01-02',25000,500,3);
-  INSERT INTO employees VALUES (4,'HOOVER','SALES I',2,'1990-04-02',27000,NULL,3);
-  INSERT INTO employees VALUES (5,'LINCOLN','TECH',6,'1994-06-23',22500,1400,4);
-  INSERT INTO employees VALUES (6,'GARFIELD','MANAGER',9,'1993-05-01',54000,NULL,4);
-  INSERT INTO employees VALUES (7,'POLK','TECH',6,'1997-09-22',25000,NULL,4);
-  INSERT INTO employees VALUES (8,'GRANT','ENGINEER',10,'1997-03-30',32000,NULL,2);
-  INSERT INTO employees VALUES (9,'JACKSON','CEO',NULL,'1990-01-01',75000,NULL,4);
-  INSERT INTO employees VALUES (10,'FILLMORE','MANAGER',9,'1994-08-09',56000,NULL,2);
-  INSERT INTO employees VALUES (11,'ADAMS','ENGINEER',10,'1996-03-15',34000,NULL,2);
-  INSERT INTO employees VALUES (12,'WASHINGTON','ADMIN',6,'1998-04-16',18000,NULL,4);
-  INSERT INTO employees VALUES (13,'MONROE','ENGINEER',10,'2000-12-03',30000,NULL,2);
-  INSERT INTO employees VALUES (14,'ROOSEVELT','CPA',9,'1995-10-12',35000,NULL,1);
-`, "sql"); 
-zone.appendChild(cell);
-cell = cellEditor(`SELECT designation,COUNT(*) AS nbr, (AVG(salary)) AS avg_salary FROM employees GROUP BY designation ORDER BY avg_salary DESC;`, "sql"); 
-zone.appendChild(cell);
-cell = cellEditor(`SELECT name,hired_on FROM employees ORDER BY hired_on;`, "sql"); 
-zone.appendChild(cell);
-*/
-cell = cellEditor(`houses
-id, val
-1, 500000
-2, "560000"
-"ab" , " c "
-a b , c
-ab, "c""d"`, "data"); 
-zone.appendChild(cell);
-cell = cellEditor(`SELECT * FROM houses;`, "sql"); 
-zone.appendChild(cell);
-cell = cellEditor(`console.log("Hello World");`, "js"); 
-zone.appendChild(cell);
-cell = cellEditor(`/triangle { moveto 100 0 rlineto -50 100 rlineto closepath } def
-0.2 setgray 200 100 triangle fill
-0.4 setgray 240 140 triangle fill
-1.0 setgray 280 180 triangle fill
-0.0 setgray 280 180 triangle stroke
-showpage`, "ps"); 
-zone.appendChild(cell);
-
 const url = window.location;
 const urlParams = new URLSearchParams(url.search);
+var timerstart = Date.now();
 
 if (urlParams.get('new') == 1) {
 	zone.innerHTML = '';

@@ -2828,7 +2828,7 @@ rpnOperators.show = function(context) {
     for (let i = 0; i < s.value.length; i++) {
         const c = s.value.charCodeAt(i);
         const gi = font.glyphIndex(c);
-		if (c > 127) console.log("encoding " + s.value.substr(i,1) + " " + c + " " + gi);
+		// if (c > 127) console.log("encoding " + s.value.substr(i,1) + " " + c + " " + gi);
         ps += font.glyphPath(gi);
         ps += " fill ";
         ps += font.glyphWidth(gi) + " 0 translate ";
@@ -3584,7 +3584,7 @@ rpnTTF = class {
 
     }
     glyphIndex(unicode) {
-		if(unicode > 127) console.log("unicode " + unicode);
+		// if(unicode > 127) console.log("unicode " + unicode);
         for (let i = 0; i < this.cmap.format.segCountX2 / 2 ; i++) {
             if (unicode >= this.cmap.format.startCode[i] && unicode <= this.cmap.format.endCode[i] ) {
                 if (this.cmap.format.idRangeOffset[i]) {
@@ -3625,7 +3625,7 @@ rpnTTF = class {
         var points = [];
         var endPtsOfContours = [];
 		if (glyph.numberOfContours < 0 && glyph.components) {
-			console.log("components " + gi + " " + glyph.components.join(","));
+			// console.log("components " + gi + " " + glyph.components.join(","));
 			for (let i of glyph.components)
 				ps += this.glyphPath(i);
 			    return ps;
@@ -3681,7 +3681,7 @@ rpnTTF = class {
                             p0y = (p.y + lastp.y) / 2;
                         } 
                     }
-if (p0y === undefined) console.log("undefined");
+					if (p0y === undefined) console.log("undefined");
                     ps += p0x + " " + p0y + " moveto ";
                     start = false;
                 }
@@ -4022,7 +4022,7 @@ class tinyPStag extends HTMLElement {
   attributeChangedCallback(name, oldValue, newValue) {
     if (!this.ready) return;
     
-    console.log(`Attribute ${name} has changed to ` + rpnLimitText(newValue));
+    console.log(`Attribute ${name} has changed`);
     
     var context = new rpnContext;
     context.width = this.getAttribute("width") ?? 360;

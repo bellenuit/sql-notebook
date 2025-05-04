@@ -11,7 +11,7 @@ examples['home'] = `
     },
     {
         "type": "wiki",
-        "source": "===Wiki text===\\nWiki text can be formatted in a basic way.\\n== ==Header 2== ==\\n'' ' 'Italic text' ' ''\\n''' ' ' 'bold text' ' ' '''\\n''''' ' ' ' ' 'italic and bold text' ' ' ' ' '''''\\n=== ===Header 3=== ===\\nUnnumbered lists with *\\n* alpha\\n* beta\\n** gamma\\nNumbered lists with #\\n# first\\n# second\\n## third\\n==== ====Header 4==== ====\\nURLs starting with https: are converted to links https://www.example.com\\n\\n"
+        "source": "===Wiki text===\\nWiki text can be formatted in a basic way. The following syntax elements are supported:\\n* Header 2 to Header 4\\n* Italic, bold and bold italic\\n* Unnumbered and numbered lists\\n* Links starting with https"
     },
     {
         "type": "wiki",
@@ -79,11 +79,11 @@ examples['home'] = `
     },
     {
         "type": "wiki",
-        "source": "===Examples===\\nSee https://www.belle-nuit.com/sql-notebook-examples "
+        "source": "===Examples===\\nSee https://www.belle-nuit.com/sql-notebook-examples"
     },
     {
         "type": "wiki",
-        "source": "===History===\\n\\n16.3.2025 version 0.1 not published.\\n9.4.2025 version 1.0\\n28.4.2025 version 1.1"
+        "source": "===History===\\n\\n16.3.2025 version 0.1 not published.\\n9.4.2025 version 1.0\\n28.4.2025 version 1.1\\n4.5.2025 version 1.2"
     },
     {
         "type": "wiki",

@@ -3,7 +3,7 @@ html {
 }
 
 body{
-	font-family: Courier, "Courier New", monospace;
+	font-family: Courier, "Courier New", monospace; 
 	font-size: 13px;
 	line-height: 16px;
 	color: black;
@@ -50,7 +50,7 @@ h4 {
 
 button {
     margin-left: 6px;
-    border: none; 1px solid #888;
+    border: none;
 	background-color: white;
 	font-family: Courier, "Courier New", monospace;
 	font-size: 10px;
@@ -170,7 +170,6 @@ div.edit button.delete { display: inline }
 div.edit textarea.cellsource {
 	border: 1px solid black;
 	color: black;
-	outline: default;
 	display: block;
 	height: auto;
 }
@@ -202,7 +201,6 @@ div.ps textarea.cellsource {
 	height: auto;
 }
 div.edit textarea.cellsource {
-	outline: default;
 	display: block;
 	height: auto;
 }
@@ -215,11 +213,13 @@ div.data button.data { display: inline; background-color: black; color: white; }
 div.js button.js { display: inline; background-color: black; color: white; }
 div.ps button.ps { display: inline; background-color: black; color: white; }
 
-div.cellconsole { background-color:  yellow; );
+div.cellconsole { 
+	background-color:  yellow; 
+}
 	
-div.tablefilter { 
-	width:auto;
-	margin:auto; background-color: blue;
+div.tablefilter {
+	width: auto;
+	margin: auto;
 }
 
 p.link {
@@ -241,7 +241,6 @@ input.sortable {
 .custom-file-upload {
     display: inline-block;
     cursor: pointer;
-	decoration: none;
     border: 1px solid #444;
     font-size: 12px;
     padding: 2px;
@@ -254,11 +253,7 @@ input { visibility: hidden; }
 output a { visibility: hidden }
 .cellsource { max-height: 99999px; border: none; }
 .cellheader { display: none }
-div.celloutput a { visibility: hidden }
-html { background-color: none  }
-body { box-shadow: none;
-border: none;
-border-radius: none;}
+html { background-color: white }
 header { display: none }
 footer { display: none }
 #shadow-root a { visibility: hidden }
