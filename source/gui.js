@@ -45,13 +45,13 @@ var tableCreate = function () {
 		    if (c.match(/__$/) && c.match(/^__/)) {
 			    ca = "center";
 			    c = c.replace(/__$/,"").replace(/^__/,"");
-			} else if (c.match(/_$/)) {
+			} else if (c.match(/__$/)) {
 				 ca = "right";
-				 c = c.replace(/^__/,"");
+				 c = c.replace(/__$/,"");
 		    } else {
 			    ca = "left";
 		    }
-		    th.innerHTML = c.replace(/_$/,"");
+		    th.innerHTML = c;
 		    th.style.textAlign = ca;
 		    columnaligns.push(ca);
 		    thead.appendChild(th);
