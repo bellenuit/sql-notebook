@@ -4050,6 +4050,7 @@ class tinyPStag extends HTMLElement {
             console.log("Adding rawnode");
             node = document.createElement("CANVAS");
             node.id = "raw" + this.id;
+            node.part = "raw";
             node.className = "jscanvas";
             node.style.display = "block";
             node.width = context.width;
@@ -4061,6 +4062,7 @@ class tinyPStag extends HTMLElement {
             console.log("Adding rawnode");
             othernode = document.createElement("CANVAS");
             othernode.id = "raw" + this.id;
+            node.part = "rawurl";
             othernode.className = "jscanvas";
             othernode.style.display = "none";
             othernode.width = context.width;
@@ -4076,6 +4078,7 @@ class tinyPStag extends HTMLElement {
             console.log("Adding canvasurlnode");
             othernode = document.createElement("CANVAS");
             othernode.id = "canvas" + this.id;
+            node.part = "canvasurl";
             othernode.className = "jscanvas";
             othernode.style.display = "none";
             othernode.width = context.width;
@@ -4092,6 +4095,7 @@ class tinyPStag extends HTMLElement {
             node = document.createElement("SVG");
             node.id = "svg" + this.id;
             node.className = "jssvg";
+            node.part = "svg";
             node.style.display = "block";
             node.width = context.width;
             node.height = context.height;
@@ -4110,6 +4114,7 @@ class tinyPStag extends HTMLElement {
             othernode.height = context.height;
             node = document.createElement("A");
             node.id = "svgurl" + this.id;
+            node.part = "svgurl";
             node.innerHTML = "SVG";
             node.style.display = "block";
             context.nodes.push(new rpnSVGDevice(othernode, node));
@@ -4120,6 +4125,7 @@ class tinyPStag extends HTMLElement {
             console.log("Adding pdfnode");
             node = document.createElement("IMG");
             node.id = "pdf" + this.id;
+            node.part = "pdf";
             node.style.display = "block";
             node.width = context.width;
             node.height = context.height;
@@ -4130,6 +4136,7 @@ class tinyPStag extends HTMLElement {
             console.log("Adding pdfurlnode");
             node = document.createElement("IMG");
             node.id = "pdf" + this.id;
+            node.part = "pdfurl";
             node.style.display = "none";
             node.width = context.width;
             node.height = context.height;
@@ -4145,6 +4152,7 @@ class tinyPStag extends HTMLElement {
             console.log("Adding canvasnode");
             node = document.createElement("CANVAS");
             node.id = "canvas" + this.id;
+            node.part = "canvas";
             node.className = "jscanvas";
             node.style.display = "block";
             node.width = context.width;

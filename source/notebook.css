@@ -31,6 +31,7 @@ h2 {
 	font-weight: bold;
 	font-size: 24px;
 	line-height: 48px;
+	margin-top: 12px;
 	margin-bottom: 0px;
 }
 
@@ -38,6 +39,7 @@ h3 {
 	font-weight: bold;
 	font-size: 20px;
 	line-height: 48px;
+	margin-top: 12px;
 	margin-bottom: 0px;
 }
 
@@ -62,6 +64,15 @@ button:hover {
 	background-color: lightgray;
 }
 
+textarea:focus {
+	outline: 3px solid -moz-mac-focusring;
+	outline: 3px solid -webkit-focus-ring-color;
+}
+
+textarea:read-only {
+	outline: none;
+}
+
 .error {
 	color:red;
 	transition:.5s;
@@ -70,7 +81,6 @@ button:hover {
 }
 
 table {
-	width:auto;
 	margin:auto;
 	border:1px solid black;
  	border-collapse:collapse;
@@ -82,6 +92,7 @@ th, td {
 	padding: 2px;
 	font-size: 12px;
 	line-height: 16px;
+	word-break: break-all;
 }
 
 footer {
@@ -92,6 +103,7 @@ footer {
 
 #header {
 	text-align: right;
+	margin-bottom: 12px;
 }
 
 #header button {
@@ -100,7 +112,6 @@ footer {
 
 .cell {
 	width: 100%;
-	margin-top: 10px; 
 }
 
 .cellheader {
@@ -116,7 +127,7 @@ footer {
     outline: none;
 	color: gray;
     width: 100%;
-	margin-top: 12px;
+	margin-bottom: 12px;
 	font-size: 13px;
 	line-height: 16px;
 	display: none;
@@ -134,8 +145,7 @@ footer {
 }
 
 .celloutput {
-	min-height: 12px;
-	margin-top: 12px;
+	margin-bottom: 12px;
 	width: 100%;
 }
 
@@ -153,13 +163,18 @@ button.down { display : none;}
 button.delete { display : none;}
 button.import { display : none;}
 button.dup { display : none;}
+button.new { display : none; }
+button.run { display : none; }
+button.rundown { display : none; }
 
+div.edit button.run { display: inline }
+div.edit button.rundown { display: inline }
 div.edit button.wiki { display: inline }
 div.edit button.sql { display: inline }
 div.edit button.data { display: inline }
 div.edit button.js { display: inline }
 div.edit button.ps { display: inline }
-div.edit button.new { display: none }
+div.edit button.new { display: inline }
 div.edit button.dup { display: inline }
 div.edit button.edit { display: none }
 div.edit button.cancel { display: inline }
@@ -174,10 +189,10 @@ div.edit textarea.cellsource {
 	height: auto;
 }
 
-div.wiki button.wiki { display: inline; background-color: black; color: white; }
+div.wiki button.wiki { background-color: black; color: white; }
 div.wiki button.run { display: none; }
 div.wiki button.rundown { display: none; }
-div.sql button.sql { display: inline; background-color: black; color: white; }
+div.sql button.sql { background-color: black; color: white; }
 div.sql textarea.cellsource {
 	color: #008;
 	display: block;
@@ -196,6 +211,25 @@ div.js textarea.cellsource {
 	color: #800;
 	height: auto;
 }
+
+pre.js {
+	color: #800;
+	height: auto;
+	white-space: pre-wrap;       /* css-3 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word; 
+}
+
+pre.error {
+	white-space: pre-wrap;       /* css-3 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word; 
+}
+
 div.ps textarea.cellsource {
 	color: #080;
 	height: auto;
@@ -209,9 +243,9 @@ div.error {
 	color: red;
 }
 div.data.edit button.import { display: inline; }
-div.data button.data { display: inline; background-color: black; color: white; }
-div.js button.js { display: inline; background-color: black; color: white; }
-div.ps button.ps { display: inline; background-color: black; color: white; }
+div.data button.data { background-color: black; color: white; }
+div.js button.js { background-color: black; color: white; }
+div.ps button.ps { background-color: black; color: white; }
 
 div.cellconsole { 
 	background-color:  yellow; 
@@ -220,14 +254,20 @@ div.cellconsole {
 div.tablefilter {
 	width: auto;
 	margin: auto;
+	max-width: 100%;
+}
+
+div.tablefilter table {
+	max-width: 100%!;
 }
 
 p.link {
-	text-align: left;
+	text-align: right;
 	width: 100%;
 }
 
-output a { 
+p.link a { 
+	color: black;
 }
 
 input[type="file"] {
@@ -249,6 +289,11 @@ input.sortable {
 
 tiny-ps {
 	max-width: 100%;
+}
+
+::part(svgurl)  { 
+	text-align: right;
+	color: black;
 }
 
 

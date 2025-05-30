@@ -12,6 +12,7 @@
 
   <header>SQL Notebook</header>
   <div id="header">
+	 <button onclick="cellRun(0,true)">Run All</button>
      <button onclick="window.open('index.html?new=1','_blank')">New</button><button onclick="openProject()">Open</button><button onclick="saveProject()">Save</button>
   </div>
   <div id="cellzone"></div>
@@ -19,13 +20,15 @@
   
 
   <footer>
-  	MIT License v 1.2 4.5.2025<br/>
+  	MIT License v 1.3 30.5.2025<br/>
 	SQL Notebook by matti <a href='https://github.com/bellenuit/'>bellenuit</a><br/>
     SQL engine by <a href='https://alasql.org'>AlaSQL</a><br/>
 	PostScript by <a href="https://github.com/bellenuit/tiny-ps">tiny-ps</a>
   </footer>
 <script type="text/javascript" src="alasql.js"></script>
-<script type="text/javascript" src="tinyps103.js"></script>
+<script type="text/javascript" src="alasql-extensions.js"></script>
+<script type="text/javascript" src="tinyps104.js"></script>
+<script type="text/javascript" src="tinyps-extensions.js"></script>
 <script type="text/javascript" src="fonts.js"></script>
 <script type="text/javascript" src="examples.js"></script>
 <script type="text/javascript" src="gui.js"></script>

@@ -21,6 +21,7 @@ function exportCSV(columns, values) {
 	return lines.join("\n");
 }
 
+
 // Create an HTML table
 var tableCreate = function () {
 	return function (columns, values) {
@@ -37,9 +38,22 @@ var tableCreate = function () {
 	    table.id = "table"+id;
 	    table.setAttribute('maxgrid',30);
 	    const thead = document.createElement('thead');
+	    const columnaligns = [];
 	    for(let c of columns) {
 		    let th = document.createElement('th');
-		    th.innerHTML = c;
+		    var ca;
+		    if (c.match(/__$/) && c.match(/^__/)) {
+			    ca = "center";
+			    c = c.replace(/__$/,"").replace(/^__/,"");
+			} else if (c.match(/_$/)) {
+				 ca = "right";
+				 c = c.replace(/^__/,"");
+		    } else {
+			    ca = "left";
+		    }
+		    th.innerHTML = c.replace(/_$/,"");
+		    th.style.textAlign = ca;
+		    columnaligns.push(ca);
 		    thead.appendChild(th);
 	    }
 	    table.appendChild(thead);
@@ -47,12 +61,15 @@ var tableCreate = function () {
 	    var i = 0;
 	    for (let row of values) {
 		    const tr = document.createElement('tr');
+		    var j = 0;
 		    for (let f of row) {
 			    const td = document.createElement('td');
 				if (typeof f !== 'undefined') {
 					td.innerHTML = f;
 				}
+				td.style.textAlign = columnaligns[j];
 			    tr.appendChild(td);
+			    j++;
 		    }
 		    i++;
 		    if (i>30) tr.style.display = "none";
@@ -152,8 +169,8 @@ function tablefilter(id) {
   
 }
 
-function cellEditor(code, type = "wiki") {
-	const id = Math.floor(Math.random() * 1000000);  // create unique id for console.log
+function cellEditor(code, type = "wiki", zeroid = false) {
+	const id = zeroid? 0 : Math.floor(Math.random() * 1000000);  // create unique id for console.log
     const node = document.createElement("DIV");   // build the HTML nodes
 	node.id = "cell" + id;
 	node.setAttribute("type", type);
@@ -208,15 +225,9 @@ function cellEditor(code, type = "wiki") {
 	jsbutton.onclick = function() {setJS(id)};
 	jsbutton.className = "js";
 	header.appendChild(jsbutton);
-	const newbutton = document.createElement("BUTTON");
-	newbutton.id = "new" + id;
-	newbutton.innerHTML = "Insert";
-	newbutton.onclick = function() {cellNew(id)};
-	newbutton.className = "new";
-	header.appendChild(newbutton);
 	const editbutton = document.createElement("BUTTON");
 	editbutton.id = "edit" + id;
-	editbutton.innerHTML = "Edit";
+	editbutton.innerHTML = "...";
 	editbutton.onclick = function() {cellEdit(id)};
 	editbutton.className = "edit";
 	header.appendChild(editbutton);
@@ -232,6 +243,12 @@ function cellEditor(code, type = "wiki") {
 	downbutton.onclick = function() {cellDown(id)};
 	downbutton.className = "down";
 	header.appendChild(downbutton); 
+	const newbutton = document.createElement("BUTTON");
+	newbutton.id = "new" + id;
+	newbutton.innerHTML = "Insert";
+	newbutton.onclick = function() {cellNew(id)};
+	newbutton.className = "new";
+	header.appendChild(newbutton);
 	const duplicatebutton = document.createElement("BUTTON");
 	duplicatebutton.id = "duplicate" + id;
 	duplicatebutton.innerHTML = "Dup";
@@ -267,10 +284,12 @@ function cellEditor(code, type = "wiki") {
         this.style.height = "auto";
         this.style.height = Math.max(this.scrollHeight, 16) + "px";
     });
+    /*
 	source.addEventListener("click", function() {
         this.style.height = "auto";
         this.style.height = Math.max(this.scrollHeight, 16) + "px";
     });
+    */
 	// force at beginning, js dom does not know layout on load
     setTimeout(() => { source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
 	source.innerHTML = code;
@@ -312,6 +331,9 @@ function cellDup(id) {
 	cell.after(newcell);
     newsource = document.getElementById('source' + newid);
     newsource.removeAttribute("readonly");
+	newsource.focus();
+	const length = newsource.value.length;
+	newsource.setSelectionRange(length, length);
 	newsource.focus();	
 }
 
@@ -340,7 +362,10 @@ function cellEdit(id) {
 	bak.innerHTML = source.value;
 	cell.className = "cell " + cell.getAttribute("type") + " edit"; 
     source.removeAttribute("readonly");
-	setTimeout(() => { source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
+	setTimeout(() => { 
+		source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
+	const length = source.value.length;
+	source.setSelectionRange(length, length);
 	source.focus();
 }
 
@@ -366,12 +391,21 @@ function cellUp(id) {
 	const cell = document.getElementById('cell'+id);
 	const previousCell = cell.previousSibling;
 	cell.parentNode.insertBefore(cell, previousCell);
+	newsource = document.getElementById('source' + id);
+    newsource.removeAttribute("readonly");
+	newsource.focus();	
+
 }
 
 function cellDown(id) {
 	const cell = document.getElementById('cell'+id);
 	const nextcell = cell.nextSibling;
 	nextcell.parentNode.insertBefore(nextcell, cell);
+	document.getElementById('cell'+id).focus();
+	newsource = document.getElementById('source' + id);
+    newsource.removeAttribute("readonly");
+	newsource.focus();	
+
 }
 
 function cellDelete(id) { 
@@ -402,13 +436,13 @@ runner.wiki = function(id, down = false) {
     html = source.value;
 	// 	// http://www.cs.sjsu.edu/faculty/pollett/masters/Semesters/Spring14/eswara/cs298/deliverable3/index1.php
 	html = "\n" + html.replace(/\r\n/g, "\n") + "\n";
-	html = html.replace(/^====(.*?)====$/gm, function (match, contents) {
+	html = html.replace(/^\n====(.*?)====\n(\n?)/g, function (match, contents) {
         return '<h4>' + contents + '</h4>';
     });
-    html = html.replace(/^===(.*?)===$/gm, function (match, contents) {
+    html = html.replace(/^\n===(.*?)===\n(\n?)/g, function (match, contents) {
         return '<h3>' + contents + '</h3>';
     });
-	html = html.replace(/^==(.*?)==$/gm, function (match, contents) {
+	html = html.replace(/^\n==(.*?)==\n(\n?)/g, function (match, contents) {
         return '<h2>' + contents + '</h2>';
     });
     html = html.replace(/^\*\*\*(.*?)$/gm, function (match, contents) {
@@ -451,7 +485,10 @@ runner.wiki = function(id, down = false) {
 	html = html.replace(/notebook:\/\/(\S+)/gm, function (match, contents) {
         return '<a href="index.html?' + content +'" target="_blank">' + content + '</a>'; 
     });
+    html = html.replace(/^\n/gi, "");
+    html = html.replace(/\n$/gi, "");
 	html = html.replace(/\n/gi, "<br/>");
+	
     output.innerHTML = html;
 	const cell = document.getElementById('cell'+id);
 	cell.style.backgroundColor = 'white';
@@ -693,6 +730,7 @@ runner.data = function(id, down = false) {
 	});
 }
 echo = function () {};
+dump = function () {};
 
 runner.js = function(id, down = false) {
     const source = document.getElementById('source'+id);
@@ -703,10 +741,32 @@ runner.js = function(id, down = false) {
 	echo = function(s) {
 		output.innerHTML += s;
 	}
+	dump = function(fn) {
+		echo('<pre class="js">' + fn.name + ' = ' + fn.toString() + '</pre>');
+	}
+	htmlTable = function(query) {
+		let first = query[0];
+	    if (typeof first === 'object') {
+	        let cols = Object.keys(first);
+	        let values = [];
+	        for(row of query) {
+		        let fields = [];
+		        for(key in row) fields.push(row[key]);
+		         values.push(fields);
+	        }
+	        echo(tableCreate(cols,values).outerHTML);
+	    };
+	}
+	
 	const cell = document.getElementById('cell'+id);
 	cell.style.backgroundColor = 'white';
 	const scriptnode = document.createElement("SCRIPT"); 
-    scriptnode.innerHTML = "try { " + code + " } catch(reason) { console.log(reason); const c = document.getElementById('output'+"+id+"); c.innerHTML = '<pre class=error>'+reason+'</pre>'; c.style.backgroundColor = 'white'; }";
+    scriptnode.innerHTML = "try { " + code + " } catch(reason) { console.log(reason); const c = document.getElementById('output'+"+id+"); c.innerHTML = '<pre class=error>'+reason+'</pre>'; c.style.backgroundColor = 'white'; console.log(c.innerHTML);}";
+    window.onerror = function (a, b, c, d, e) {
+        const co = document.getElementById('output'+id); 
+		co.innerHTML = '<pre class=error>' + a + '</pre>'; 
+		co.style.backgroundColor = 'white'; 
+	}
 	document.body.appendChild(scriptnode);
 	console.log((Date.now() - timerstart) +" ms");
 	
@@ -724,80 +784,6 @@ runner.js = function(id, down = false) {
 			console.log("run end");
 		}
 }
-
-rpnOperators.table = function(context) {
-    const [haslabel, tablename] = context.pop("number", "string");
-    if (!tablename) return context;
-	try {
-		results = alasql("SELECT * FROM "+ tablename.value) ;
-	} catch (reason) {
-		context.error("databaserror");
-		 return context;
-	}
-	list = [];
-	list.push('[');
-	elem = results;
-	  
-	   if (Array.isArray(elem)) {
-		   let first = elem[0];
-		   if (typeof first === 'object') {
-			   let cols = Object.keys(first);
-			   let values = [];
-			   
-			   list.push('[');
-			   for(key in first) {
-				   list.push('(' + key + ')');
-			   }
-			   list.push(']');
-			   
-			   for(row of elem) {
-				   list.push('[');
-				   var firstcolumn = true;
-				   let fields = [];
-				   for(key in row) {
-					   if (firstcolumn && haslabel)
-						   list.push('(' + row[key] + ')');
-					   else
-						   list.push(row[key]);
-					   firstcolumn = false;
-				   }
-				   list.push(']');
-				   
-			   }
-		   }
-	   }
-	   
-	
-	list.push(']');
-	context = rpn(list.join(" "), context);
-    return context;
-};
-
-rpnOperators.findfont = function(context) {
-    const [n] = context.pop("name");
-    if (!n) return context;
-    if (!rpnFonts[n.value]) { 
-		if (!fontfiles[n.value]) {
-			context.error("invalidfont " );
-            return context;
-        }
-        rpnFonts[n.value] = new rpnTTF(fontfiles[n.value]);
-    }
-    if (!rpnFonts[n.value]) {
-        context.error("invalidfont " );
-        return context;
-    }
-    if (rpnFonts[n.value].error) {
-        context.error("invalidfont " + fonts[n.value].error );
-        return context;
-    }
-    const dict = new rpnDictionary(1);
-    dict.value.FontName = n;
-    context.stack.push(dict);
-    return context;
-};
-
-
 
 readSyncDataURL = function(url, filetype = ""){
 	// override for TTF
@@ -870,14 +856,24 @@ runner.ps = function(id, down = false) {
 
 function cellRun(id, down = false) {
 
+	 if (id == 0) {
+		 const cell0 = document.getElementById('cellzone').firstChild;
+		 id = cell0.id.replace('cell','');
+	 } 
+	 
 	 const cell = document.getElementById('cell'+id);
+	 
+	 console.log(cell.id);
+	 
 	 const type = cell.getAttribute("type");
 	 if (type != "wiki") {
 		console.log("cellRun " + type + " " + id);
 		timerstart = Date.now();
 		cell.style.backgroundColor = 'yellow';
 	}
-	setTimeout(function() {runner[type](id, down);}, 25 ); 	
+	// setTimeout(function() {runner[type](id, down);}, 25 ); 	
+	const run = async function() { runner[type](id, down); };
+	run();
      
 }
 
@@ -896,8 +892,6 @@ function setSQL(id)
 {
 	const cell = document.getElementById('cell'+id);
     cell.setAttribute("type", "sql");
-	//const source = document.getElementById('source'+id);
-	//source.ondrop = undefined;
 	if (cell.className.indexOf("edit") > -1)
 		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
     else
@@ -923,16 +917,6 @@ function setData(id)
 		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
     else
 		cell.className = "cell " + cell.getAttribute("type");
-	
-	/*
-	const source = document.getElementById('source'+id);
-	source.ondrop = function(e) {
-        e.preventDefault();
-        var file = e.dataTransfer.files[0];
-        dropfile(file, id);
-    }
-*/	
-	
 }
 
 function setJS(id)
@@ -980,8 +964,10 @@ function readProject(json) {
 	zone.innerHTML = "";
 	const list = JSON.parse(json);
 	console.log(list);
+	var first = true;
 		for(const elem of list) {
-			const cell = cellEditor(elem.source, elem.type);
+			const cell = cellEditor(elem.source, elem.type, first);
+			first = false;
 			zone.appendChild(cell);
 			const id = cell.getAttribute("id").replace("cell","");
 			if (elem.type == 'wiki') cellRun(id);
@@ -1032,7 +1018,7 @@ var timerstart = Date.now();
 
 if (urlParams.get('new') == 1) {
 	zone.innerHTML = '';
-	cell = cellEditor('','wiki');
+	cell = cellEditor('','wiki', true);
 	zone.appendChild(cell);
 	cellEdit(cell.id.replace("cell",""));
 } else if (urlParams.get('example')) {
