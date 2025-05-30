@@ -457,7 +457,7 @@ runner.wiki = function(id, down = false) {
     // clean-up
     html = html.replaceAll('</ul>\n','</ul>');
     html = html.replaceAll('</ul><ul>','');
-     html = html.replace(/^###(.*?)$/gm, function (match, contents) {
+    html = html.replace(/^###(.*?)$/gm, function (match, contents) {
         return '<ol><ol><ol><li>' + contents + '</li></ol></ol></ol>';
     });
     html = html.replace(/^##(.*?)$/gm, function (match, contents) {
@@ -479,6 +479,16 @@ runner.wiki = function(id, down = false) {
     html = html.replace(/''(.*?)''/g, function (match, contents) {
         return '<i>' + contents + '</i>';
     });
+    html = html.replace(/\$\$\$(.*?)\$\$\$/g, function (match, contents) {
+	    mathcolor = "black";
+	    let node = asciimath.parseMath(contents, false);
+	    node.style.display = "block";
+        return node.outerHTML ;
+    });
+    html = html.replace(/\$\$(.*?)\$\$/g, function (match, contents) {
+	    mathcolor = "black";
+        return asciimath.parseMath(contents, false).outerHTML ;
+    });
 	html = html.replace(/https:\/\/(\S+)/gm, function (match, contents) {
         return '<a href="https://' + contents +'" target="_blank">https://' + contents + '</a>'; 
     });
@@ -499,7 +509,7 @@ runner.wiki = function(id, down = false) {
 			let nextcell = cell.nextSibling;
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
-				cellRun(nextid, true);
+				if (nextid != id) cellRun(nextid, true);
 			} else {
 			console.log("run end");
 			}
@@ -556,7 +566,7 @@ runner.sql = function(id, down = false) {
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
 				if (nextid != id)
-					cellRun(nextid, true);
+					if (nextid != id) cellRun(nextid, true);
 			} else {
 			console.log("run end");
 			}
@@ -712,7 +722,7 @@ runner.data = function(id, down = false) {
 			let nextcell = cell.nextSibling;
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
-				cellRun(nextid, true);
+				if (nextid != id) cellRun(nextid, true);
 			} else {
 			console.log("run end");
 			}
@@ -775,7 +785,7 @@ runner.js = function(id, down = false) {
 			let nextcell = cell.nextSibling;
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
-				cellRun(nextid, true);
+				if (nextid != id) cellRun(nextid, true);
 			} else {
 			console.log("run end");
 			}
@@ -843,7 +853,7 @@ runner.ps = function(id, down = false) {
 			let nextcell = cell.nextSibling;
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
-				cellRun(nextid, true);
+				if (nextid != id) cellRun(nextid, true);
 			} else {
 			console.log("run end");
 			}

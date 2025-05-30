@@ -11,7 +11,7 @@ examples['home'] = `
     },
     {
         "type": "wiki",
-        "source": "===Wiki text===\\nWiki text can be formatted in a basic way. The following syntax elements are supported:\\n* Header 2 to Header 4\\n* Italic, bold and bold italic\\n* Unnumbered and numbered lists\\n* Links starting with https"
+        "source": "===Wiki text===\\nWiki text can be formatted in a basic way. The following syntax elements are supported:\\n* Header 2 to Header 4\\n* Italic, bold and bold italic\\n* Unnumbered and numbered lists\\n* Links starting with https\\n* Mathematical formulas (using double and triple $)"
     },
     {
         "type": "wiki",
