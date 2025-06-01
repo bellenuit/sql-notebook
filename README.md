@@ -40,7 +40,7 @@ Note that when you open a notebook, it is not executed immediately. If you want 
 
 ## Wiki text
  
-Wiki text can be formatted in a basic way: Header 2-4, italic, bold, unnumbered and numbered lists as well as URL with https$$
+Wiki text can be formatted in a basic way: Header 2-4, italic, bold, unnumbered and numbered lists as well as URL with https protocol. You can include math notation with double and triple $.
 
 ## SQL code
 

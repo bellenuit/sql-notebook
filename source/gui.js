@@ -39,15 +39,20 @@ var tableCreate = function () {
 	    table.setAttribute('maxgrid',30);
 	    const thead = document.createElement('thead');
 	    const columnaligns = [];
+	    var caption = '';
 	    for(let c of columns) {
 		    let th = document.createElement('th');
 		    var ca;
+		    console.log(c);
 		    if (c.match(/__$/) && c.match(/^__/)) {
 			    ca = "center";
 			    c = c.replace(/__$/,"").replace(/^__/,"");
 			} else if (c.match(/__$/)) {
 				 ca = "right";
 				 c = c.replace(/__$/,"");
+		    } else if (c.match(/^':/)) {
+  			     caption = c.substr(2,c.length-3);
+			     continue;
 		    } else {
 			    ca = "left";
 		    }
@@ -56,6 +61,13 @@ var tableCreate = function () {
 		    columnaligns.push(ca);
 		    thead.appendChild(th);
 	    }
+	    if (caption)
+	    {
+		    let cp = document.createElement('caption');
+		    cp.innerHTML = caption;
+		    table.appendChild(cp);
+	    }
+	    
 	    table.appendChild(thead);
 	    const tbody = document.createElement('tbody');
 	    var i = 0;
@@ -63,6 +75,7 @@ var tableCreate = function () {
 		    const tr = document.createElement('tr');
 		    var j = 0;
 		    for (let f of row) {
+			    if (caption && j == row.length -1) continue;
 			    const td = document.createElement('td');
 				if (typeof f !== 'undefined') {
 					td.innerHTML = f;
@@ -373,7 +386,7 @@ function cellCancel(id) {
 	const cell = document.getElementById('cell'+id);
 	const source = document.getElementById('source'+id);
 	const bak = document.getElementById('bak'+id);
-	source.innerHTML = bak.innerHTML+"";
+	source.innerHTML = bak.innerHTML;
     source.setAttribute("readonly", true);
 	source.outerHTML = source.outerHTML;  // force update textarea
 	cell.className = "cell " + cell.getAttribute("type"); 
@@ -382,6 +395,9 @@ function cellCancel(id) {
 function cellSave(id) { 
 	const cell = document.getElementById('cell'+id);
     const source = document.getElementById('source'+id);
+    const bak = document.getElementById('bak'+id);
+    // if (bak.innerHTML !== source.innerHTML)
+    projectTouched = true;
     source.setAttribute("readonly", true);
 	cell.className = "cell " + cell.getAttribute("type"); 
 	if (cell.getAttribute("type") == "wiki") cellRun(id);
@@ -436,13 +452,13 @@ runner.wiki = function(id, down = false) {
     html = source.value;
 	// 	// http://www.cs.sjsu.edu/faculty/pollett/masters/Semesters/Spring14/eswara/cs298/deliverable3/index1.php
 	html = "\n" + html.replace(/\r\n/g, "\n") + "\n";
-	html = html.replace(/^\n====(.*?)====\n(\n?)/g, function (match, contents) {
+	html = html.replace(/\n====(.*)====\n/gm, function (match, contents) {
         return '<h4>' + contents + '</h4>';
     });
-    html = html.replace(/^\n===(.*?)===\n(\n?)/g, function (match, contents) {
+    html = html.replace(/\n===(.*)===\n/gm, function (match, contents) {
         return '<h3>' + contents + '</h3>';
     });
-	html = html.replace(/^\n==(.*?)==\n(\n?)/g, function (match, contents) {
+	html = html.replace(/\n==(.*)==\n/gm, function (match, contents) {
         return '<h2>' + contents + '</h2>';
     });
     html = html.replace(/^\*\*\*(.*?)$/gm, function (match, contents) {
@@ -457,7 +473,7 @@ runner.wiki = function(id, down = false) {
     // clean-up
     html = html.replaceAll('</ul>\n','</ul>');
     html = html.replaceAll('</ul><ul>','');
-    html = html.replace(/^###(.*?)$/gm, function (match, contents) {
+     html = html.replace(/^###(.*?)$/gm, function (match, contents) {
         return '<ol><ol><ol><li>' + contents + '</li></ol></ol></ol>';
     });
     html = html.replace(/^##(.*?)$/gm, function (match, contents) {
@@ -470,6 +486,18 @@ runner.wiki = function(id, down = false) {
     html = html.replaceAll('</ol>\n','</ol>');
     html = html.replaceAll('</ol><ol>','');
     
+    html = html.replace(/\$\$\$(.*?)\$\$\$/g, function (match, contents) {
+	    let node = asciimath.parseMath(contents, false);
+	    node.style.display = "block";
+        return node.outerHTML ;
+    });
+    
+    html = html.replace(/\$\$(.*?)\$\$/g, function (match, contents) {
+	    mathcolor = "black";
+        return asciimath.parseMath(contents, false).outerHTML ;
+    });
+
+    
 	html = html.replace(/'''''(.*?)'''''/g, function (match, contents) {
         return '<b><i>' + contents + '</i></b>';
     });
@@ -479,16 +507,6 @@ runner.wiki = function(id, down = false) {
     html = html.replace(/''(.*?)''/g, function (match, contents) {
         return '<i>' + contents + '</i>';
     });
-    html = html.replace(/\$\$\$(.*?)\$\$\$/g, function (match, contents) {
-	    mathcolor = "black";
-	    let node = asciimath.parseMath(contents, false);
-	    node.style.display = "block";
-        return node.outerHTML ;
-    });
-    html = html.replace(/\$\$(.*?)\$\$/g, function (match, contents) {
-	    mathcolor = "black";
-        return asciimath.parseMath(contents, false).outerHTML ;
-    });
 	html = html.replace(/https:\/\/(\S+)/gm, function (match, contents) {
         return '<a href="https://' + contents +'" target="_blank">https://' + contents + '</a>'; 
     });
@@ -497,6 +515,7 @@ runner.wiki = function(id, down = false) {
     });
     html = html.replace(/^\n/gi, "");
     html = html.replace(/\n$/gi, "");
+    html = html.replace(/(<\/h\d>)\n/gi, "$1");
 	html = html.replace(/\n/gi, "<br/>");
 	
     output.innerHTML = html;
@@ -509,7 +528,7 @@ runner.wiki = function(id, down = false) {
 			let nextcell = cell.nextSibling;
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
-				if (nextid != id) cellRun(nextid, true);
+				cellRun(nextid, true);
 			} else {
 			console.log("run end");
 			}
@@ -546,7 +565,10 @@ runner.sql = function(id, down = false) {
 			   
 			   let csv = exportCSV(cols, values);
 			   let url = "data:text/csv;base64,"+btoaUnicode(csv);
-		       let a = '<p class="link"><a href="' + url + '">CSV</a>';
+			   const d = new Date();
+			   const ds = d. toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13);
+			   console.log(ds);
+		       let a = '<p class="link"><a href="' + url + '" download="export ' + ds  + '.csv">CSV</a>';
 		       s += a;
 			   }
 		   }
@@ -566,7 +588,7 @@ runner.sql = function(id, down = false) {
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
 				if (nextid != id)
-					if (nextid != id) cellRun(nextid, true);
+					cellRun(nextid, true);
 			} else {
 			console.log("run end");
 			}
@@ -722,7 +744,7 @@ runner.data = function(id, down = false) {
 			let nextcell = cell.nextSibling;
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
-				if (nextid != id) cellRun(nextid, true);
+				cellRun(nextid, true);
 			} else {
 			console.log("run end");
 			}
@@ -752,7 +774,7 @@ runner.js = function(id, down = false) {
 		output.innerHTML += s;
 	}
 	dump = function(fn) {
-		echo('<pre class="js">' + fn.name + ' = ' + fn.toString() + '</pre>');
+		echo('<pre class="js">{' + fn.name + ' = ' + fn.toString() + '</pre>');
 	}
 	htmlTable = function(query) {
 		let first = query[0];
@@ -785,7 +807,7 @@ runner.js = function(id, down = false) {
 			let nextcell = cell.nextSibling;
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
-				if (nextid != id) cellRun(nextid, true);
+				cellRun(nextid, true);
 			} else {
 			console.log("run end");
 			}
@@ -829,22 +851,35 @@ runner.ps = function(id, down = false) {
 	scriptnode.setAttribute("format","svgurl");
 	scriptnode.setAttribute("textmode","1");
 	scriptnode.innerHTML = code;
-	scriptnode2 = document.createElement("TINY-PS");
+	const scriptnode2 = document.createElement("TINY-PS");
 	scriptnode2.id = "ps" + id;
 	scriptnode2.setAttribute("width","640");
 	scriptnode2.setAttribute("height","360");
 	scriptnode2.setAttribute("format","svg");
 	scriptnode2.setAttribute("maxwidth","100%");
 	scriptnode2.setAttribute("error","1");
-	scriptnode2.setAttribute("textmode","1");
+//	scriptnode2.setAttribute("textmode","1");
+	scriptnode2.innerHTML = code;
 	
-    scriptnode2.innerHTML = rpnProlog + " " + code;
-	output.innerHTML = "";	
-	
+    const scriptnode3 = document.createElement("TINY-PS");
+	scriptnode3.setAttribute("width","640");
+	scriptnode3.setAttribute("height","360");
+	scriptnode3.setAttribute("format","canvasurl");
+	scriptnode3.setAttribute("oversampling","4");
+	scriptnode3.innerHTML = code;
+
+    output.innerHTML = "";		
 	const cell = document.getElementById('cell'+id);
 	cell.style.backgroundColor = 'white';
 	output.appendChild(scriptnode2);
-	output.appendChild(scriptnode);
+	const divnode = document.createElement("DIV");
+	divnode.className = "svgurl";
+	divnode.appendChild(scriptnode);
+	output.appendChild(divnode);
+	const divnode3 = document.createElement("DIV");
+	divnode3.className = "canvasurl";
+	divnode3.appendChild(scriptnode3);
+	output.appendChild(divnode3);
 	
 	console.log((Date.now() - timerstart) +" ms");
 	
@@ -853,7 +888,7 @@ runner.ps = function(id, down = false) {
 			let nextcell = cell.nextSibling;
 			if (nextcell) {
 				let nextid = nextcell.id.replace("cell","");
-				if (nextid != id) cellRun(nextid, true);
+				cellRun(nextid, true);
 			} else {
 			console.log("run end");
 			}
@@ -870,6 +905,8 @@ function cellRun(id, down = false) {
 		 const cell0 = document.getElementById('cellzone').firstChild;
 		 id = cell0.id.replace('cell','');
 	 } 
+	 currentCell = id;
+
 	 
 	 const cell = document.getElementById('cell'+id);
 	 
@@ -885,6 +922,18 @@ function cellRun(id, down = false) {
 	const run = async function() { runner[type](id, down); };
 	run();
      
+}
+
+function cellRunNext() {
+	const cell = document.getElementById("cell"+currentCell);
+    if (cell) { 
+	    const nextcell = cell.nextSibling;
+	    if (nextcell) { 
+			const nextid = nextcell.id.replace("cell","");
+			cellRun(nextid, true); 
+			console.log("cellRunNext "+nextid);
+		}
+	}
 }
 
 function setWiki(id)
@@ -1018,6 +1067,8 @@ function saveProject()
 	document.body.appendChild(link); // firefox needs this
 	link.click();
 	link.remove();
+	
+	projectTouched = false;
 
 }
 
@@ -1038,3 +1089,7 @@ if (urlParams.get('new') == 1) {
 } else {
     readProject(examples["home"]);
 }
+
+currentCell = undefined;
+window.onbeforeunload = askConfirm;
+function askConfirm(){ if (projectTouched) return false; }

@@ -7,6 +7,10 @@ examples['home'] = `
     },
     {
         "type": "wiki",
+        "source": "===Examples===\\nSee https://www.belle-nuit.com/sql-notebook-examples"
+    },
+    {
+        "type": "wiki",
         "source": "===Using the notebook===\\n\\nA notebook is a collection of cells. Each cell can be either Wikitext, SQL code, Data, JavaScript code or PostScript code.\\n\\nClick '''New''' to create a new notebook. It will open in a separate tab. A new notebook contains one single cell of the type '''Wiki''' and an empty textarea where you can start writing. \\nWrite some text and then click  '''OK'''. The textarea closes and the wiki is rendered to the page. \\nClick '''...''' to modify the text. Click then '''OK''' to apply the changes of '''Cancel''' to reject them.\\nClick '''Insert''' to add a new empty cell below the current cell. \\nClick '''Duplicate''' to add a copy of the current cell below the current cell.\\nClick '''Up''' or '''Down''' to modify the order of the cells. \\nClick '''Delete''' to remove the cell.\\n\\nThe editing of the cells is the same for all types of the cells. The difference is how they render to the page. To change the type of the cell, click on '''Wiki''', '''SQL''', '''Data''', '''PS''' or '''JS'''. The black button is the current type.\\n\\nWhen the type of the cell is not Wiki, a '''Run''' and a '''Run Down''' button appear. The code is not run when you click OK, but when you click '''Run'''. What is the difference between the two buttons? '''Run''' only executes the code of the current cell. '''Run Down''' executes the current cell and all cells below.\\n\\nWhen you have finished, you can save the project with the '''save''' button so that you can open it later with '''open'''. \\n\\nNote that when you open a notebook, it is not executed immediately. If you want to execute all cells, go to the top and click '''Run All'''. \\n"
     },
     {
@@ -67,7 +71,7 @@ examples['home'] = `
     },
     {
         "type": "wiki",
-        "source": "But the main use case is to extend SQL.\\n\\nYou can define a custom function for SQL.\\n\\nalasql.fn.double = function(x) { return x*2 );"
+        "source": "But the main use case is to extend SQL.\\nou can define a custom function for SQL.\\n\\nalasql.fn.double = function(x) { return x*2 );"
     },
     {
         "type": "js",
@@ -79,11 +83,11 @@ examples['home'] = `
     },
     {
         "type": "wiki",
-        "source": "===Examples===\\nSee https://www.belle-nuit.com/sql-notebook-examples"
+        "source": "===Saving and exporting===\\nProjects are saved in compact JSON files you can open again later. Tables can be exported as CSV files, images as SVG or PNG. If you want to print the notebook, export it as PDF. If you want to edit it in Word, export it as PDF. Word is able to read quite much out of the PDF including charts and math notation."
     },
     {
         "type": "wiki",
-        "source": "===History===\\n\\n16.3.2025 version 0.1 not published.\\n9.4.2025 version 1.0\\n28.4.2025 version 1.1\\n4.5.2025 version 1.2\\n30.5.2025 version 1.3"
+        "source": "===History===\\n\\n16.3.2025 version 0.1 not published.\\n9.4.2025 version 1.0\\n28.4.2025 version 1.1\\n4.5.2025 version 1.2\\n30.5.2025 version 1.3\\n1.6.2025 version 1.4"
     },
     {
         "type": "wiki",

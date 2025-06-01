@@ -3,9 +3,10 @@ html {
 }
 
 body{
-	font-family: Courier, "Courier New", monospace; 
-	font-size: 13px;
-	line-height: 16px;
+	font-family: Times, "Times New Roman", serif; 
+	font-size: 16px;
+	line-height: 20px;
+	text-align: justify;
 	color: black;
 	margin: 0px;
 	max-width: 595px; /* A4 */
@@ -24,13 +25,13 @@ body{
 
 header {
 	padding: 0px;
-	font-size: 11px;
+	font-size: 16px;
 }
 
 h2 {
 	font-weight: bold;
 	font-size: 24px;
-	line-height: 48px;
+	line-height: 36px;
 	margin-top: 12px;
 	margin-bottom: 0px;
 }
@@ -38,7 +39,7 @@ h2 {
 h3 {
 	font-weight: bold;
 	font-size: 20px;
-	line-height: 48px;
+	line-height: 36px;
 	margin-top: 12px;
 	margin-bottom: 0px;
 }
@@ -46,22 +47,24 @@ h3 {
 h4 {
 	font-weight: bold;
 	font-size: 16px;
-	line-height: 48px;
+	line-height: 24px;
 	margin-bottom: 0px;
 }
 
 button {
-    margin-left: 6px;
+    margin-left: 4px;
     border: none;
 	background-color: white;
-	font-family: Courier, "Courier New", monospace;
-	font-size: 10px;
-    font-weight: bold;
+	color: black;
+	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
+	font-weight: bold;
+	font-size: 11px;
 	cursor: pointer;
 }
 
 button:hover {
-	background-color: lightgray;
+	background-color: black;
+	color: white;
 }
 
 textarea:focus {
@@ -76,6 +79,7 @@ textarea:read-only {
 .error {
 	color:red;
 	transition:.5s;
+	font-size: 14px;
 	overflow:hidden;
 	margin: 15px;
 }
@@ -89,15 +93,30 @@ table {
 
 th, td {
 	border:1px solid #777;
-	padding: 2px;
-	font-size: 12px;
-	line-height: 16px;
+	padding: 4px;
+	font-size: 16px;
+	line-height: 20px;
 	word-break: break-all;
 }
 
+th {
+	font-weight: normal;
+}
+
+td { 
+	border-top: none;
+	border-bottom: none;
+}
+
+caption {
+	border:1px solid #777;
+	border-bottom: none;
+}
+
+
 footer {
 	margin-top: 48px;
-	font-size: 11px;
+	font-size: 13px;
 	color: #222;
 }
 
@@ -121,15 +140,15 @@ footer {
 
 .cellsource {
 	font-family: Courier, "Courier New", monospace;
+	font-size: 14px;
 	border: none;
     background-color: transparent;
     resize: none;
     outline: none;
-	color: gray;
     width: 100%;
 	margin-bottom: 12px;
-	font-size: 13px;
-	line-height: 16px;
+	padding: 4px;
+	line-height: 20px;
 	display: none;
 	max-height: 600px;
 }
@@ -199,12 +218,15 @@ div.sql textarea.cellsource {
 	height: auto;
 }
 div.data textarea.cellsource {
-	color: #088;
+	color: #080;
 	height: auto;
 }
 div.data div.celloutput {
-	color: #088;
+	font-family: Courier, "Courier New", monospace;
+	font-size: 14px;
+	color: #080;
 	height: auto;
+	padding: 4px;
 }
 
 div.js textarea.cellsource {
@@ -213,8 +235,11 @@ div.js textarea.cellsource {
 }
 
 pre.js {
+	font-family: Courier, "Courier New", monospace;
+	font-size: 14px;
 	color: #800;
 	height: auto;
+	padding: 4px;
 	white-space: pre-wrap;       /* css-3 */
     white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
     white-space: -pre-wrap;      /* Opera 4-6 */
@@ -254,7 +279,7 @@ div.cellconsole {
 div.tablefilter {
 	width: auto;
 	margin: auto;
-	max-width: 100%;
+	max-width: 100%; 
 }
 
 div.tablefilter table {
@@ -267,7 +292,18 @@ p.link {
 }
 
 p.link a { 
-	color: black;
+	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
+	font-weight: bold;
+	font-size: 11px;
+	cursor: pointer;
+	color:black;
+	padding: 4px;
+	text-decoration: none;
+}
+
+p.link a:hover {
+	background-color: black;
+	color: white;
 }
 
 input[type="file"] {
@@ -282,7 +318,7 @@ input.sortable {
     display: inline-block;
     cursor: pointer;
     border: 1px solid #444;
-    font-size: 12px;
+    font-size: 16px;
     padding: 2px;
 }
 
@@ -291,11 +327,43 @@ tiny-ps {
 	max-width: 100%;
 }
 
-::part(svgurl)  { 
-	text-align: right;
-	color: black;
+div.svgurl {
+		text-align: right;
 }
 
+div.canvasurl {
+		text-align: right;
+}
+
+::part(svgurl)  { 
+	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
+	font-weight: bold;
+	font-size: 11px;
+	cursor: pointer;
+	color:black;
+	padding: 4px;
+	text-decoration: none;
+}
+
+::part(canvasurl)  { 
+	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
+	font-weight: bold;
+	font-size: 11px;
+	cursor: pointer;
+	color: black;
+	padding: 4px;
+	text-decoration: none;
+}
+
+::part(svgurl):hover{
+	background-color: black;
+	color: white;
+}
+
+::part(canvasurl):hover{
+	background-color: black;
+	color: white;
+}
 
 @media print {
 button { visibility: hidden; }
@@ -308,4 +376,15 @@ header { display: none }
 footer { display: none }
 #shadow-root a { visibility: hidden }
 p.link { display: none }
+::part(svgurl)  { display:none; }
+::part(canvasurl)  { display:none; }
+
+@page {
+    counter-increment: page;
+    counter-reset: page 1;
+    @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+    }
+}
+
 }
