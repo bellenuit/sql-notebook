@@ -43,7 +43,6 @@ var tableCreate = function () {
 	    for(let c of columns) {
 		    let th = document.createElement('th');
 		    var ca;
-		    console.log(c);
 		    if (c.match(/__$/) && c.match(/^__/)) {
 			    ca = "center";
 			    c = c.replace(/__$/,"").replace(/^__/,"");
@@ -567,7 +566,6 @@ runner.sql = function(id, down = false) {
 			   let url = "data:text/csv;base64,"+btoaUnicode(csv);
 			   const d = new Date();
 			   const ds = d. toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13);
-			   console.log(ds);
 		       let a = '<p class="link"><a href="' + url + '" download="export ' + ds  + '.csv">CSV</a>';
 		       s += a;
 			   }
@@ -722,7 +720,7 @@ runner.data = function(id, down = false) {
 
 	const statement = "SELECT count(*) AS c FROM "+tablename +"; SHOW COLUMNS FROM " + tablename;
 	alasql.promise(statement)
-	.then(function(results){ console.log(results);
+	.then(function(results){ 
 		var s = "";
 		s += '<p>table '+tablename;		
 		const cols = [];
@@ -730,7 +728,7 @@ runner.data = function(id, down = false) {
 			cols.push(row.columnid);
 		}
 		s += '<br>columns ' + cols.join(", ");
-		s += '<br>rows ' + results[0][0].c; console.log(results[0][0]);
+		s += '<br>rows ' + results[0][0].c; 
 		
 		output.innerHTML = s;
 		const cell = document.getElementById('cell'+id);
