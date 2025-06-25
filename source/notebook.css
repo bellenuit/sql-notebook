@@ -111,10 +111,17 @@ td {
 }
 
 caption {
-	border:1px solid #777;
+	border:1px solid black;
 	border-bottom: none;
 }
 
+tbody {
+	border:1px solid black;
+}
+
+table {
+	border:1px solid black;
+} 
 
 footer {
 	margin-top: 48px;
@@ -326,12 +333,22 @@ tiny-ps {
 	max-width: 100%;
 }
 
+
+
 div.svgurl {
 		text-align: right;
 }
 
 div.canvasurl {
 		text-align: right;
+}
+
+::part(url) {
+	text-align: right;
+}
+
+::part(divsvg)  { 
+	max-width: 100%;
 }
 
 ::part(svgurl)  { 
@@ -354,12 +371,42 @@ div.canvasurl {
 	text-decoration: none;
 }
 
+::part(rawurl)  { 
+	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
+	font-weight: bold;
+	font-size: 11px;
+	cursor: pointer;
+	color: black;
+	padding: 4px;
+	text-decoration: none;
+}
+
+::part(pdfurl)  { 
+	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
+	font-weight: bold;
+	font-size: 11px;
+	cursor: pointer;
+	color: black;
+	padding: 4px;
+	text-decoration: none;
+}
+
 ::part(svgurl):hover{
 	background-color: black;
 	color: white;
 }
 
 ::part(canvasurl):hover{
+	background-color: black;
+	color: white;
+}
+
+::part(rawurl):hover{
+	background-color: black;
+	color: white;
+}
+
+::part(pdfurl):hover{
 	background-color: black;
 	color: white;
 }

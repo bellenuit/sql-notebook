@@ -5,6 +5,8 @@ Version 1.0.0 2025-02-12
 Version 1.0.1 2025-02-21 added operators abs, clear, max, min, rand, sqrt
 Version 1.0.2 2025-02-23 fixed bug in TTF reader
 Version 1.0.3 2025-04-09 function rpnRedirectConsoleError, fixed bug in TTF reader (offsets subtable 4), webcomponent attribute error, operators log, exp, cvs
+Version 1.0.4 2025-05-05 fixed SVG text mode
+Version 1.1.0 2025-06-23 refactored as worker, added operators cvx
 
 Renders as subset PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
 The output can be displayed or proposed as downloadable link. It can be transparent.
@@ -41,10 +43,14 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 
 /* DICTIONARY */
 
+var ENVIRONMENT_IS_WORKER = typeof importScripts === 'function';
+
 rpnFonts = {};
 rpnFiles = {};
 rpnFontBasePath = "";
 rpnOperators = {};
+rpnFrames = {};
+rpnExtensions = "";
 
 /* DATA TYPES */
 
@@ -178,20 +184,19 @@ rpnString = class {
 /* DEVICES */
 
 rpnRawDevice = class {
-    constructor(node, urlnode) {
-        this.node = node;
-        if (!this.node) this.node = document.createElement("CANVAS");
-        this.urlnode = urlnode;
-        this.imagestack = [];
-        this.timer = null;
-        this.finalround = false;
-        if (this.node) this.clear(this.node.width, this.node.height, 1, 1);
+    constructor() {
+        this.clear(576, 324, 2, 0);
+
     }
     finalize(context) {
-        // stub 
+        postMessage(["rawzip", context.id, null, null]);
     }
 
     clear(width, height, oversampling, transparent) {
+	    this.width = width;
+        this.height = height;
+        this.oversampling = oversampling;
+        this.transparent = transparent;
         this.data = new Uint8ClampedArray(width * height * 4 * oversampling * oversampling);
         if (transparent == 0) {
             for (let i = 0; i < this.data.length; i++) this.data[i] = 255;
@@ -199,9 +204,6 @@ rpnRawDevice = class {
         this.clipdata = new Uint8ClampedArray(width * height * 4 * oversampling * oversampling);
         this.clippath = "";
         for (let i = 0; i < this.clipdata.length; i++) this.clipdata[i] = 255;
-        // touch interface only when changed
-        if (width != this.node.width) this.node.width = width;
-        if (height != this.node.height) this.node.height = height;
     }
     getFlatPath(path) {
         const flatpath = [];
@@ -238,7 +240,6 @@ rpnRawDevice = class {
         return this.fill(context, false);
     }
     fill(context, zerowind = true) {
-        if (context.device.raw + context.device.rawurl < 1) return context;
         const flatpath = this.getFlatPath(context.graphics.path);
         context = this.clip(context);
         this.data = rpnScanFill(flatpath, context.width, context.height, context.graphics.color, zerowind, this.data, this.clipdata);
@@ -248,7 +249,6 @@ rpnRawDevice = class {
         // stub
     }
     stroke(context) {
-        if (context.device.raw + context.device.rawurl < 1) return context;
         const w = context.graphics.linewidth / 2;
         const ad = Math.PI / 2;
         if (!w) return context;
@@ -298,93 +298,47 @@ rpnRawDevice = class {
         return context;
     }
     showpage(context) {
-        if (context.device.raw + context.device.rawurl < 1) {
-            this.node.style.display = "none";
-            if (this.urlnode) this.urlnode.style.display = "none";
-            return context;
-        } 
-        this.node.style.display = (context.device.raw) ? "block" : "none";
-        const image = new ImageData(this.data, context.width * context.device.oversampling);
-        const canvas = (this.node) ? this.node : document.createElement("CANVAS");
-        const ctx = canvas.getContext("2d");
-        if (context.device.oversampling > 1) {
-            const nodebig = document.createElement("CANVAS");
-            nodebig.width = context.width * context.device.oversampling;
-            nodebig.height = context.height * context.device.oversampling;
-            nodebig.getContext("2d").putImageData(image, 0,0);
-            const nodesmall = document.createElement("CANVAS");
-            nodesmall.width = context.width;
-            nodesmall.height = context.height;
-            const nodectx = nodesmall.getContext("2d");
-            nodectx.scale(1/context.device.oversampling, 1/context.device.oversampling);
-            nodectx.imageSmoothingEnabled = true;
-            nodectx.imageSmoothingQuality = "high";
-            nodectx.drawImage(nodebig,0,0);
-            this.imagestack.push(nodectx.getImageData(0,0, context.width, context.height));
-        } else {
-            this.imagestack.push(new ImageData(this.data, context.width * context.device.oversampling));
-        }
-        if (context.device.raw) {
-            if (! this.timer) this.timer = setInterval ( () => {
-                const imagedata = this.imagestack.shift();
-                if (imagedata) {
-                    const ctx = this.node.getContext("2d");
-                    ctx.putImageData(imagedata, 0,0);
-                }
-                if (this.finalround && this.imagestack.length == 0)
-                    clearInterval(this.timer);
-            }, context.device.interval );
-        }
-        if (this.urlnode && context.device.rawurl) {
-            this.urlnode.style.display = "inline";
-            ctx.putImageData(this.imagestack[this.imagestack.length-1], 0,0);
-            const url = canvas.toDataURL();
-            this.urlnode.href = url;
-            this.urlnode.setAttribute("download", "PS.png");
-            if (context.shadow) context.shadow.innerHTML = this.urlnode.outerHTML;
-        } else {
-            if (this.urlnode)  this.urlnode.style.display = "none";
-        }
-        this.clear(this.node.width, this.node.height, context.device.oversampling, context.device.transparent);
+        const data = new ImageData(this.data, context.width * context.device.oversampling);
+        postMessage(["raw", context.id, data, null]);       
+        this.clear(this.width, this.height, this.oversampling, this.transparent);
         return context;
     }
 
 };
 
 rpnCanvasDevice = class {
-    constructor(node, urlnode) {
-        this.node = node;
-        if (!node) document.createElement("CANVAS");
-        this.urlnode = urlnode;
-        this.clippath = "";
-        this.ctx = null;
+    constructor() {
         this.imagestack = [];
         this.timer = null;
         this.finalround = false;
+        this.frames = [];
+        this.clear(640,360,1,0);
+
     }
     finalize(context) {
-        this.finalround = true;
+        postMessage(["canvaszip", context.id, null, null]);
     }
     clear(width, height, oversampling, transparent) {
+	    this.width = width;
+	    this.height = height;
+	    this.node = new OffscreenCanvas(this.width, this.height)
         this.node.width = width * oversampling;
         this.node.height = height * oversampling;
-        const node = document.createElement("CANVAS");
-        node.width = width * oversampling;
-        node.height = height * oversampling;
-        this.ctx = node.getContext("2d");
-        this.ctx.clearRect(0, 0, node.width, node.height);
+		this.ctx = this.node.getContext("2d");
+        this.ctx.clearRect(0, 0, this.node.width, this.node.height);
         if (transparent == 0) {
             this.ctx.fillStyle = "white";
-            this.ctx.fillRect(0, 0, node.width, node.height);
+            this.ctx.fillRect(0, 0, this.node.width, this.node.height);
         }
         this.oversampling = oversampling;
         this.transparent = transparent;
+        this.clippath = "";
     }
     refresh() {
         // stub
     }
     applyPath(path) {
-        if (!this.ctx) this.clear(this.node.width, this.node.height, this.oversampling, this.transparent);
+        if (!this.ctx) this.clear(this.width, this.height, this.oversampling, this.transparent);
         this.ctx.beginPath();
         for (let subpath of path) {
            if (!subpath.length) continue;
@@ -400,7 +354,7 @@ rpnCanvasDevice = class {
         } 
     }
     clip(context) {
-        if (!this.ctx) this.clear(this.node.width, this.node.height, this.oversampling, this.transparent);
+        if (!this.ctx) this.clear(this.width, this.height, this.oversampling, this.transparent);
         for (let clip of context.graphics.clip) {
             this.applyPath(clip);
             this.ctx.clip();
@@ -412,8 +366,7 @@ rpnCanvasDevice = class {
     }
     fill(context, zerowind = true) {
         if (context.device.canvas + context.device.canvasurl < 1) return context;
-        if (context.device.canvas) this.node.style.display = "block";
-        if (!this.ctx) this.clear(this.node.width, this.node.height, this.oversampling, this.transparent);
+        if (!this.ctx) this.clear(this.width, this.height, this.oversampling, this.transparent);
         this.ctx.save();
         context = this.clip(context);
         this.applyPath(context.graphics.path);
@@ -429,7 +382,7 @@ rpnCanvasDevice = class {
     }
     stroke(context) {
         if (context.device.canvas + context.device.canvasurl < 1) return context;
-        if (!this.ctx) this.clear(this.node.width, this.node.height, this.oversampling, this.transparent);
+        if (!this.ctx) this.clear(this.width, this.height, this.oversampling, this.transparent);
         this.ctx.save();
         context = this.clip(context);
         this.applyPath(context.graphics.path);
@@ -441,33 +394,8 @@ rpnCanvasDevice = class {
         return context;
     }
     showpage(context) {
-        if (context.device.canvas + context.device.canvasurl < 1) {
-            this.node.style.display = "none";
-            if (this.urlnode) this.urlnode.style.display = "none";
-            return context;
-        }
-        this.node.style.display = (context.device.canvas) ? "block" : "none";
-        
-        if (context.device.canvasurl && this.urlnode) {
-            this.urlnode.style.display = "inline";
-            const url = this.ctx.canvas.toDataURL();
-            this.urlnode.href = url;
-            this.urlnode.setAttribute("download", "PS.png");
-            } else {
-            if (this.urlnode) this.urlnode.style.display = "none";
-        }
-        if (context.device.canvas && this.node) {
-            this.imagestack.push(this.ctx.getImageData(0, 0, context.width, context.height));
-            if (! this.timer) this.timer = setInterval ( () => {
-                const imagedata = this.imagestack.shift();
-                if (imagedata) {
-                    const ctx = this.node.getContext("2d");
-                    ctx.putImageData(imagedata, 0,0);
-                }
-                if (this.finalround && this.imagestack.length == 0)
-                    clearInterval(this.timer);
-        }, context.device.interval );
-        }
+	    const data = this.ctx.getImageData(0, 0, this.node.width, this.node.height);
+	    postMessage(["canvas", context.id, data, null]);       
         this.ctx = null;
         return context;
     }
@@ -477,11 +405,8 @@ rpnCanvasDevice = class {
 
 
 rpnPDFDevice = class {
-    constructor(node, urlnode) {
-        this.node = node;
-        if (!this.node) this.node = document.createElement("IMG");
-        this.urlnode = urlnode;
-        this.clear(this.node.width, this.node.height, 1, 1);
+    constructor() {
+        
         this.canshow = true;
         this.catalog = {};
         this.pageslist = {};
@@ -494,15 +419,14 @@ rpnPDFDevice = class {
         this.imagestack = [];
         this.timer = null;
         this.finalround = false;
+        this.clear(576, 324, 1, 1);
         
     }
     clear(width, height, oversampling, transparent) { 
         if (Number.isFinite(width*1)) this.width = width;
         if (Number.isFinite(height*1)) this.height = height;
-        this.node.style.backgroundColor = (transparent == 0) ? "white" : "transparent";  
     }
     finalize(context) {
-        if (context.device.pdf + context.device.pdfurl < 1) return context; 
         const objects = [];
         this.catalog.Type = "/Catalog";
         this.catalog.Pages = "2 0 R ";
@@ -531,57 +455,44 @@ rpnPDFDevice = class {
 
 
         const xrefoffset = [];
-        var file = "%PDF-1.1" + rpnEndOfine; // signature
-        file +=  "%¥±ë rpn" + rpnEndOfine; // random binary characters 
+        var file = "%PDF-1.1" + rpnEOL; // signature
+        file +=  "%¥±ë rpn" + rpnEOL; // random binary characters 
         
         for (let k in objects) {    
      const o = objects[k];
             xrefoffset.push(file.length);
-            file += xrefoffset.length + " 0 obj" + rpnEndOfine;
-            file += this.objectDict(o[0]) + rpnEndOfine;
+            file += xrefoffset.length + " 0 obj" + rpnEOL;
+            file += this.objectDict(o[0]) + rpnEOL;
             if (o.length == 2) {
-                file += "stream" + rpnEndOfine;
-                file += o[1] + rpnEndOfine;
-                file += "endstream" + rpnEndOfine;
+                file += "stream" + rpnEOL;
+                file += o[1] + rpnEOL;
+                file += "endstream" + rpnEOL;
             }
-            file += "endobj" + rpnEndOfine + rpnEndOfine;
+            file += "endobj" + rpnEOL + rpnEOL;
         }
         
         
         const startxref = file.length;
 
-        file += "xref" + rpnEndOfine;
-        file += "0 6" + rpnEndOfine;
-        file += "0000000000 65535 f" + rpnEndOfine;
+        file += "xref" + rpnEOL;
+        file += "0 6" + rpnEOL;
+        file += "0000000000 65535 f" + rpnEOL;
         for (let i in xrefoffset) {
             const x = new Intl.NumberFormat('en-IN', { minimumIntegerDigits: 10 , useGrouping: false}).format(xrefoffset[i]);
-            file += x + ' 00000 n ' + rpnEndOfine;
+            file += x + ' 00000 n ' + rpnEOL;
         }
 
         // trailer
         const trailderdict = {};
         trailderdict.Root = "1 0 R";
         trailderdict.Size = 5;
-        file += "trailer " + this.objectDict(trailderdict) + rpnEndOfine;
-        file += 'startxref'+ rpnEndOfine;
-        file += startxref + rpnEndOfine;
-        file +='%%EOF' + rpnEndOfine;
+        file += "trailer " + this.objectDict(trailderdict) + rpnEOL;
+        file += 'startxref'+ rpnEOL;
+        file += startxref + rpnEOL;
+        file +='%%EOF' + rpnEOL;
         const url = "data:application/pdf;base64," + btoa(file);
-       
-        
+        postMessage(["pdf", context.id, url, null]);
 
-        if (context.device.pdfurl && this.urlnode) {
-            this.urlnode.href = url;
-            this.urlnode.style.display = (context.device.pdfurl) ? "inline" : "none";
-            this.urlnode.setAttribute("download", "PS.pdf");
-        }
-        if (context.device.pdf && this.node) {
-            this.node.src = url;
-            this.node.style.display = "block";
-            this.node.style.display = (context.device.pdf) ? "block" : "none";
-            this.node.width = this.width;
-            this.node.height = this.height;
-        } 
     } 
     numberFormat(z) {
         return Intl.NumberFormat('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(z);
@@ -634,8 +545,7 @@ rpnPDFDevice = class {
         return this.fill(context, false);
     }
     fill(context, zerowind = true) {
-        if (context.device.pdf + context.device.pdfurl < 1) return context;
-        if (context.device.textmode * context.showmode) return context;
+	    if (context.showmode) return context;
         if (context.graphics.clip.length) context = this.clip(context);
         this.elements.push(this.getPath(context.graphics.path));
         this.setcolor(context);
@@ -686,7 +596,6 @@ rpnPDFDevice = class {
 
     }
     show(s, context, targetwidth = 0, extraspace = 0) {
-        if (context.device.pdf + context.device.pdfurl < 1) return context;
         if (context.graphics.clip.length) context = this.clip(context);
         this.setfont(context);
         this.setcolor(context);
@@ -737,7 +646,7 @@ rpnPDFDevice = class {
 
 
         const streamdict = {};
-        const stream = this.elements.join(rpnEndOfine);
+        const stream = this.elements.join(rpnEOL);
         this.elements = [];
         streamdict.Length = stream.length;
         this.streams.push([streamdict, stream]);
@@ -746,7 +655,6 @@ rpnPDFDevice = class {
         return context;
     }
     stroke(context) {
-        if (context.device.pdf + context.device.pdfurl < 1) return context;
         if (context.graphics.clip.length) context = this.clip(context);
         this.elements.push(this.getPath(context.graphics.path, false));
         this.setcolor(context);
@@ -759,31 +667,16 @@ rpnPDFDevice = class {
     }
 };
 
+
 rpnSVGDevice = class {
-    constructor(node, urlnode) {
-        this.node = node;
+    constructor() {
         this.canshow = true;
         this.fonts = {};
-        if (!node) this.node = document.createElement("SVG");
-        this.node.setAttribute("xmlns","http://www.w3.org/2000/svg");
-        this.urlnode = urlnode;
-        this.imagestack = [];
-        this.timer = null;
-        this.finalround = false;
-        this.clear( 590, 330, 1, 1);
-    }
-    finalize(context) {
-        this.finalround = true;
-    }
-    refresh() {
-        if (this.node.style.display == "block") {
-        this.node.style.display='none';
-        this.node.offsetHeight;
-        this.node.style.display='block';
-        }
-        // https://martinwolf.org/before-2018/blog/2014/06/force-repaint-of-an-element-with-javascript/
+        this.clear( 576, 324, 1, 1);
     }
     clear(width, height, oversampling, transparent) {
+        this.node = rpnDocument.createElement("svg");
+        this.node.setAttribute("xmlns","http://www.w3.org/2000/svg");
         if (Number.isFinite(width)) {
             this.node.setAttribute("width",width+"px");
             this.width = width;
@@ -794,14 +687,18 @@ rpnSVGDevice = class {
         }
         if (Number.isFinite(width) && Number.isFinite(height))         
         this.node.setAttribute("viewBox", "0 0 " + width+" " + height);
+        this.node.setAttribute("width", width + "px");
+        this.node.setAttribute("height", height + "px");
         this.node.style.backgroundColor = (transparent != 0) ? "transparent" : "white";
         this.clippath = "";
         this.clippathsource = "";
-        while(this.node.firstChild) this.node.removeChild(this.node.lastChild);
+        // while(this.node.firstChild()) this.node.removeChild(this.node.lastChild());
         this.oversampling = oversampling;
         this.transparent = transparent
         this.ctx = true;
 
+    }
+    finalize(context) {
     }
     getPath(path, close = true) {
        const p = [];
@@ -822,17 +719,16 @@ rpnSVGDevice = class {
         return p.join(" ");
     }
     clip(context) {
-        if (!this.ctx) this.clear(this.width, this.height, this.oversampling, this.transparent);
         const test = JSON.stringify(context.graphics.clip);
         if (this.clippathsource == test) return context;
         this.clippath = "";
         this.clippathsource == test;
         for (let clip of context.graphics.clip) {
-            const node = document.createElement("CLIPPATH");
+            const node = rpnDocument.createElement("clippath");
             if (this.clippath) node.setAttribute("clip-path", "url(#"+this.clippath+")");
             this.clippath = "clippath"+this.node.childElementCount;
             node.setAttribute("id", this.clippath);
-            const node2 = document.createElement("PATH");
+            const node2 = document.createElement("path");
             node2.setAttribute("d", this.getPath(clip));
             node.appendChild(node2);
             this.node.appendChild(node);
@@ -844,13 +740,9 @@ rpnSVGDevice = class {
         return this.fill(context, false);
     }
     fill(context, zerowind = true) {
-        if (context.device.svg + context.device.svgurl < 1) return context;
-        if (context.device.textmode * context.showmode) return context;
-        if (context.device.svg) this.node.style.display = "block";
-        if (!this.ctx) this.clear(this.width, this.height, this.oversampling, this.transparent);
-        context = this.clip(context);
-        const node = document.createElement("PATH");
-        node.setAttribute("id","fill"+this.node.childElementCount);
+	    if (context.showmode) return context;
+        const node = rpnDocument.createElement("path");
+        // node.setAttribute("id","fill"+this.node.childElementCount);
         node.setAttribute("d", this.getPath(context.graphics.path));
         node.setAttribute("stroke","none");
         node.setAttribute("fill", "rgb(" + Math.round(context.graphics.color[0]) + ", " + Math.round(context.graphics.color[1]) + ", " + Math.round(context.graphics.color[2]) + ")");
@@ -865,11 +757,7 @@ rpnSVGDevice = class {
         return context;
     }
     stroke(context) {
-        if (context.device.svg + context.device.svgurl < 1) return context;
-        if (context.device.svg) this.node.style.display = "block";
-        if (!this.ctx) this.clear(this.width, this.height, this.oversampling, this.transparent);
-context = this.clip(context);
-        const node = document.createElement("PATH");
+        const node = rpnDocument.createElement("path");
         node.setAttribute("id","stroke" + this.node.childElementCount);
         node.setAttribute("d", this.getPath(context.graphics.path, false));
         node.setAttribute("fill","none");
@@ -881,14 +769,11 @@ context = this.clip(context);
         return context;
     }
     show(s, context, targetwidth = 0) {
-        if (context.device.svg + context.device.svgurl < 1) return context;
-        if (context.device.svg) this.node.style.display = "block";
         if (!Object.prototype.hasOwnProperty(this.fonts, context.graphics.font)) {
             this.fonts[context.graphics.font] = context.graphics.font;
         }
-        if (!this.ctx) this.clear(this.width, this.height, this.oversampling, this.transparent);
         context = this.clip(context);
-        const node = document.createElement("TEXT");
+        const node = rpnDocument.createElement("text");
         node.setAttribute("x", "0");
         node.setAttribute("y", "0");
         node.setAttribute("font-family", context.graphics.font);
@@ -912,38 +797,17 @@ context = this.clip(context);
         return context;
     }
     showpage(context) {
-        if (context.device.svg + context.device.svgurl < 1) {
-            this.node.style.display = "none";
-            if (this.urlnode) this.urlnode.style.display = "none";
-            return context;
-        } 
-        const node = document.createElement("DEFS");
-        this.node.insertBefore(node, this.node.firstChild);
+        const node = rpnDocument.createElement("defs");
+        this.node.insertBefore(node, this.node.firstChild());
         for (const font in this.fonts) {
-            const style = document.createElement("STYLE");
+            const style = rpnDocument.createElement("style");
             const src = readSyncDataURL(rpnFontBasePath + font + ".ttf", "font/ttf");
             style.innerHTML = "@font-face { font-family: '" + font + "'; font-weight: normal; src:  url('" + src + "') format('truetype')} }";
             node.appendChild(style);
         }
-        const shadow = context.shadow;
-        if (context.device.svg && this.node) {
-            this.imagestack.push(this.node.outerHTML.slice());
-            if (! this.timer) this.timer = setInterval ( () => {
-                shadow.innerHTML = this.imagestack.shift(); 
-                if (this.finalround && this.imagestack.length == 0)
-                    clearInterval(this.timer);
-                }, context.device.interval );
-        }
-        if (context.device.svgurl && this.urlnode) {
-            const file = rpnStartTag + "?xml version='1.0' encoding='UTF-8'?" + rpnEndTag + this.node.outerHTML;
-            const url = "data:image/svg+xml;base64," + rpnBbtoaUnicode(file);
-            this.urlnode.href = url;
-            this.urlnode.setAttribute("download", "PS.svg");
-        } 
-        this.node.style.display = (context.device.svg) ? "block" : "none";
-        if (this.urlnode) 
-         this.urlnode.style.display = (context.device.svgurl) ? "inline" : "none";
-        this.ctx = null;
+        console.log(this.node)
+        postMessage(["svg", context.id, this.node.outerHTML(), null])
+        this.clear(this.width, this.height, this.oversampling, this.transparent);
         return context;
     }
 };
@@ -951,7 +815,11 @@ context = this.clip(context);
 /* CONTEXT */
 
 rpnContext = class {
-    constructor() {
+	constructor(obj) {
+	    if (obj) {
+		    Object.assign(this, obj); 
+		    return;
+	    }; 
         this.source = [];
         this.stack = [];
         this.heap = [];
@@ -963,8 +831,8 @@ rpnContext = class {
         this.dictstack.push({});
         this.nodes = [];
         this.fontdict = {};
-        this.device = { canvas: 0, canvasurl: 0, console: 1, interval: 0, oversampling: 1, pdf: 0, pdfurl: 0, raw: 1, rawurl : 0, svg: 0, svgurl: 0, textmode: 0,  transparent: 0  };
-        this.async = true;
+        this.device = { canvas: 0, canvasurl: 0, console: 1, interval: 0, oversampling: 1, pdf: 0, pdfurl: 0, raw: 0, rawurl : 0, svg: 0, svgurl: 0, textmode: 0,  transparent: 0  };
+        this.async = false;
         this.initgraphics();
     }
     get dict() {
@@ -980,9 +848,6 @@ rpnContext = class {
     }
     finalize() {
        for (let n of this.nodes) n.finalize(this);
-    }
-    refresh() {
-        for (let n of this.nodes) n.refresh();
     }
     initgraphics () {
         this.graphicsstack = [];
@@ -1041,17 +906,27 @@ rpnContext = class {
 /* PARSER AND EVALUATOR */
 
 
-rpn = function(s, context = null, outerContext = false ) {
+rpn = function(s, context = null, outerContext = false, silent = false ) {
     if (!context) {
         context = new rpnContext();
     }
-    const list = s.concat(" ").split("");
+    context.silent = silent;
+    const list =  (typeof s == "string") ? s.concat(" ").split("") : [];
     var state = "start";
     var current = "";
     var depth = 0;
-    for (let elem of list) {
+    for (var i = 0; i < list.length; i++) {
+	    let elem = list[i];
         if (context.lasterror) {
-           return context;
+	       if (context.lasterror == 'exit') {
+		       return context;
+	       } 
+	       if (context.lasterror && !context.silent) {
+	           console.error("!" + context.lasterror);
+               console.log("Stack: " + context.stack.reduce((acc,v) => acc + v.dump + " " , " "));
+               console.log("Code executed: " + context.currentcode);
+           }
+		   if (context.lasterror) return context;
         }
         context.currentcode += elem;
         switch (state) {
@@ -1227,7 +1102,7 @@ rpn = function(s, context = null, outerContext = false ) {
                }
                break;
            case "comment":
-             if (elem == rpnEndOfine ) {
+             if (elem == rpnEOL ) {
                 state = "start";
              }
         } // switch state
@@ -1404,7 +1279,7 @@ rpnScanFill = function (path, width, height, color, zerowind, data, clipdata) {
 /* UNIT TEST */
 
 rpnUnitTest = function (input, output) {
-   context = rpn(input);
+   const context = rpn(input, null, false, true);
    result = context.stack.reduce((acc,v) => acc + v.dump + " " , " ").trim();
    if (result == output) {
        check = "ok";
@@ -1595,6 +1470,14 @@ rpnOperators.begin = function(context) {
 rpnOperators.bind = function(context) {
     // Expands all defined rpnOperators in procedure. We ignore that operator for the moment
     return context;};
+    
+rpnOperators.ceil = function(context) {
+    const [r] = context.pop("number");
+    if (!r) return context;
+    context.stack.push(new rpnNumber(Math.ceil(r.value)));
+    return context;
+};
+
 rpnOperators.charpath = function(context) {
     const [s] = context.pop("string");
     if (!context.graphics.current.length) {
@@ -1762,6 +1645,14 @@ rpnOperators.cvs = function(context) {
     if (!x) return context;
     const result = x.dump
     context.stack.push(new rpnString(result, context.heap));
+    return context;
+};
+
+rpnOperators.cvx = function(context) {
+    const [x] = context.pop("any");
+    if (!x) return context;
+    const result = x.value
+    context.stack.push(new rpnProcedure(result));
     return context;
 };
 
@@ -1934,6 +1825,13 @@ rpnOperators.fill = function(context) {
     context.graphics.current = [];
     return context;};
 rpnUnitTest("fill","");
+
+rpnOperators.floor = function(context) {
+    const [r] = context.pop("number");
+    if (!r) return context;
+    context.stack.push(new rpnNumber(Math.floor(r.value)));
+    return context;
+};
 
 rpnOperators.for = function(context) {
     const [proc, limit, increment, initial] = context.pop("procedure", "number", "number", "number");
@@ -2519,6 +2417,18 @@ rpnOperators.readonly = function(context) {
     // makes a dictionary entry readonly. We ignore that operator for the moment
     return context;};
     
+rpnOperators.realtime = function(context)
+{
+	const d = new Date();
+	let h = d.getHours();
+	let m = d.getMinutes();
+	let s = d.getSeconds();
+	let ms = d.getMilliseconds();
+	const t = ((h*60+ m)*60 + s)*1000 + ms;
+	context.stack.push(new rpnNumber(t));
+	return context;
+}
+    
 rpnOperators.repeat = function(context) {
     const [doit, n] = context.pop("any", "number");
     if (!doit) return context;
@@ -2843,8 +2753,10 @@ rpnOperators.show = function(context) {
 
 rpnOperators.showpage = function(context) {
     for (let n of context.nodes) context = n.showpage(context);
-    context.refresh();
+    // context.refresh();
     context.initgraphics();
+//   console.log("SHOWPAGE")
+// context.error("refreshpage");
     return context;
 };
 
@@ -3001,7 +2913,7 @@ rpnOperators.widthshow = function(context) {
 
 /* UTILITY FUNCTIONS */
 
-rpnEndOfine = String.fromCharCode(10);
+rpnEOL = String.fromCharCode(10);
 rpnStartTag = String.fromCharCode(60);
 rpnEndTag = String.fromCharCode(62);
 rpnBackSlash = String.fromCharCode(92);
@@ -3054,51 +2966,6 @@ readSyncDataURL = function(url, filetype = ""){
     return "data:"+filetype+";base64,"+btoa(returnText); //Generate data URL
 };
 
-/* POSTSCRIPT EDITOR */
-
-rpnRedirectConsoleError = function(id) {
-	if (!id) {
-		delete console.error;
-		delete window.onerror;
-	}
-    const current = document.getElementById("console"+id);
-    if (! current) return;
-    console.error = function(message,url,line) {
-        const node = document.createElement("SPAN"); 
-        node.className = "error";
-        node.innerHTML = message || "unknown error";
-        current.innerHTML = node.outerHTML + "<br/>";
-    };
-    document.getElementById("console"+id).innerHTML = "";
-};
-
-rpnRedirectConsole = function(id) {
-	if (!id) {
-		delete console.log;
-		delete console.error;
-		delete window.onerror;
-	}
-    const current = document.getElementById("console"+id);
-    if (! current) return;
-    console.log = function(s) {
-        if (s) {
-            current.innerHTML += s + "<br/>";
-        }
-    };
-    console.error = function(message,url,line) {
-        const node = document.createElement("SPAN"); 
-        node.className = "error";
-        node.innerHTML = message || "unknown error";
-        current.innerHTML += node.outerHTML + "<br/>";
-    };
-    window.onerror = function(message,url,line) {
-        const node = document.createElement("SPAN");
-        node.className = "error";
-        node.innerHTML = message || "unknown error";
-        current.innerHTML += node.outerHTML+ "<br/>";
-    };
-    document.getElementById("console"+id).innerHTML = "";
-};
 
 rpnSwitchDisplay = function (node) {
     if (node.nextSibling.style.display == "block") {
@@ -3110,144 +2977,6 @@ rpnSwitchDisplay = function (node) {
 
 String.prototype.rpnLimitText = rpnLimitText;
 String.prototype.rpnLimitTextEnd = rpnLimitTextEnd;
-
-rpnPostScriptEditor = function(code) {
-    const id = Math.floor(Math.random() * 1000);  // create unique id for console.log
-    const node = document.createElement("DIV");   // build the HTML nodes
-    node.id = "id" & id;
-    node.className = "psmain";
-    const node2 = document.createElement("DIV");
-    node2.className = "editzone";
-    node.appendChild(node2);
-    const node3 = document.createElement("DIV");
-    node3.className = "editheader";
-    node3.innerHTML = "PostScript";
-    node2.appendChild(node3);
-    const node4 = document.createElement("FORM");
-    node2.appendChild(node4);
-    const node5 = document.createElement("BUTTON");
-    node5.type = "button";
-    node5.id = "button" + id;
-    node5.innerHTML = "Run";
-    node4.appendChild(node5);
-    const node6 = document.createElement("TEXTAREA");
-    node6.id = "editor" + id;
-    node6.className = "pseditor";
-    node6.innerHTML = code;
-    node6.rows = code.split(rpnEndOfine).length + 1;
-    node4.appendChild(node6);
-    const node7 = document.createElement("DIV");
-    node7.id = "console" + id;
-    node7.className = "jsconsole";   
-    const node8 = document.createElement("CANVAS");
-    node8.id = "raw" + id;
-    node8.className = "jscanvas";
-    node8.style.display = "none";
-    node8.width = 590;
-    node8.height = 330;
-    node.appendChild(node8);
-    const node9 = document.createElement("A");
-    node9.id = "rawurl" + id;
-    node9.innerHTML = "PNG raw";
-    node9.style.display = "none";
-    node.appendChild(node9);
-    const node10 = document.createElement("CANVAS");
-    node10.id = "canvas" + id;
-    node10.className = "jscanvas";
-    node10.width = 590;
-    node10.height = 330;
-    node10.style.display = "none";
-    node.appendChild(node10);
-    const node11 = document.createElement("A");
-    node11.id = "canvasurl" + id;
-    node11.innerHTML = "PNG canvas";
-    node11.style.display = "none";
-    node.appendChild(node11);
-    const node12 = document.createElement("SVG");
-    node12.id = "svg" + id;
-    node12.className = "jssvg";
-    node12.setAttribute("width","590px");
-    node12.setAttribute("height","330px");
-    node12.style.display = "none";
-    node.appendChild(node12);
-    const node13 = document.createElement("A");
-    node13.id = "svgurl" + id;
-    node13.innerHTML = "SVG";
-    node13.style.display = "none";
-    node.appendChild(node13);
-    const node14 = document.createElement("IMG");
-    node14.id = "pdf" + id;
-    node14.style.display = "none";
-    node14.style.backgroundColor = "white";
-    node14.width = 590;
-    node14.height = 330;
-    node.appendChild(node14);
-    const node15 = document.createElement("A");
-    node15.id = "pdfurl" + id;
-    node15.innerHTML = "PDF";
-    node15.style.display = "none";
-    node.appendChild(node15);
-    node.appendChild(node7);
-    console.log(node.outerHTML);  // add the node to the parent element
-
-    const script = `rpnRedirectConsole($id);
-        run$id = function() {
-        rpnRedirectConsole($id);
-        const width = 590;
-        const height = 330;
-        const code = document.getElementById("editor$id").value;
-        
-        var context = new rpnContext;
-        context.width = width;
-        context.height = height;
-        context.nodes.push(new rpnRawDevice(document.getElementById("raw$id"), document.getElementById("rawurl$id")));
-        context.nodes.push(new rpnCanvasDevice(document.getElementById("canvas$id"), document.getElementById("canvasurl$id")));
-        context.nodes.push(new rpnSVGDevice(document.getElementById("svg$id"), document.getElementById("svgurl$id")));
-        context.nodes.push(new rpnPDFDevice(document.getElementById("pdf$id"), document.getElementById("pdfurl$id")));
-        context = rpn(code, context, true);
-        if (context.device.console) {
-            console.log("<b>stack:</b> " + context.stack.reduce((acc,v) => acc + v.dump + " " , " ").rpnLimitTextEnd());
-            if (context.lasterror) {
-                console.log("<b>rpn:</b> " + context.currentcode.rpnLimitTextEnd());
-            } 
-            console.log("<b>dict:</b>")
-            for (key in context.dict) {
-                console.log(key + " = " + (context.dict[key].dump).rpnLimitText());
-            } 
-            console.log("<b>graphics:</b>")
-            for (key in context.graphics) {
-                console.log(key + ": " + context.graphics[key]);
-            } 
-            console.log("<b>fonts:</b>")
-            for (key in context.fontdict) {
-                console.log(key);
-            }
-            console.log("<b>device:</b>")
-            for (key in context.device) {
-                console.log(key + ": " + context.device[key]);
-            } 
-           if (context.heap.length) {
-               console.log("<b>heap:</b> " + context.heap.reduce( function(acc, v) {
-	               const val = v.value;
-	               if (Array.isArray(val)) {
-	                  return acc + "<br>[" + val.reduce( (acc2, v2) => acc2 + v2.dump + " " , " ") + "] "+v.counter+"<br>";
-	              } else if (val === null) {
-	                  return acc + "<br>";
-	              } else {
-	                return acc + "<br>(" + val + ") "+v.counter;
-	              }
-	           }  , "").rpnLimitText());
-           }       
-      }    
-    };
-    document.getElementById("button$id").onclick = run$id;
-`.replaceAll("$id", id).replaceAll("$code",code);
-    const scriptnode = document.createElement("SCRIPT");
-    scriptnode.innerHTML = script;
-    document.body.appendChild(scriptnode);  // run the script
-    
-};
-
 
 /* TRUETYPE FONT */
 
@@ -3942,7 +3671,7 @@ rpnRomanMapping = `0x20    0x0020    # SPACE
 0xFF    0x02C7    # CARON`;
 
 rpnRomanDict = {};
-for (let lines of rpnRomanMapping.split(rpnEndOfine)) {
+for (let lines of rpnRomanMapping.split(rpnEOL)) {
     rpnRomanDict[parseInt(lines.substr(5, 6))] = parseInt(lines.substr(0, 4));
 }
 
@@ -3994,9 +3723,229 @@ function rpnBbtoaUnicode(s) {
 	));
 };
 
+/* https://github.com/pwasystem/zip/ */
+/* added export keyword to make it modular */
+
+rpnZip = class {
+
+	constructor(name) {
+		this.name = name;
+		this.zip = new Array();
+		this.file = new Array();
+	}
+	
+	dec2bin=(dec,size)=>dec.toString(2).padStart(size,'0');
+	str2dec=str=>Array.from(new TextEncoder().encode(str));
+	str2hex=str=>[...new TextEncoder().encode(str)].map(x=>x.toString(16).padStart(2,'0'));
+	hex2buf=hex=>new Uint8Array(hex.split(' ').map(x=>parseInt(x,16)));
+	bin2hex=bin=>(parseInt(bin.slice(8),2).toString(16).padStart(2,'0')+' '+parseInt(bin.slice(0,8),2).toString(16).padStart(2,'0'));
+	
+	reverse=hex=>{
+		let hexArray=new Array();
+		for(let i=0;i<hex.length;i=i+2)hexArray[i]=hex[i]+''+hex[i+1];
+		return hexArray.filter((a)=>a).reverse().join(' ');	
+	}
+	
+	crc32=r=>{
+		for(var a,o=[],c=0;c<256;c++){
+			a=c;
+			for(var f=0;f<8;f++)a=1&a?3988292384^a>>>1:a>>>1;
+			o[c]=a;
+		}
+		for(var n=-1,t=0;t<r.length;t++)n=n>>>8^o[255&(n^r[t])];
+		return this.reverse(((-1^n)>>>0).toString(16).padStart(8,'0'));
+	}
+	
+	fecth2zip(filesArray,folder=''){
+		filesArray.forEach(fileUrl=>{
+			let resp;				
+			fetch(fileUrl).then(response=>{
+				resp=response;
+				return response.arrayBuffer();
+			}).then(blob=>{
+				new Response(blob).arrayBuffer().then(buffer=>{
+					console.log(`File: ${fileUrl} load`);
+					let uint=[...new Uint8Array(buffer)];
+					uint.modTime=resp.headers.get('Last-Modified');
+					uint.fileUrl=`${this.name}/${folder}${fileUrl}`;							
+					this.zip[fileUrl]=uint;
+				});
+			});				
+		});
+	}
+	
+	str2zip(name,str,folder=''){
+		let uint=[...new Uint8Array(this.str2dec(str))];
+		uint.name=name;
+		uint.modTime=new Date();
+		uint.fileUrl=`${this.name}/${folder}${name}`;
+		this.zip[name]=uint;
+	}
+	
+	convertBinaryStringToUint8Array(bStr) {
+	var i, len = bStr.length, u8_array = new Uint8Array(len);
+	for (var i = 0; i < len; i++) {
+		u8_array[i] = bStr.charCodeAt(i);
+	}
+	return u8_array;
+	}
+	
+	binary2zip(name,str,folder=''){
+		let uint=this.convertBinaryStringToUint8Array(str);
+		uint.name=name;
+		uint.modTime=new Date();
+		uint.fileUrl=`${this.name}/${folder}${name}`;
+		this.zip[name]=uint;
+	}
+	
+	files2zip(files,folder=''){
+		for(let i=0;i<files.length;i++){
+			files[i].arrayBuffer().then(data=>{
+				let uint=[...new Uint8Array(data)];
+				uint.name=files[i].name;
+				uint.modTime=files[i].lastModifiedDate;
+				uint.fileUrl=`${this.name}/${folder}${files[i].name}`;
+				this.zip[uint.fileUrl]=uint;							
+			});
+		}
+	}
+	
+	makeZip(a=null){
+		let count=0;
+		let fileHeader='';
+		let centralDirectoryFileHeader='';
+		let directoryInit=0;
+		let offSetLocalHeader='00 00 00 00';
+		let zip=this.zip;
+		for(const name in zip){
+			let modTime=()=>{
+				lastMod=new Date(zip[name].modTime);
+				hour=this.dec2bin(lastMod.getHours(),5);
+				minutes=this.dec2bin(lastMod.getMinutes(),6);
+				seconds=this.dec2bin(Math.round(lastMod.getSeconds()/2),5);
+				year=this.dec2bin(lastMod.getFullYear()-1980,7);
+				month=this.dec2bin(lastMod.getMonth()+1,4);
+				day=this.dec2bin(lastMod.getDate(),5);						
+				return this.bin2hex(`${hour}${minutes}${seconds}`)+' '+this.bin2hex(`${year}${month}${day}`);
+			}					
+			let crc=this.crc32(zip[name]);
+			let size=this.reverse(parseInt(zip[name].length).toString(16).padStart(8,'0'));
+			let nameFile=this.str2hex(zip[name].fileUrl).join(' ');
+			let nameSize=this.reverse(zip[name].fileUrl.length.toString(16).padStart(4,'0'));
+			let fileHeader=`50 4B 03 04 14 00 00 00 00 00 ${modTime} ${crc} ${size} ${size} ${nameSize} 00 00 ${nameFile}`;
+			let fileHeaderBuffer=this.hex2buf(fileHeader);
+			directoryInit=directoryInit+fileHeaderBuffer.length+zip[name].length;
+			centralDirectoryFileHeader=`${centralDirectoryFileHeader}50 4B 01 02 14 00 14 00 00 00 00 00 ${modTime} ${crc} ${size} ${size} ${nameSize} 00 00 00 00 00 00 01 00 20 00 00 00 ${offSetLocalHeader} ${nameFile} `;
+			offSetLocalHeader=this.reverse(directoryInit.toString(16).padStart(8,'0'));
+			this.file.push(fileHeaderBuffer,new Uint8Array(zip[name]));
+			count++;
+		}
+		centralDirectoryFileHeader=centralDirectoryFileHeader.trim();
+		let entries=this.reverse(count.toString(16).padStart(4,'0'));
+		let dirSize=this.reverse(centralDirectoryFileHeader.split(' ').length.toString(16).padStart(8,'0'));
+		let dirInit=this.reverse(directoryInit.toString(16).padStart(8,'0'));
+		let centralDirectory=`50 4b 05 06 00 00 00 00 ${entries} ${entries} ${dirSize} ${dirInit} 00 00`;
+		
+		
+		this.file.push(this.hex2buf(centralDirectoryFileHeader),this.hex2buf(centralDirectory));
+		
+		if(!a) a = document.createElement('a');
+		a.href = URL.createObjectURL(new Blob([...this.file],{type:'application/octet-stream'}));
+		//console.log(a.href)
+		a.download = `${this.name}.zip`;
+		//a.click();				
+	}
+}
+
 
 /* TINYPS TAG */
 
+async function rpn2(code, context) {
+	context.async = true;
+	rpn(code, context, true);
+}
+
+xmlDoc = class {
+	constructor() {
+		
+	}
+	createElement(type)
+	{
+		return new xmlNode(type);
+	}
+	
+	
+}
+
+xmlNode = class {
+	constructor(type) {
+		this.type = type
+		this.attributes = {};
+		this.style = {};
+		this.innerHTML = '';
+		this.children = [];
+	}
+	
+	appendChild(node) {
+		this.children.push(node);
+	}
+	
+	firstChild() {
+	    if (this.children.length) return this.children[0];
+	}
+	
+	lastChild() {
+	    if (this.children.length) return this.children[this.children.length-1];
+	}
+
+	insertBefore(newNode, referenceNode){
+		const newChildren = [];
+		for (let i = 0; i < this.children.length; i++) {
+			if (this.children[i].outerHTML() === referenceNode.outerHTML()) 
+			{
+				newChildren.push(newNode)
+			}
+			newChildren.push(this.children[i])
+		}
+		this.children = newChildren;
+	}
+	
+	removeChild(node){
+		for (let i = 0; i < this.children.length; i++) {
+			if (this.children[i] === node) {
+				this.children = this.children.splice(i, 1);
+				return;
+			}
+		}
+		// not found, insert anyway
+		this.appendChild(node);
+	}
+
+	
+	outerHTML() {
+		const list = [];
+		for(let key in this.attributes) {
+			list.push(key + ' = "' + this.attributes[key] + '"');
+		}
+		
+		list.push(' style = "');
+		
+			for(let key in this.style) {
+			list.push(key + ' : "' + this.style[key] + '"');
+		}
+		
+		list.push('" ');
+		
+		
+		return "<" + this.type + " " + list.join(" ") + ">" + this.innerHTML.replace("<","&lt;") + this.children.map(node => node.outerHTML()).join("") + "</" + this.type +">";  
+	}
+	
+	setAttribute(key, value) {
+		this.attributes[key] = value;
+	}
+}
+
+rpnDocument = new xmlDoc();
 
 class tinyPStag extends HTMLElement {
   // static observedAttributes = ["innerHTML", "width", "height", "format", "oversampling", "transparent", "interval"];
@@ -4004,6 +3953,7 @@ class tinyPStag extends HTMLElement {
   constructor() {
     super();
     this.shadow = this.attachShadow({mode: "open"});
+    this.nodes = {};
     this.ready = false;
     const elementToObserve = this;
     this.observedAttributes = ["innerHTML", "width", "maxwidth", "height", "format", "oversampling", "textmode", "transparent", "interval", "error"];
@@ -4042,140 +3992,302 @@ class tinyPStag extends HTMLElement {
     context.device.interval = this.getAttribute("interval") ?? 0;
 	const errorMode = this.getAttribute("error") ?? 0;
     var divnode = document.createElement("DIV");
-    var node;
+    divnode.part = "output";
+    var divnurlode = document.createElement("DIV");
+    divnurlode.part = "url"
+    var divsvgnode = document.createElement("DIV");
+    divsvgnode.part = "divsvg"
+    divsvgnode.className = "divsvg"
+    divsvgnode.style.width = context.width + "px";
+    divsvgnode.style.height = context.height + "px";
     var othernode;
-    
-    switch(this.getAttribute("format")) {
-        case "raw": 
-            console.log("Adding rawnode");
-            node = document.createElement("CANVAS");
-            node.id = "raw" + this.id;
-            node.part = "raw";
-            node.className = "jscanvas";
-            node.style.display = "block";
-            node.width = context.width;
-            node.height = context.height;
-            context.nodes.push(new rpnRawDevice(node, null));
-            context.device.raw = 1;
-            break;
-        case "rawurl": 
-            console.log("Adding rawnode");
-            othernode = document.createElement("CANVAS");
-            othernode.id = "raw" + this.id;
-            othernode.part = "raw";
-            othernode.className = "jscanvas";
-            othernode.style.display = "none";
-            othernode.width = context.width;
-            othernode.height = context.height;
-            node = document.createElement("A");
-            node.id = "raw" + this.id;
-            node.part = "rawurl";
-            node.innerHTML = "PNG";
-            node.style.display = "inline";
-            context.nodes.push(new rpnRawDevice(othernode, node));
-            context.device.rawurl = 1;
-            break;
-        case "canvasurl":
-            console.log("Adding canvasurlnode");
-            othernode = document.createElement("CANVAS");
-            othernode.id = "canvas" + this.id;
-            othernode.part = "canvas";
-            othernode.className = "jscanvas";
-            othernode.style.display = "none";
-            othernode.width = context.width;
-            othernode.height = context.height;
-            node = document.createElement("A");
-            node.id = "canvasurl" + this.id;
-            node.part = "canvasurl";
-            node.innerHTML = "PNG";
-            node.style.display = "inline";
-            context.nodes.push(new rpnCanvasDevice(othernode, node));
-            context.device.canvasurl = 1;
-            break;
-        case "svg":
-            console.log("Adding svgnode");
-            node = document.createElement("SVG");
-            node.id = "svg" + this.id;
-            node.className = "jssvg";
-            node.part = "svg";
-            node.style.display = "block";
-            node.width = context.width;
-            node.height = context.height;
-            if (this.getAttribute("maxwidth"))
-            	node.style.maxWidth = this.getAttribute("maxwidth");
-            context.nodes.push(new rpnSVGDevice(node, null));
-            context.device.svg = 1;
-            break;
-        case "svgurl":
-            console.log("Adding svgurlnode");
-            othernode = document.createElement("SVG");
-            othernode.id = "svg" + this.id;
-            othernode.part = "svg";
-            othernode.className = "jssvg";
-            othernode.style.display = "none";
-            othernode.width = context.width;
-            othernode.height = context.height;
-            node = document.createElement("A");
-            node.id = "svgurl" + this.id;
-            node.part = "svgurl";
-            node.innerHTML = "SVG";
-            node.style.display = "inline";
-            context.nodes.push(new rpnSVGDevice(othernode, node));
-            context.device.svgurl = 0;
-            context.device.svgurl = 1;
-            break;
-        case "pdf":
-            console.log("Adding pdfnode");
-            node = document.createElement("IMG");
-            node.id = "pdf" + this.id;
-            node.part = "pdf";
-            node.style.display = "block";
-            node.width = context.width;
-            node.height = context.height;
-            context.nodes.push(new rpnPDFDevice(node, null));
-            context.device.pdf = 1;
-            break;
-        case "pdfurl":
-            console.log("Adding pdfurlnode");
-            node = document.createElement("IMG");
-            node.id = "pdf" + this.id;
-            node.part = "pdfurl";
-            node.style.display = "none";
-            node.width = context.width;
-            node.height = context.height;
-            node = document.createElement("A");
-            node.id = "pdfurl" + this.id;
-            node.innerHTML = "PDF";
-            node.style.display = "inline";
-            context.nodes.push(new rpnPDFDevice(othernode, node));
-            context.device.pdfurl = 1;
-            break;
-        case "canvas":
-        default:
-            console.log("Adding canvasnode");
-            node = document.createElement("CANVAS");
-            node.id = "canvas" + this.id;
-            node.part = "canvas";
-            node.className = "jscanvas";
-            node.style.display = "block";
-            node.width = context.width;
-            node.height = context.height;
-
-            context.nodes.push(new rpnCanvasDevice(node, null));
-            context.device.canvas = 1;
-            break;
-    }
-    // divnode.appendChild(node);
-    //  this.shadow.innerHTML = divnode.outerHTML;
     this.shadow.innerHTML = "";
-    this.shadow.appendChild(node);
-    context.nodes[0].clear(context.width, context.height, context.device.oversampling, context.device.transparent);
-    context.shadow = this.shadow;
+    const formats = this.getAttribute("format").split(",");
+    var errornode = document.createElement("DIV");
+    errornode.part = "error"
+    errornode.className = "error";
+    errornode.style.display = "none";
+
+	var node, node2, node3, node4;
+	var urlnode, urlnode2, urlnode3, urlnode4;
+    
+    if (formats.indexOf("raw") > -1 || formats.indexOf("rawurl") > -1) {
+	    console.log("Adding rawnode");
+        node = document.createElement("CANVAS");
+        node.id = "raw" + this.id;
+        node.part = "raw";
+        node.className = "jsraw";
+        node.style.display = "none";
+        node.width = context.width * context.device.oversampling;
+        node.height = context.height *  context.device.oversampling;
+        node.style.width = context.width + "px";
+		node.style.height = context.height + "px";
+        context.device.raw = 1;
+        
+        if (formats.indexOf("raw") > -1)  {
+	        node.style.display = "block";
+        }
+        
+        if (formats.indexOf("rawurl") > -1) {
+	        urlnode = document.createElement("A");
+            urlnode.id = "rawurl" + this.id;
+            urlnode.part = "rawurl";
+            urlnode.className = "jsrawurl";
+            urlnode.innerHTML = "PNG";
+            urlnode.style.display = "inline";
+            rpnFrames[urlnode.id] = [];
+            context.device.rawurl = 1;
+            this.nodes.raw = node;
+            this.nodes.rawurl = urlnode;
+
+        } else {
+	        this.nodes.raw = node;
+        }
+    }
+    if (formats.indexOf("canvas") > -1 || formats.indexOf("canvasurl") > -1) {
+        console.log("Adding canvasnode");
+        node2 = document.createElement("CANVAS");
+        node2.id = "canvas" + this.id;
+        node2.part = "canvas";
+        node2.className = "jscanvas";
+        node2.style.display = "none";
+        node2.width = context.width * context.device.oversampling;
+        node2.height = context.height *  context.device.oversampling;
+        node2.style.width = context.width + "px";
+		node2.style.height = context.height + "px";
+        context.device.canvas = 1;
+        
+        if (formats.indexOf("canvas") > -1)  {
+	        node2.style.display = "block";
+        }
+            
+        if (formats.indexOf("canvasurl") > -1) {  
+	        urlnode2 = document.createElement("A");
+            urlnode2.id = "canvasurl" + this.id;
+            urlnode2.part = "canvasurl";
+            urlnode2.className = "jscanvasurl";
+            urlnode2.innerHTML = "PNG";
+            urlnode2.style.display = "inline";
+            rpnFrames[urlnode2.id] = [];
+            context.device.canvasurl = 1;
+            this.nodes.canvas = node2
+            this.nodes.canvasurl = urlnode2;
+        } else {
+	        this.nodes.canvas = node2;
+        }
+    }
+	        
+	if (formats.indexOf("svg") > -1 || formats.indexOf("svgurl") > -1) {        
+        console.log("Adding svgnode");
+        // let svgdivnode = document.createElement("DIV");
+        node3 = document.createElement("SVG");
+        node3.setAttribute("xmlns","http://www.w3.org/2000/svg"); // must be first attribute!
+        node3.id = "svg" + this.id;
+        node3.className = "jssvg";
+        node3.part = "svg";
+        node3.style.display = "none";
+        node3.width = context.width;
+        node3.height = context.height;
+        node3.style.width = context.width + "px";
+		node3.style.height = context.height + "px";
+        if (this.getAttribute("maxwidth"))
+        	node3.style.maxWidth = this.getAttribute("maxwidth");
+        context.device.svg = 1;
+        
+        if (formats.indexOf("svg") > -1)  {
+	        node3.style.display = "block";
+        }
+        
+        if (formats.indexOf("svgurl") > -1) {
+	        urlnode3 = document.createElement("A");
+            urlnode3.id = "svgurl" + this.id;
+            urlnode3.part = "svgurl";
+            urlnode3.className = "svgurl";
+            urlnode3.innerHTML = "SVG";
+            urlnode3.style.display = "inline";
+            this.nodes.svg = node3;
+            this.nodes.svgurl = urlnode3;
+            context.device.svgurl = 1;
+	    } else {
+		    this.nodes.svg = node3;
+	    }
+	    //divnode.appendChild(svgdivnode);
+	}
+	
+	if (formats.indexOf("pdf") > -1 || formats.indexOf("pdfurl") > -1) {   
+        console.log("Adding pdfnode");
+        node4 = document.createElement("IMG");
+        node4.id = "pdf" + this.id;
+        node4.part = "pdf";
+        node4.className = "pdf";
+        node4.style.display = "none";
+        node4.width = context.width;
+        node4.height = context.height;
+        node4.style.backgroundColor = (context.transparent == 0) ? "white" : "transparent";  
+        context.device.pdf = 1;
+        
+        if (formats.indexOf("pdf") > -1)  {
+	        node4.style.display = "block";
+        }
+        
+        if (formats.indexOf("pdfurl") > -1) {
+	        urlnode4 = document.createElement("A");
+            urlnode4.id = "pdfurl" + this.id;
+            urlnode4.part = "pdfurl";
+            urlnode4.className = "pdfurl";
+            urlnode4.innerHTML = "PDF";
+            urlnode4.style.display = "inline";
+            this.nodes.pdf = node4;
+            this.nodes.pdfurl = urlnode4;
+            context.device.pdfurl = 1;
+
+	    } else {
+		    this.nodes.pdf = node4;
+	    }
+	}
+	
+	if (node) divnode.appendChild(node);
+	if (node2) divnode.appendChild(node2);
+	if (node3) { divsvgnode.appendChild(node3); divnode.appendChild(divsvgnode) }
+	if (node4) divnode.appendChild(node4);
+	if (urlnode) divnurlode.appendChild(urlnode);
+	if (urlnode2) divnurlode.appendChild(urlnode2);
+	if (urlnode3) divnurlode.appendChild(urlnode3);
+	if (urlnode4) divnurlode.appendChild(urlnode4);
+	
+    
+    this.shadow.appendChild(divnode);
+    this.shadow.appendChild(divnurlode);
+    this.shadow.appendChild(errornode);  
+    
+    const worker = rpnWorker(this.innerHTML, context);
+    
+    worker.onmessage = function (e) {
+	    const msg = e.data; 
+		if (msg.length != 4) { 
+			console.log("worker: formaterror"); worker.terminate(); 
+			return; 
+		}
+		const [ action, id, data, contextstring ] = msg;
+		
+		var node, shadow, canvasnode, svgnode, pdfnode, urlnode, ctx, url, errornode;
+		
+		console.log("worker out: " + action + " " + id);
+		switch (action)
+		{
+			case "raw":  node = document.getElementById(id);
+				            shadow = node.shadowRoot; 
+							canvasnode = shadow.querySelector('.jsraw');
+			                ctx = canvasnode.getContext("2d");
+							ctx.putImageData(data,0,0);
+							urlnode = shadow.querySelector('.jsrawurl');
+							if (urlnode) {
+								url = ctx.canvas.toDataURL();
+								urlnode.href = url;
+								urlnode.setAttribute("download", "PS.png");
+								rpnFrames[urlnode.id].push(url);
+							}
+							break;
+			case "rawzip": node = document.getElementById(id);
+				              shadow = node.shadowRoot; 
+							  urlnode = shadow.querySelector('.jsrawurl');
+							  if (urlnode) {
+								  let z = new rpnZip('Frames');
+				                  var i = 0;
+				                  if (rpnFrames[urlnode.id].length > 1) {
+					                  for (let u of rpnFrames[urlnode.id]) {
+						                  if (u && u !== 'null') { 
+						                  	const b = atob(u.split(",")[1]);
+										  	z.binary2zip((1000+i)+".png",b,"");
+										  	i++;
+										  }
+										  
+					                  }	
+					                  rpnFrames[urlnode.id] = [];				                
+					                  z.makeZip(urlnode);
+					                  urlnode.innerHTML = "ZIP";
+					              }
+                              }
+                              break;
+			case "canvas":  node = document.getElementById(id);
+				            shadow = node.shadowRoot; 
+							canvasnode = shadow.querySelector('.jscanvas');
+			                ctx = canvasnode.getContext("2d");
+							ctx.putImageData(data,0,0);
+							urlnode = shadow.querySelector('.jscanvasurl');
+							if (urlnode) {
+								url = ctx.canvas.toDataURL();
+								urlnode.href = url;
+								urlnode.setAttribute("download", "PS.png");
+								rpnFrames[urlnode.id].push(url);
+							}
+							break;
+							
+			case "canvaszip": node = document.getElementById(id);
+				              shadow = node.shadowRoot; 
+							  urlnode = shadow.querySelector('.jscanvasurl');
+							  if (urlnode) {
+								  let z = new rpnZip('Frames');
+				                  var i = 0;
+				                  if (rpnFrames[urlnode.id].length > 1) {
+					                  for (let u of rpnFrames[urlnode.id]) {
+						                  if (u && u !== 'null') { 
+						                  	const b = atob(u.split(",")[1]);
+										  	z.binary2zip((1000+i)+".png",b,"");
+										  	i++;
+										  }
+										  
+					                  }	
+					                  rpnFrames[urlnode.id] = [];				                
+					                  z.makeZip(urlnode);
+					                  urlnode.innerHTML = "ZIP";
+					              }
+                              }
+                              break;
+		
+			case "svg":     node = document.getElementById(id);
+				            shadow = node.shadowRoot; 
+							svgnode = shadow.querySelector('.divsvg');
+			                svgnode.innerHTML = data;
+							urlnode = shadow.querySelector('.svgurl');
+							if (urlnode) {
+								let file = rpnStartTag + "?xml version='1.0' encoding='UTF-8'?" + rpnEndTag + data;
+                                url = "data:image/svg+xml;base64," + rpnBbtoaUnicode(file);
+                                urlnode.href = url;
+                                urlnode.setAttribute("download", "PS.svg");
+							}
+							break;
+			
+			
+			case "pdf":     node = document.getElementById(id);
+				            shadow = node.shadowRoot; 
+							pdfnode = shadow.querySelector('.pdf');
+			                pdfnode.src = data;
+							urlnode = shadow.querySelector('.pdfurl');
+							urlnode.href = data;
+			                urlnode.setAttribute("download", "PS.pdf");
+			                break;
+			
+			case "error":   node = document.getElementById(id);
+			                shadow = node.shadowRoot; 
+							errornode = shadow.querySelector('.error');
+							errornode.style.display = "block";
+			                errornode.style.color = "red";
+			                errornode.width = context.width;
+			                errornode.height = context.height;
+                            errornode.innerHTML = data;
+			
+			default :       
+		}
+    
+    };
+
+    
+    worker.postMessage(["rpn",this.id, this.innerHTML,JSON.stringify(context)])
+    
+    /*
     context = rpn(this.innerHTML, context, true);
     if (context.lasterror) {
-        console.error("!" + context.lasterror);
-        console.log("Stack: " + context.stack.reduce((acc,v) => acc + v.dump + " " , " "));
-        console.log("Code executed: " + context.currentcode);
 		if (errorMode) {
 			console.log("errorMode");
 			node = document.createElement("DIV");
@@ -4187,8 +4299,141 @@ class tinyPStag extends HTMLElement {
 			node.innerHTML = "!" + context.lasterror + '<p>' + "Stack: " + context.stack.reduce((acc,v) => acc + v.dump + " " , " ") + '<p>' + "Code executed: " + context.currentcode;
 			this.shadow.appendChild(node);
 		}
-    }
+    }*/
+    
     
   }
 }
+
 customElements.define("tiny-ps", tinyPStag);
+
+workeronmessage = function (e) {
+    
+    const msg = e.data; 
+	if (msg.length != 4) { console.log("formaterror"); worker.terminate(); return; }
+
+	const action = msg[0];
+	const id = msg[1];
+	const data = msg[2];
+	var context = new rpnContext(JSON.parse(msg[3]));
+	console.log(context.nodes);
+	
+	if(context.device.raw || context.device.rawurl) {
+		context.nodes.push(new rpnRawDevice());
+	}
+	if(context.device.canvas || context.device.canvasurl) {
+		context.nodes.push(new rpnCanvasDevice());
+	}
+	if(context.device.svg || context.device.svgurl) {
+		context.nodes.push(new rpnSVGDevice());
+	}
+		if(context.device.pdf || context.device.pdfurl) {
+		context.nodes.push(new rpnPDFDevice());
+	}
+
+	context.id = id;
+	
+	for(let i in context.nodes) {
+        context.nodes[i].clear(context.width, context.height, context.device.oversampling, context.device.transparent); 
+	}
+	
+	console.log("worker in: " + action + " " + id)
+	
+	switch (action)
+	{
+		case "rpn": context = rpn(data, context, true); 
+		            if (context.lasterror) postMessage(["error", context.id, "!" + context.lasterror + '<p>' + "Stack: " + context.stack.reduce((acc,v) => acc + v.dump + " " , " ") + '<p>' + "Code executed: " + context.currentcode.substr(-300), null]);
+					break;
+		default : handleMessageExtended(e);
+	}
+    
+};
+
+
+
+function rpnWorker() {
+	const workercode = []
+	workercode.push('rpnFonts = ' + JSON.stringify(rpnFonts));
+	workercode.push('rpnFiles = ' + JSON.stringify(rpnFiles));
+	workercode.push('rpnFontBasePath = '+ "'" + rpnFontBasePath+"'");
+	workercode.push('rpnOperators = ' + JSON.stringify(rpnOperators));
+	workercode.push('rpnHeapElement = ' + rpnHeapElement.toString());
+	workercode.push('rpnArray = ' + rpnArray.toString());
+	workercode.push('rpnDictionary = ' + rpnDictionary.toString());
+	workercode.push('rpnError = ' + rpnError.toString());
+	workercode.push('rpnMark = ' + rpnMark.toString());
+	workercode.push('rpnName = ' + rpnName.toString());
+	workercode.push('rpnNumber = ' + rpnNumber.toString());
+	workercode.push('rpnProcedure = ' + rpnProcedure.toString());
+	workercode.push('rpnString = ' + rpnString.toString());
+	workercode.push('rpnRawDevice = ' + rpnRawDevice.toString());
+	workercode.push('rpnCanvasDevice = ' + rpnCanvasDevice.toString());
+	workercode.push('rpnPDFDevice = ' + rpnPDFDevice.toString());
+	workercode.push('rpnSVGDevice = ' + rpnSVGDevice.toString());
+	workercode.push('rpnContext = ' + rpnContext.toString()); 
+	workercode.push('rpn = ' + rpn.toString());
+	workercode.push('rpnBezier = ' + rpnBezier.toString());
+	workercode.push('rpnLineIntersection = ' + rpnLineIntersection.toString());
+	workercode.push('rpnMatrixMultiplication = ' + rpnMatrixMultiplication.toString());
+	workercode.push('rpnDecompose2dMatrix = ' + rpnDecompose2dMatrix.toString());
+	workercode.push('rpnScanFill = ' + rpnScanFill.toString());
+	workercode.push('rpnUnitTest = ' + rpnUnitTest.toString());
+	workercode.push('rpnEOL = String.fromCharCode(10);'); 
+	workercode.push('rpnStartTag = String.fromCharCode(60);'); 
+	workercode.push('rpnEndTag = String.fromCharCode(62);'); 
+	workercode.push('rpnBackSlash = String.fromCharCode(92);'); 
+	workercode.push('rpnObjectSlice = ' + rpnObjectSlice.toString());
+	workercode.push('rpnHtmlSpecialChars = ' + rpnHtmlSpecialChars.toString()); 
+	workercode.push('rpnLimitText = ' + rpnLimitText.toString());
+	workercode.push('rpnLimitTextEnd = ' + rpnLimitTextEnd.toString());
+	workercode.push('readSyncURL = ' + readSyncURL.toString());
+	workercode.push('readSyncDataURL = ' + readSyncDataURL.toString());
+	// workercode.push('rpnRedirectConsoleError = ' + rpnRedirectConsoleError.toString());
+// 	workercode.push('rpnRedirectConsole = ' + rpnRedirectConsole.toString());
+	workercode.push('rpnSwitchDisplay = ' + rpnSwitchDisplay.toString());
+// 	workercode.push('rpnPostScriptEditor = ' + rpnPostScriptEditor.toString());
+	workercode.push('rpnBinary = ' + rpnBinary.toString());
+	workercode.push('rpnTTF = ' + rpnTTF.toString());
+	workercode.push('rpnRomanDict = ' + JSON.stringify(rpnRomanDict));
+	workercode.push('rpnMacRomanEncoding = ' + rpnMacRomanEncoding.toString());
+	workercode.push('rpnSubstitutionDict = ' + JSON.stringify(rpnSubstitutionDict));
+	workercode.push('rpnBbtoaUnicode = ' + rpnBbtoaUnicode.toString());
+	workercode.push('rpnFontSubstitution = ' + rpnFontSubstitution.toString());
+	workercode.push('rpnZip = ' + rpnZip.toString());
+	workercode.push('xmlDoc = ' + xmlDoc.toString());
+	workercode.push('xmlNode = ' + xmlNode.toString());
+	workercode.push('rpnDocument = new xmlDoc();');
+
+	workercode.push('this.onmessage = ' + workeronmessage.toString());
+rpnDocument = new xmlDoc();
+
+	for (key in rpnOperators)
+	{
+		workercode.push('rpnOperators.' + key + ' = ' + rpnOperators[key].toString());
+	}
+	workercode.push('fontfiles = {};');
+	for (key in fontfiles)
+	{
+		workercode.push('fontfiles["' + key + '"] = "' + fontfiles[key]+ '"') ;
+	}
+	// console.log(rpnExtensions);
+	workercode.push(rpnExtensions);
+
+	var blob;
+	try {
+		var code = workercode.join(";\n\n").replaceAll("\\","\\\\");
+		blob = new Blob([code], {type: 'application/javascript'});
+	}  catch (e) {
+		console.log("rpnWorker blob failed");
+		return;
+	}
+	return new Worker(URL.createObjectURL(blob));
+    
+    
+    
+    
+    
+}
+
+
+

@@ -47,19 +47,19 @@ examples['home'] = `
     },
     {
         "type": "data",
-        "source": "third\\ncity, population\\nZürich, 400000\\nGenève, 250000\\nLausanne, 150000"
+        "source": "_third\\ncity, population\\nZürich, 400000\\nGenève, 250000\\nLausanne, 150000"
     },
     {
         "type": "sql",
-        "source": "SELECT * FROM third"
+        "source": "SELECT * FROM _third"
     },
     {
         "type": "wiki",
-        "source": "===PostScript code===\\nYou can PostScript to visualize the data or to add illustration. PostScript is rendered to an SVG file you can save.\\n* The data has to be prepared in a table. Set the first column to the category and the following to the values.\\n* To get the data, use the '''table''' command. It has the syntax '''(tablename) 1 table''' when the first column is a category,  '''(tablename) 0 table''' when the first column is also a number. The result in the stack is an array of rows which are arrays of column values.\\n* The script has one installed fonts you can use: '''TGL017'''. \\nClick '''edit''' of the following cell to inspect the code."
+        "source": "===PostScript code===\\nYou can PostScript to visualize the data or to add illustration. PostScript is rendered to an SVG file you can save.\\n* The data has to be prepared in a table and have a name starting with underscore. The first parameter is the table name and the second the number of columns which are not numbers. The result in the stack is an array of rows which are arrays of column values.\\n* The script has one installed fonts you can use: '''TGL017'''. \\nClick '''edit''' of the following cell to inspect the code."
     },
     {
         "type": "ps",
-        "source": "% data\\n/data (third) 1 table def\\n\\n% options\\n/title (Income and expenses per year) def\\n/colors [ [0.078 0.431 0.667] [0 0.510 0.353] [0.902 0.196 0.157] [0.941 0.549 0.157] [0.427 0.224 0.545] [0.941 0.784 0] ] def \\n/width 550 def\\n/height 290 def\\n20 20 translate\\n/TGL017 findfont 16 scalefont setfont \\n\\n% utilities\\n/round1 { log 0.5 sub round 10 exch exp } def\\n/setcolor { colors length 1 sub min /c exch def colors c get 0 get colors c get 1 get colors c get 2 get setrgbcolor } def\\n\\n% autosize\\n/xcount data length 1 sub def\\n/series data 0 get length 1 sub def\\n/ymax data 1 get 1 get def\\n/ymin data 1 get 1 get def\\n1 1 series { /s exch def\\n1 1 xcount { /x exch def /y data x get s get def\\n/ymax ymax y max def /ymin ymin y min def } for } for\\n/ystep ymax ymin sub round1 def\\n/yoffset ymin ystep div 0.5 sub round ystep mul def\\n/ycount ymax ymin sub ystep div 1.5 add round def\\n/xaxish 30 def\\n/yscale height ycount 2 add ystep mul xaxish add div def\\n\\n/yaxisw yoffset cvs stringwidth pop 5 add def \\n/width2 width yaxisw sub def\\n/barwidth width2 xcount div series div 3 div round def\\n/xoffset width2 xcount div round def\\n \\n\\n\\n% set origin\\n% frame\\n% 0 0 moveto width 0 lineto width height lineto 0 height lineto closepath stroke\\n\\nyaxisw xaxish translate\\n\\n% y axis\\n0 1 ycount { /y exch def \\n0.7 setgray\\ny ystep mul yscale mul 0 exch moveto width2 0 rlineto stroke \\n0 setgray\\n/label y ystep mul yoffset add cvs def\\nlabel stringwidth pop neg 2 sub y ystep mul yscale mul moveto label show} for\\n\\n% bars and xlabels\\n1 1 xcount { /x exch def x gsave 0.5 sub xoffset mul barwidth 2 div sub 0 translate\\n1 1 series { /s exch def\\n/y data x get s get yoffset sub yscale mul def\\ns 1 sub setcolor\\nbarwidth s 1 sub mul 0 moveto barwidth 0 rlineto 0 y rlineto barwidth neg 0 rlineto closepath fill } for\\n/label data x get 0 get def \\n0 setgray\\nbarwidth series mul 2 div label stringwidth pop 2 div sub -20 moveto label show\\ngrestore} for\\n0 setgray\\n\\n% x axis\\n0 0 moveto width2 0 lineto stroke\\n% title\\nyaxisw neg ycount 1 add ystep mul yscale mul moveto title show\\n\\nshowpage\\n"
+        "source": "% data\\n/data (_third) 1 table def\\n\\n% options\\n/title (Income and expenses per year) def\\n/colors [ [0.078 0.431 0.667] [0 0.510 0.353] [0.902 0.196 0.157] [0.941 0.549 0.157] [0.427 0.224 0.545] [0.941 0.784 0] ] def \\n/width 550 def\\n/height 290 def\\n20 20 translate\\n/TGL017 findfont 16 scalefont setfont \\n\\n% utilities\\n/round1 { log 0.5 sub round 10 exch exp } def\\n/setcolor { colors length 1 sub min /c exch def colors c get 0 get colors c get 1 get colors c get 2 get setrgbcolor } def\\n\\n% autosize\\n/xcount data length 1 sub def\\n/series data 0 get length 1 sub def\\n/ymax data 1 get 1 get def\\n/ymin data 1 get 1 get def\\n1 1 series { /s exch def\\n1 1 xcount { /x exch def /y data x get s get def\\n/ymax ymax y max def /ymin ymin y min def } for } for\\n/ystep ymax ymin sub round1 def\\n/yoffset ymin ystep div 0.5 sub round ystep mul def\\n/ycount ymax ymin sub ystep div 1.5 add round def\\n/xaxish 30 def\\n/yscale height ycount 2 add ystep mul xaxish add div def\\n\\n/yaxisw yoffset cvs stringwidth pop 5 add def \\n/width2 width yaxisw sub def\\n/barwidth width2 xcount div series div 3 div round def\\n/xoffset width2 xcount div round def\\n \\n\\n\\n% set origin\\n% frame\\n% 0 0 moveto width 0 lineto width height lineto 0 height lineto closepath stroke\\n\\nyaxisw xaxish translate\\n\\n% y axis\\n0 1 ycount { /y exch def \\n0.7 setgray\\ny ystep mul yscale mul 0 exch moveto width2 0 rlineto stroke \\n0 setgray\\n/label y ystep mul yoffset add cvs def\\nlabel stringwidth pop neg 2 sub y ystep mul yscale mul moveto label show} for\\n\\n% bars and xlabels\\n1 1 xcount { /x exch def x gsave 0.5 sub xoffset mul barwidth 2 div sub 0 translate\\n1 1 series { /s exch def\\n/y data x get s get yoffset sub yscale mul def\\ns 1 sub setcolor\\nbarwidth s 1 sub mul 0 moveto barwidth 0 rlineto 0 y rlineto barwidth neg 0 rlineto closepath fill } for\\n/label data x get 0 get def \\n0 setgray\\nbarwidth series mul 2 div label stringwidth pop 2 div sub -20 moveto label show\\ngrestore} for\\n0 setgray\\n\\n% x axis\\n0 0 moveto width2 0 lineto stroke\\n% title\\nyaxisw neg ycount 1 add ystep mul yscale mul moveto title show\\n\\nshowpage\\n"
     },
     {
         "type": "wiki",
@@ -79,7 +79,7 @@ examples['home'] = `
     },
     {
         "type": "sql",
-        "source": "SELECT city, double(population) FROM third"
+        "source": "SELECT city, double(population) FROM _third"
     },
     {
         "type": "wiki",
@@ -87,7 +87,7 @@ examples['home'] = `
     },
     {
         "type": "wiki",
-        "source": "===History===\\n\\n16.3.2025 version 0.1 not published.\\n9.4.2025 version 1.0\\n28.4.2025 version 1.1\\n4.5.2025 version 1.2\\n30.5.2025 version 1.3\\n1.6.2025 version 1.4"
+        "source": "===History===\\n\\n16.3.2025 version 0.1 not published.\\n9.4.2025 version 1.0\\n28.4.2025 version 1.1\\n4.5.2025 version 1.2\\n30.5.2025 version 1.3\\n1.6.2025 version 1.4\\n25.6.2025 version 1.5"
     },
     {
         "type": "wiki",

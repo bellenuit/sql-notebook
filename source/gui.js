@@ -40,7 +40,12 @@ var tableCreate = function () {
 	    const thead = document.createElement('thead');
 	    const columnaligns = [];
 	    var caption = '';
+	    var captionid = 0;
+	    var footer = '';
+	    var footerid = 0;
+	    var i = 0;
 	    for(let c of columns) {
+		    var special = false;
 		    let th = document.createElement('th');
 		    var ca;
 		    if (c.match(/__$/) && c.match(/^__/)) {
@@ -49,16 +54,23 @@ var tableCreate = function () {
 			} else if (c.match(/__$/)) {
 				 ca = "right";
 				 c = c.replace(/__$/,"");
-		    } else if (c.match(/^':/)) {
+		    } else if (c.match(/^'\^/)) {
   			     caption = c.substr(2,c.length-3);
-			     continue;
+  			     captionid = i;
+  			     special = true;
+		    } else if (c.match(/^'\$/)) {
+  			     footer = c.substr(2,c.length-3);
+  			     footerid = i;
+  			     special = true;
 		    } else {
 			    ca = "left";
 		    }
-		    th.innerHTML = c;
+		    th.innerHTML = c.replace(/^'(.*)'$/,"$1");
 		    th.style.textAlign = ca;
 		    columnaligns.push(ca);
+		    if (!special)
 		    thead.appendChild(th);
+		    i++;
 	    }
 	    if (caption)
 	    {
@@ -74,20 +86,35 @@ var tableCreate = function () {
 		    const tr = document.createElement('tr');
 		    var j = 0;
 		    for (let f of row) {
-			    if (caption && j == row.length -1) continue;
-			    const td = document.createElement('td');
-				if (typeof f !== 'undefined') {
-					td.innerHTML = f;
-				}
-				td.style.textAlign = columnaligns[j];
-			    tr.appendChild(td);
+			    if ((caption && j == captionid) || (footer && j == footerid)) {
+                  // ignore	   
+			    } else {
+			    	const td = document.createElement('td');
+					if (typeof f !== 'undefined') {
+						td.innerHTML = f;
+					}
+					td.style.textAlign = columnaligns[j];
+				    tr.appendChild(td);
+				    
+			    }
 			    j++;
 		    }
 		    i++;
 		    if (i>30) tr.style.display = "none";
 		    tbody.appendChild(tr);
 	    }
- 	    table.appendChild(tbody);
+	    table.appendChild(tbody);
+	    if (footer) {
+		    let tf = document.createElement('tfoot');
+		    let td = document.createElement('td');
+		    td.setAttribute("colspan","100%");
+		    td.innerHTML = footer;
+		    tf.appendChild(td);
+		    table.appendChild(tf);
+	    }
+	    
+	    
+ 	    
  	    if (values.length > 50 ) { 
 	 	    input.width = table.width;
 	 	    div.appendChild(input);
@@ -772,7 +799,7 @@ runner.js = function(id, down = false) {
 		output.innerHTML += s;
 	}
 	dump = function(fn) {
-		echo('<pre class="js">{' + fn.name + ' = ' + fn.toString() + '</pre>');
+		echo('<pre class="js">' + fn.name + ' = ' + fn.toString() + '</pre>');
 	}
 	htmlTable = function(query) {
 		let first = query[0];
@@ -844,41 +871,32 @@ runner.ps = function(id, down = false) {
     const output = document.getElementById('output'+id);
     const code = source.value;
 	const scriptnode = document.createElement("TINY-PS");
-	scriptnode.setAttribute("width","640");
-	scriptnode.setAttribute("height","360");
-	scriptnode.setAttribute("format","svgurl");
+	scriptnode.id = "tinyps"+id;
+	scriptnode.setAttribute("width","576");
+	scriptnode.setAttribute("height","324");
+	scriptnode.setAttribute("format","svg,svgurl,canvasurl");
 	scriptnode.setAttribute("textmode","1");
+	scriptnode.setAttribute("error","1");
+	scriptnode.setAttribute("interval","500");
+	scriptnode.setAttribute("oversampling","4");
+	scriptnode.setAttribute("transparent","1");
 	scriptnode.innerHTML = code;
-	const scriptnode2 = document.createElement("TINY-PS");
-	scriptnode2.id = "ps" + id;
-	scriptnode2.setAttribute("width","640");
-	scriptnode2.setAttribute("height","360");
-	scriptnode2.setAttribute("format","svg");
-	scriptnode2.setAttribute("maxwidth","100%");
-	scriptnode2.setAttribute("error","1");
-//	scriptnode2.setAttribute("textmode","1");
-	scriptnode2.innerHTML = code;
 	
-    const scriptnode3 = document.createElement("TINY-PS");
-	scriptnode3.setAttribute("width","640");
-	scriptnode3.setAttribute("height","360");
-	scriptnode3.setAttribute("format","canvasurl");
-	scriptnode3.setAttribute("oversampling","4");
-	scriptnode3.innerHTML = code;
+	const tabledump = []
+	tabledump.push("rpnTables = []");
+    for (t in alasql.tables) {
+	    if (t.substr(0,1)=="_") {
+		    tabledump.push("rpnTables[\""+t+"\"] = " + JSON.stringify(alasql.tables[t].data) + " ;\n");
+	    }
+    }
+    rpnExtensions = tabledump.join("\n");
 
     output.innerHTML = "";		
 	const cell = document.getElementById('cell'+id);
 	cell.style.backgroundColor = 'white';
-	output.appendChild(scriptnode2);
-	const divnode = document.createElement("DIV");
-	divnode.className = "svgurl";
-	divnode.appendChild(scriptnode);
-	output.appendChild(divnode);
-	const divnode3 = document.createElement("DIV");
-	divnode3.className = "canvasurl";
-	divnode3.appendChild(scriptnode3);
-	output.appendChild(divnode3);
-	
+	output.appendChild(scriptnode);
+
+	console.log("runner.ps changes tag")
 	console.log((Date.now() - timerstart) +" ms");
 	
 	if (down) {
@@ -895,7 +913,6 @@ runner.ps = function(id, down = false) {
 			console.log("run end");
 		}
 }
-
 
 function cellRun(id, down = false) {
 
@@ -1001,12 +1018,15 @@ function setPS(id)
 }
 
 function openProject() {
+	console.log("openProject");
     const input = document.createElement('input');
     input.type = 'file';
 	input.onchange = _ => {
+		console.log("change");
         const files = Array.from(input.files);
         const reader = new FileReader();
         reader.onload = function(){ 
+	        console.log("file");
             readProject(reader.result);
         };
         reader.readAsText(input.files[0]);
@@ -1017,6 +1037,7 @@ function openProject() {
   
   
 function readProject(json) {
+	console.log("readProject");
 	const zone = document.getElementById('cellzone');
 	zone.innerHTML = "";
 	const list = JSON.parse(json);
@@ -1052,7 +1073,7 @@ function saveProject()
 			const source = document.getElementById('source' + cellid);
 			result.push({"type": cell.getAttribute("type"), "source": source.value });
 			if (first) {
-				suggestedTitle = source.value.split('\n').shift().replaceAll('==','').replaceAll(' ','-').toLowerCase();
+				suggestedTitle = source.value.split('\n').shift().replace(/^==+(.*)==+$/,"$1").replaceAll(' ','-').toLowerCase();
 			}
 			
 			first = false;
@@ -1088,6 +1109,7 @@ if (urlParams.get('new') == 1) {
     readProject(examples["home"]);
 }
 
+projectTouched = false;
 currentCell = undefined;
 window.onbeforeunload = askConfirm;
 function askConfirm(){ if (projectTouched) return false; }

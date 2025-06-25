@@ -1,12 +1,18 @@
 rpnOperators.table = function(context) {
     const [haslabel, tablename] = context.pop("number", "string");
     if (!tablename) return context;
+    /*
 	try {
 		results = alasql("SELECT * FROM "+ tablename.value) ;
 	} catch (reason) {
 		context.error("databaserror");
 		 return context;
 	}
+	*/
+	console.log(rpnTables);
+	results = rpnTables[tablename.value];
+	console.log("table result");
+	
 	list = [];
 	list.push('[');
 	elem = results;
@@ -25,24 +31,28 @@ rpnOperators.table = function(context) {
 			   
 			   for(row of elem) {
 				   list.push('[');
-				   var firstcolumn = true;
 				   let fields = [];
+				   var k = 0;
 				   for(key in row) {
-					   if (firstcolumn && haslabel)
+					   if (k < haslabel.value)
 						   list.push('(' + row[key] + ')');
 					   else
 						   list.push(row[key]);
-					   firstcolumn = false;
+			           k++;
 				   }
 				   list.push(']');
 				   
 			   }
 		   }
+	   } else {
+		   context.error("missingtable");
 	   }
 	   
 	
 	list.push(']');
-	context = rpn(list.join(" "), context);
+	const s = list.join(" ");
+	console.log(s.slice(0,140));
+	context = rpn(s, context);
     return context;
 };
 
