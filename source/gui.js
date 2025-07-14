@@ -319,6 +319,8 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	source.id = "source" + id;
     source.className = "cellsource";
 	source.setAttribute("readonly", true);
+	source.setAttribute("autocomplete", "on");
+    source.setAttribute("spellcheck", false);	
 	source.addEventListener("input", function() {
         this.style.height = "auto";
         this.style.height = Math.max(this.scrollHeight, 16) + "px";
@@ -404,8 +406,8 @@ function cellEdit(id) {
 	setTimeout(() => { 
 		source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
 	const length = source.value.length;
-	source.setSelectionRange(length, length);
 	source.focus();
+	source.setSelectionRange(length, length);
 }
 
 function cellCancel(id) { 
@@ -819,11 +821,17 @@ runner.js = function(id, down = false) {
 	cell.style.backgroundColor = 'white';
 	const scriptnode = document.createElement("SCRIPT"); 
     scriptnode.innerHTML = "try { " + code + " } catch(reason) { console.log(reason); const c = document.getElementById('output'+"+id+"); c.innerHTML = '<pre class=error>'+reason+'</pre>'; c.style.backgroundColor = 'white'; console.log(c.innerHTML);}";
+    
+    /*
     window.onerror = function (a, b, c, d, e) {
         const co = document.getElementById('output'+id); 
+        if (co) {
 		co.innerHTML = '<pre class=error>' + a + '</pre>'; 
 		co.style.backgroundColor = 'white'; 
+		}
+		console.error(a);
 	}
+	*/ 
 	document.body.appendChild(scriptnode);
 	console.log((Date.now() - timerstart) +" ms");
 	
@@ -933,7 +941,7 @@ function cellRun(id, down = false) {
 		timerstart = Date.now();
 		cell.style.backgroundColor = 'yellow';
 	}
-	// setTimeout(function() {runner[type](id, down);}, 25 ); 	
+	// setTimeout(function() { runner[type](id, down);}, 25 ); 	
 	const run = async function() { runner[type](id, down); };
 	run();
      

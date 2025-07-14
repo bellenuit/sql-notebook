@@ -7,6 +7,14 @@ Version 1.0.2 2025-02-23 fixed bug in TTF reader
 Version 1.0.3 2025-04-09 function rpnRedirectConsoleError, fixed bug in TTF reader (offsets subtable 4), webcomponent attribute error, operators log, exp, cvs
 Version 1.0.4 2025-05-05 fixed SVG text mode
 Version 1.1.0 2025-06-23 refactored as worker, added operators cvx
+Version 1.1.1 2025-07-14 new operators forall, pathbbox
+- resize with setpagedevice resizes parent node.
+- added worker messages (svgfilnal, device)
+- proper exit for for and repeat operators
+- imroved error messages (currentcode limited in length for speed)
+- fixed errors that did not stop code (always return with context.error!) 
+- fixed heap errors on arrays ans strings
+- download elements  with jtimestamp in filename
 
 Renders as subset PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
 The output can be displayed or proposed as downloadable link. It can be transparent.
@@ -689,7 +697,11 @@ rpnSVGDevice = class {
         this.node.setAttribute("viewBox", "0 0 " + width+" " + height);
         this.node.setAttribute("width", width + "px");
         this.node.setAttribute("height", height + "px");
-        this.node.style.backgroundColor = (transparent != 0) ? "transparent" : "white";
+        if (transparent) {
+        	this.node.setAttribute("style", "backgrouncolor: transparent");
+        } else {
+        	        	this.node.setAttribute("style", "backgrouncolor: white");
+        }
         this.clippath = "";
         this.clippathsource = "";
         // while(this.node.firstChild()) this.node.removeChild(this.node.lastChild());
@@ -699,6 +711,7 @@ rpnSVGDevice = class {
 
     }
     finalize(context) {
+    	postMessage(["svgfinal", context.id, null, null])
     }
     getPath(path, close = true) {
        const p = [];
@@ -719,16 +732,17 @@ rpnSVGDevice = class {
         return p.join(" ");
     }
     clip(context) {
+        
         const test = JSON.stringify(context.graphics.clip);
         if (this.clippathsource == test) return context;
         this.clippath = "";
-        this.clippathsource == test;
+        this.clippathsource = test;
         for (let clip of context.graphics.clip) {
             const node = rpnDocument.createElement("clippath");
             if (this.clippath) node.setAttribute("clip-path", "url(#"+this.clippath+")");
             this.clippath = "clippath"+this.node.childElementCount;
             node.setAttribute("id", this.clippath);
-            const node2 = document.createElement("path");
+            const node2 = rpnDocument.createElement("path");
             node2.setAttribute("d", this.getPath(clip));
             node.appendChild(node2);
             this.node.appendChild(node);
@@ -741,6 +755,7 @@ rpnSVGDevice = class {
     }
     fill(context, zerowind = true) {
 	    if (context.showmode) return context;
+	    context = this.clip(context);
         const node = rpnDocument.createElement("path");
         // node.setAttribute("id","fill"+this.node.childElementCount);
         node.setAttribute("d", this.getPath(context.graphics.path));
@@ -757,6 +772,7 @@ rpnSVGDevice = class {
         return context;
     }
     stroke(context) {
+        context = this.clip(context);
         const node = rpnDocument.createElement("path");
         node.setAttribute("id","stroke" + this.node.childElementCount);
         node.setAttribute("d", this.getPath(context.graphics.path, false));
@@ -805,7 +821,7 @@ rpnSVGDevice = class {
             style.innerHTML = "@font-face { font-family: '" + font + "'; font-weight: normal; src:  url('" + src + "') format('truetype')} }";
             node.appendChild(style);
         }
-        console.log(this.node)
+        // console.log(this.node)
         postMessage(["svg", context.id, this.node.outerHTML(), null])
         this.clear(this.width, this.height, this.oversampling, this.transparent);
         return context;
@@ -831,7 +847,7 @@ rpnContext = class {
         this.dictstack.push({});
         this.nodes = [];
         this.fontdict = {};
-        this.device = { canvas: 0, canvasurl: 0, console: 1, interval: 0, oversampling: 1, pdf: 0, pdfurl: 0, raw: 0, rawurl : 0, svg: 0, svgurl: 0, textmode: 0,  transparent: 0  };
+        this.device = { canvas: 0, canvasurl: 0, console: 1, interval: 0, oversampling: 1, pdf: 0, pdfurl: 0, raw: 0, rawurl : 0, svg: 0, svgurl: 0, textmode: 0,  transparent: 0, width: 576, height: 324 };
         this.async = false;
         this.initgraphics();
     }
@@ -918,7 +934,7 @@ rpn = function(s, context = null, outerContext = false, silent = false ) {
     for (var i = 0; i < list.length; i++) {
 	    let elem = list[i];
         if (context.lasterror) {
-	       if (context.lasterror == 'exit') {
+	       if (context.lasterror == "exit") {
 		       return context;
 	       } 
 	       if (context.lasterror && !context.silent) {
@@ -928,7 +944,7 @@ rpn = function(s, context = null, outerContext = false, silent = false ) {
            }
 		   if (context.lasterror) return context;
         }
-        context.currentcode += elem;
+        context.currentcode = context.currentcode.slice(-140) + elem;
         switch (state) {
             case "start":
                 if (/[0-9-.]/.test(elem)) {
@@ -1392,8 +1408,7 @@ rpnOperators.arcto = function(context) {
     const [r, y2, x2, y1, x1] = context.pop("number","number","number","number","number");
     if (!x1) return context;
     if (!context.graphics.current.length) {
-       context.error("nocurrentpoint");
-       return context;
+       return context.error("nocurrentpoint");
     }
     const [x0, y0] = context.itransform(context.graphics.current[0], context.graphics.current[1]);
  
@@ -1432,14 +1447,15 @@ rpnOperators.array = function(context) {
     const [n] = context.pop("number");
     if (!n) return context;
     if (n.value < 1) {
-        context.error("limitcheck");
-        return context;
+        return context.error("limitcheck");
     }
     const a = [];
     for (let i = 0; i < n.value; i++) {
         a.push(new rpnNumber(0));
     }
-    context.stack.push(new rpnArray(a, context.heap));
+    const ar = new rpnArray(a, context.heap);
+    ar.reference.inc();
+    context.stack.push(ar);
     return context;
 };
 rpnUnitTest("3 array","[0 0 0]");
@@ -1481,14 +1497,16 @@ rpnOperators.ceil = function(context) {
 rpnOperators.charpath = function(context) {
     const [s] = context.pop("string");
     if (!context.graphics.current.length) {
-       context.error("nocurrentpoint");
-       return context;
+       return context.error("nocurrentpoint");
     }
     if (!context.graphics.font) {
-       context.error("nocurrentfont");
+       return context.error("nocurrentfont");
     }
     if (!s) return context;
     const font = rpnFonts[context.graphics.font];
+    if (!font) {
+       return context.error("nocurrentfont");
+    }
     const scale = context.graphics.size / font.head.unitsPerEm;
     var ps = " currentpoint currentpoint translate currentmatrix " + scale + " " + scale + " scale ";
     for (let i = 0; i < s.value.length; i++) {
@@ -1537,7 +1555,10 @@ rpnOperators.copy = function(context) {
     if (n.value > context.stack.length) return context.error("stackunderflow");
     const arr = [];
     for (let i = 0; i < n.value; i++ ) {
-        arr.push(context.stack.pop());
+    	let a = context.stack.pop();
+    	if (a.type == "array") a.reference.inc();
+        if (a.type == "string") a.reference.inc();
+        arr.push(a);
     }
     arr.reverse();
     context.stack = context.stack.concat(arr).concat(arr);
@@ -1722,8 +1743,7 @@ rpnUnitTest("dup","!stackunderflow");
 
 rpnOperators.end = function(context) {
     if (context.dictstack.length < 2) {
-        context.error("dictstackunderflow");
-        return context;
+        return context.error("dictstackunderflow");
     }
     context.dictstack.pop();
     return context;
@@ -1777,8 +1797,7 @@ rpnOperators.exec = function(context) {
 rpnUnitTest("2 { 3 add } exec ","5");
 
 rpnOperators.exit = function(context) {
-    context.error("exit");
-    return context;
+    return context.error("exit");
 };
 
 rpnOperators.exp = function(context) {
@@ -1805,12 +1824,10 @@ rpnOperators.findfont = function(context) {
         console.log(rpnFontBasePath + n.value + ".ttf");
     }
     if (!rpnFonts[n.value]) {
-        context.error("invalidfont " );
-        return context;
+        return context.error("invalidfont " );
     }
     if (rpnFonts[n.value].error) {
-        context.error("invalidfont " + rpnFonts[n.value].error );
-        return context;
+        return context.error("invalidfont " + rpnFonts[n.value].error );
     }
     const dict = new rpnDictionary(1);
     dict.value.FontName = n;
@@ -1837,23 +1854,45 @@ rpnOperators.for = function(context) {
     const [proc, limit, increment, initial] = context.pop("procedure", "number", "number", "number");
     if (!initial) return context;
     if (! increment.value) {
-        context.error("limitcheck");
-        return context;
+        return context.error("limitcheck");
     }
     if (increment.value > 0) {
         for (let i = initial.value; i <= limit.value; i+= increment.value) {
             context.stack.push(new rpnNumber(i));
             context = rpn(proc.value, context);
+            if (context.lasterror == "exit") {
+                context.lasterror = "";
+                context.stack.pop();
+                return context;
+            }
+
         }
     } else {
         for (let i = initial.value; i >= limit.value; i+= increment.value) {
             context.stack.push(new rpnNumber(i));
             context = rpn(proc.value, context);
+            if (context.lasterror == "exit") {
+                context.lasterror = "";
+                context.stack.pop();
+                return context;
+            }
        }
     }
     return context;
 };
 rpnUnitTest("0 1 1 5 { add } for", "15");
+
+rpnOperators.forall = function(context) {
+    const [proc, list] = context.pop("procedure", "array");
+        for (let elem of list.value) {
+        	if (elem.reference) elem.reference.inc();
+            context.stack.push(elem);
+            context = rpn(proc.value, context);
+        }
+    return context;
+};
+rpnUnitTest("0 [0 1 1 5] { add } forall", "7");
+
 
 rpnOperators.ge = function(context) {
     const [b, a] = context.pop("number,string", "number,string");
@@ -1949,8 +1988,7 @@ rpnUnitTest("getinterval","!stackunderflow");
 
 rpnOperators.grestore = function(context) {
     if (!context.graphicsstack.length) {
-        context.error("dictstackunderflow");
-        return context;
+        return context.error("dictstackunderflow");
     } else if (context.graphicsstack.length == 1) {
         context.graphics = rpnObjectSlice(context.graphicsstack[0]);
     } else {
@@ -2027,12 +2065,10 @@ rpnOperators.index = function(context) {
     const [i] = context.pop("number");
     if (!i) return context;
     if (i.value < 0) {
-        context.error("limitcheck");
-        return context;
+        return context.error("limitcheck");
     }
     if (i.value >= context.stack.length) {
-        context.error("limitcheck");
-        return context;
+        return context.error("limitcheck");
     }
     const v = context.stack[context.stack.length - i.value - 1];
     if (v.type == "array") v.reference.inc();
@@ -2310,6 +2346,39 @@ rpnUnitTest("[2 3] pop","");
 rpnUnitTest("pop","!stackunderflow");
 rpnUnitTest("(a) dup /b exch def pop b", "(a)");
 
+rpnOperators.pathbbox = function(context) {
+    if (!context.graphics.current.length) {
+       context.stack.push(new rpnError("nocurrentpoint"));
+       return context;
+    }
+    var [minx, miny] = context.graphics.current;
+    var [maxx, maxy] = context.graphics.current;
+    for (let subpath of context.graphics.path)
+    for (let seg of subpath) {
+        if (seg.length) {
+           for (let i = 1; i + 1 < seg.length; i += 2) {
+               let [x, y] = [seg[i], seg[i+1]];
+               minx = Math.min(minx, x);
+               maxx = Math.max(maxx, x);
+               miny = Math.min(miny, y);
+               maxy = Math.max(maxy, y);
+           }
+        }
+    }
+
+    [minx, miny] = context.itransform(minx, miny);
+    [maxx, maxy] = context.itransform(maxx, maxy);
+    //if (maxx < minx ) [minx, maxx] = [maxx, minx];
+    //if (maxy < miny ) [miny, maxy] = [maxy, miny]; 
+    context.stack.push(new rpnNumber(minx));
+    context.stack.push(new rpnNumber(miny));
+    context.stack.push(new rpnNumber(maxx));
+    context.stack.push(new rpnNumber(maxy));
+    return context;
+};
+
+
+
 rpnOperators.put = function(context) {
     const [c, b, a] = context.pop("any", "number", "array,string");
     if (!a) return context;
@@ -2363,9 +2432,9 @@ rpnOperators.qcurveto = function(context) {
     const [y3, x3, yq, xq] = context.pop("number","number","number","number");
     if (!y3) return context;
     if (!context.graphics.current.length) {
-       context.error("nocurrentpoint");
+       return context.error("nocurrentpoint");
     } else if (!context.graphics.path.length) {
-       context.error("nocurrentpath");
+       return context.error("nocurrentpath");
     } else {
       const subpath = context.graphics.path.pop();
       const [xqt, yqt] = context.transform(xq.value, yq.value);
@@ -2435,6 +2504,11 @@ rpnOperators.repeat = function(context) {
     while (n.value > 0) {
        context = rpn(doit.value, context);
        n.value-- ;
+       if (context.lasterror == "exit") {
+            context.lasterror = "";
+            context.stack.pop();
+            return context;
+       }
     }
     return context;
 };
@@ -2681,7 +2755,7 @@ rpnOperators.setpagedevice = function(context) {
     if (dict.canvasurl) context.device.canvasurl = dict.canvasurl.value;
     if (dict.color)  context.device.color = dict.color.value;
     if (dict.console)  context.device.console = dict.console.value;
-    if (dict.height) context.height = dict.height.value;
+    if (dict.height) context.height = context.device.height = dict.height.value;
     if (dict.oversampling) {
         const oversampling = Math.min(16,Math.max(1, dict.oversampling.value));
         context.device.oversampling = oversampling;
@@ -2695,11 +2769,11 @@ rpnOperators.setpagedevice = function(context) {
     if (dict.svgurl) context.device.svgurl = dict.svgurl.value;
     if (dict.textmode) context.device.textmode = dict.textmode.value;
     if (dict.transparent) context.device.transparent = dict.transparent.value;
-    if (dict.width) context.width = dict.width.value;
+    if (dict.width) context.width = context.device.width = dict.width.value;
     if (dict.height + dict.oversampling + dict.width + dict.transparent) {
         for (let n of context.nodes) n.clear(context.width, context.height, context.device.oversampling, context.device.transparent);
     }
-    
+    postMessage(["device", context.id, context.device, null])
     return context;
 };
 
@@ -2721,19 +2795,23 @@ rpnOperators.setrgbcolor = function(context) {
 
 rpnOperators.show = function(context) {
     const [s] = context.pop("string");
+    if (!s) return context;
     if (!context.graphics.current.length) {
-       context.error("nocurrentpoint");
+       return context.error("nocurrentpoint");
     }
-    if (!context.graphics.font) {
-       context.error("nocurrentfont");
+    if (!context.graphics.font.length) {
+       return context.error("nocurrentfont");
     }
+    console.log("show1.5 "+context.graphics.font + " " + context.graphics.font.length);
     if (context.device.textmode) {
         for (let n of context.nodes) {
            if (n.canshow) context = n.show(s.value, context);
         }
     }
-    if (!s) return context;
     const font = rpnFonts[context.graphics.font];
+    if (!font) {
+	     return context.error("nocurrentfont");
+    }
     const scale = context.graphics.size / font.head.unitsPerEm;
     var ps = " currentpoint currentpoint translate currentmatrix " + scale + " " + scale + " scale ";
     for (let i = 0; i < s.value.length; i++) {
@@ -2783,21 +2861,24 @@ rpnOperators.string = function(context) {
     const [n] = context.pop("number");
     if (!n) return context;
     if (n.value < 1) {
-        context.error("limitcheck");
-        return context;
-    }
-    const s = String.fromCharCode(0).repeat(n.value);
-    context.stack.push(new rpnString(s, context.heap));
+        return context.error("limitcheck");
+    } 
+    const s = new rpnString(" ".repeat(n.value), context.heap)
+    s.reference.inc();
+    context.stack.push(s);
     return context;
 };
 
 rpnOperators.stringwidth = function(context) {
     const [s] = context.pop("string");
     if (!context.graphics.font) {
-       context.error("nocurrentfont");
+       return context.error("nocurrentfont");
     }
     if (!s) return context;
     const font = rpnFonts[context.graphics.font];
+    if (!font) {
+       return context.error("nocurrentfont");
+    }
     const scale = context.graphics.size / font.head.unitsPerEm;
     var width = 0;
     for (let i = 0; i < s.value.length; i++) {
@@ -2872,13 +2953,16 @@ rpnUnitTest("true { 2 3 add } ifelse","1 { 2 3 add } !stackunderflow");rpnUnitTe
 rpnOperators.widthshow = function(context) {
     const [s, ch, cy, cx ] = context.pop("string", "number", "number", "number");
     if (!context.graphics.current.length) {
-       context.error("nocurrentpoint");
+       return context.error("nocurrentpoint");
     }
     if (!context.graphics.font) {
-       context.error("nocurrentfont");
+       return context.error("nocurrentfont");
     }
     if (!s) return context;
     const font = rpnFonts[context.graphics.font];
+    if (!font) {
+       return context.error("nocurrentfont");
+    }
     const scale = context.graphics.size / font.head.unitsPerEm;
     const [cx0, cy0] = [cx.value / scale, cy.value / scale];
     const [currentx0, currenty0] = context.graphics.current;
@@ -3928,15 +4012,6 @@ xmlNode = class {
 			list.push(key + ' = "' + this.attributes[key] + '"');
 		}
 		
-		list.push(' style = "');
-		
-			for(let key in this.style) {
-			list.push(key + ' : "' + this.style[key] + '"');
-		}
-		
-		list.push('" ');
-		
-		
 		return "<" + this.type + " " + list.join(" ") + ">" + this.innerHTML.replace("<","&lt;") + this.children.map(node => node.outerHTML()).join("") + "</" + this.type +">";  
 	}
 	
@@ -4216,9 +4291,11 @@ class tinyPStag extends HTMLElement {
 							ctx.putImageData(data,0,0);
 							urlnode = shadow.querySelector('.jscanvasurl');
 							if (urlnode) {
-								url = ctx.canvas.toDataURL();
+								let url = ctx.canvas.toDataURL();
 								urlnode.href = url;
-								urlnode.setAttribute("download", "PS.png");
+                                let d = new Date();
+	                            let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13)+".png";
+                                urlnode.setAttribute("download", fn);
 								rpnFrames[urlnode.id].push(url);
 							}
 							break;
@@ -4227,7 +4304,9 @@ class tinyPStag extends HTMLElement {
 				              shadow = node.shadowRoot; 
 							  urlnode = shadow.querySelector('.jscanvasurl');
 							  if (urlnode) {
-								  let z = new rpnZip('Frames');
+							  	  let d = new Date();
+	                              let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13);
+								  let z = new rpnZip(fn);
 				                  var i = 0;
 				                  if (rpnFrames[urlnode.id].length > 1) {
 					                  for (let u of rpnFrames[urlnode.id]) {
@@ -4254,10 +4333,18 @@ class tinyPStag extends HTMLElement {
 								let file = rpnStartTag + "?xml version='1.0' encoding='UTF-8'?" + rpnEndTag + data;
                                 url = "data:image/svg+xml;base64," + rpnBbtoaUnicode(file);
                                 urlnode.href = url;
-                                urlnode.setAttribute("download", "PS.svg");
+                                let d = new Date();
+	                            let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13)+".svg";
+                                urlnode.setAttribute("download", fn);
 							}
 							break;
 			
+			
+			case "svgfinal": node = document.getElementById(id);
+				            shadow = node.shadowRoot; 
+				            svgnode = shadow.querySelector('.divsvg');
+				            svgnode.outerHTML = 				            svgnode.outerHTML + " ";
+				            break;
 			
 			case "pdf":     node = document.getElementById(id);
 				            shadow = node.shadowRoot; 
@@ -4266,6 +4353,23 @@ class tinyPStag extends HTMLElement {
 							urlnode = shadow.querySelector('.pdfurl');
 							urlnode.href = data;
 			                urlnode.setAttribute("download", "PS.pdf");
+			                break;
+			                
+			case "device":  node = document.getElementById(id);
+			                node.setAttribute("width", data.width);
+			                node.setAttribute("height", data.height + 20);
+			                node.parentNode.setAttribute("width", data.width);
+			                node.parentNode.setAttribute("height", data.height + 20);
+			                node.parentNode.style.width = data.width + "px"; 
+			                node.parentNode.style.height = data.height + "px"; 
+			                shadow = node.shadowRoot; 
+							svgnode = shadow.querySelector('.divsvg');
+							if (svgnode) {
+								
+							    svgnode.setAttribute("width", data.width);
+							    svgnode.setAttribute("height", data.height);
+							}
+			                break;
 			                break;
 			
 			case "error":   node = document.getElementById(id);
@@ -4316,7 +4420,7 @@ workeronmessage = function (e) {
 	const id = msg[1];
 	const data = msg[2];
 	var context = new rpnContext(JSON.parse(msg[3]));
-	console.log(context.nodes);
+	// console.log(context.nodes);
 	
 	if(context.device.raw || context.device.rawurl) {
 		context.nodes.push(new rpnRawDevice());
@@ -4342,7 +4446,7 @@ workeronmessage = function (e) {
 	switch (action)
 	{
 		case "rpn": context = rpn(data, context, true); 
-		            if (context.lasterror) postMessage(["error", context.id, "!" + context.lasterror + '<p>' + "Stack: " + context.stack.reduce((acc,v) => acc + v.dump + " " , " ") + '<p>' + "Code executed: " + context.currentcode.substr(-300), null]);
+		            if (context.lasterror) postMessage(["error", context.id, "!" + context.lasterror + '<p>' + "Stack: " + context.stack.reduce((acc,v) => acc + v.dump + " " , " ") + '<p>' + "Code executed: " + context.currentcode, null]);
 					break;
 		default : handleMessageExtended(e);
 	}
