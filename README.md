@@ -82,6 +82,12 @@ To get the data, use the table command. It has the syntax (tablename) 1 table wh
 
 The script has one installed fonts you can use: TGL017.
 
+Extensions: 
+- number **numberformat** string
+- string number **preparechart**
+- procedure **patternfill**
+- string numer **table** array
+
 
 ## JavaScript code
 
