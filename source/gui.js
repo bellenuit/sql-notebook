@@ -853,11 +853,6 @@ runner.js = function(id, down = false) {
 readSyncDataURL = function(url, filetype = ""){
 	// override for TTF
 	// URL = rpnFontBasePath + font + ".ttf",
-	if (filetype == 'font/ttf') {
-		let filename = url.replace(rpnFontBasePath,'').replace('.ttf', '');
-		console.log(filename)
-		return fontfiles[filename];
-	}
 	
     // var url=URL.createObjectURL(file);//Create Object URL
     const xhr = new XMLHttpRequest();

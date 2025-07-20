@@ -1,27 +1,4 @@
 
-
-rpnOperators.findfont = function(context) {
-    const [n] = context.pop("name");
-    if (!n) return context;
-    if (!rpnFonts[n.value]) { 
-		if (!fontfiles[n.value]) {
-			return context.error("invalidfont " );
-        }
-        rpnFonts[n.value] = new rpnTTF(fontfiles[n.value]);
-    }
-    if (!rpnFonts[n.value]) {
-        return context.error("invalidfont " );
-    }
-    if (rpnFonts[n.value].error) {
-        return context.error("invalidfont " + fonts[n.value].error );
-    }
-    const dict = new rpnDictionary(1);
-    dict.value.FontName = n;
-    context.stack.push(dict);
-    return context;
-};
-
-
 rpnOperators.numberformat = function(context) {
     const [r] = context.pop("number");
     if (!r) return context;
@@ -45,6 +22,7 @@ grestore end newpath
     context =  rpn(code, context);
     return context;
 };
+
 
 rpnOperators.preparechart = function(context) {
     const code = `
@@ -90,53 +68,7 @@ xlimits 0 get sub xlimits 2 get xlimits 0 get sub div chartrect 2 get chartmargi
 /hchartproj { ylimits 0 get sub ylimits 2 get ylimits 0 get sub div chartrect 2 get chartmargins 0 get sub chartmargins 2 get sub mul chartrect 0 get add chartmargins 0 get add exch 
 xlimits 2 get exch sub xlimits 2 get xlimits 0 get sub div chartrect 3 get chartmargins 1 get sub chartmargins 3 get sub mul chartrect 1 get add chartmargins 1 get add exch   exch } def
 
-/hpat { /h exch def /w exch def
-0 6 h { newpath 0 exch moveto w 0 rlineto stroke } for 
-} def
-
-/dhpat { /h exch def /w exch def
-0 3 h { newpath 0 exch moveto w 0 rlineto stroke } for 
-} def
-
-/vpat { /h exch def /w exch def
-0 6 w { newpath 0 moveto 0 h rlineto stroke } for 
-} def
-
-/dvpat { /h exch def /w exch def
-0 3 w { newpath 0 moveto 0 h rlineto stroke } for 
-} def
-
-/apat { /h exch def /w exch def /m w h max def
-0 6 1.41 mul w { newpath 0 moveto m m rlineto stroke } for 
-0 6 1.41 mul  h { newpath 0 exch moveto m m rlineto stroke } for 
-} def
-
-/dapat { /h exch def /w exch def /m w h max def
-0 3 1.41 mul w { newpath 0 moveto m m rlineto stroke } for 
-0 3 1.41 mul h { newpath 0 exch moveto m m rlineto stroke } for 
-} def
-
-/dpat { /h exch def /w exch def /m w h max def
-0 6 1.41 mul w { newpath m moveto m m neg rlineto stroke } for 
-0 6 1.41 mul h { newpath 0 exch moveto m m neg rlineto stroke } for 
-} def
-
-/ddpat { /h exch def /w exch def /m w h max def
-0 3 1.41 mul w { newpath m moveto m m neg rlineto stroke } for 
-0 3 1.41 mul h { newpath 0 exch moveto m m neg rlineto stroke } for 
-} def
-
-/ppat { /h exch def /w exch def
-0 6 h { /hi exch def 0 6 w { /wi exch def newpath wi hi 1 0 360 arc fill } for } for 
-} def
-
-/cpat { 2 copy hpat vpat } def
-/acpat { 2 copy apat dpat } def
-
-/raster { /perc exch def /h exch def /w exch def
-/r perc 100 div 36 mul 3.14159 div sqrt def
-0 6 h { /hi exch def 0 6 w { /wi exch def newpath wi hi r 0 360 arc fill } for } for 
-} def
+preparepatterns
 
 /patterns [ {}
 { 0.078 0.431 0.667 setrgbcolor fill }
@@ -510,24 +442,71 @@ row 0.5 sub 0 hchartproj 8 sub moveto data row get 0 get stringwidth pop neg 8 s
     return context;
 };
 
+
+rpnOperators.preparepatterns = function(context) {
+    const code = `
+/hpat { /h exch def /w exch def
+0 6 h { newpath 0 exch moveto w 0 rlineto stroke } for 
+} def
+
+/dhpat { /h exch def /w exch def
+0 3 h { newpath 0 exch moveto w 0 rlineto stroke } for 
+} def
+
+/vpat { /h exch def /w exch def
+0 6 w { newpath 0 moveto 0 h rlineto stroke } for 
+} def
+
+/dvpat { /h exch def /w exch def
+0 3 w { newpath 0 moveto 0 h rlineto stroke } for 
+} def
+
+/apat { /h exch def /w exch def /m w h max def
+0 6 1.41 mul w { newpath 0 moveto m m rlineto stroke } for 
+0 6 1.41 mul  h { newpath 0 exch moveto m m rlineto stroke } for 
+} def
+
+/dapat { /h exch def /w exch def /m w h max def
+0 3 1.41 mul w { newpath 0 moveto m m rlineto stroke } for 
+0 3 1.41 mul h { newpath 0 exch moveto m m rlineto stroke } for 
+} def
+
+/dpat { /h exch def /w exch def /m w h max def
+0 6 1.41 mul w { newpath m moveto m m neg rlineto stroke } for 
+0 6 1.41 mul h { newpath 0 exch moveto m m neg rlineto stroke } for 
+} def
+
+/ddpat { /h exch def /w exch def /m w h max def
+0 3 1.41 mul w { newpath m moveto m m neg rlineto stroke } for 
+0 3 1.41 mul h { newpath 0 exch moveto m m neg rlineto stroke } for 
+} def
+
+/ppat { /h exch def /w exch def
+0 6 h { /hi exch def 0 6 w { /wi exch def newpath wi hi 1 0 360 arc fill } for } for 
+} def
+
+/cpat { 2 copy hpat vpat } def
+/acpat { 2 copy apat dpat } def
+
+/raster { /perc exch def /h exch def /w exch def
+/r perc 100 div 36 mul 3.14159 div sqrt def
+0 6 h { /hi exch def 0 6 w { /wi exch def newpath wi hi r 0 360 arc fill } for } for 
+} def
+`;
+    context =  rpn(code, context);
+    return context;
+};
+
+
+
 rpnOperators.table = function(context) {
     const [haslabel, tablename] = context.pop("number", "string");
-    if (!tablename) return context;
-    /*
-	try {
-		results = alasql("SELECT * FROM "+ tablename.value) ;
-	} catch (reason) {
-		context.error("databaserror");
-		 return context;
-	}
-	*/
-	// console.log(rpnTables);
-	results = rpnTables[tablename.value];
-	// console.log("table result");
-	
+    if (!tablename) return context; console.log("table " +tablename.value )
+	results = rpnTables[tablename.value];	
 	list = [];
 	list.push('[');
 	elem = results;
+	console.log(rpnTables);
 	  
 	   if (Array.isArray(elem)) {
 		   let first = elem[0];
@@ -549,7 +528,7 @@ rpnOperators.table = function(context) {
 					   if (k < haslabel.value)
 						   list.push('(' + row[key] + ')');
 					   else
-						   list.push(row[key]);
+					       if (row[key]) list.push(row[key]); else list.push('0');
 			           k++;
 				   }
 				   list.push(']');
