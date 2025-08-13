@@ -89,7 +89,7 @@ Extensions:
 - string numer **table** array
 
 
-## JavaScript code
+## JavaScript code
 
 You can add aribtrarily JavaScript code which will be added to the page. The function echo renders to the page.
 
