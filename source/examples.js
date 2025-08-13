@@ -95,7 +95,7 @@ examples['home'] = `
     },
     {
         "type": "wiki",
-        "source": "===History===\\n\\n16.3.2025 version 0.1 not published.\\n9.4.2025 version 1.0\\n28.4.2025 version 1.1\\n4.5.2025 version 1.2\\n30.5.2025 version 1.3\\n1.6.2025 version 1.4\\n25.6.2025 version 1.5\\n14.7.2025 version 1.6"
+        "source": "===History===\\n\\n16.3.2025 version 0.1 not published.\\n9.4.2025 version 1.0\\n28.4.2025 version 1.1\\n4.5.2025 version 1.2\\n30.5.2025 version 1.3\\n1.6.2025 version 1.4\\n25.6.2025 version 1.5\\n14.7.2025 version 1.6\\n13.8.2025 version 1.7"
     },
     {
         "type": "wiki",
