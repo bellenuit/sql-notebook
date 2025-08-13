@@ -875,14 +875,16 @@ runner.ps = function(id, down = false) {
     const code = source.value;
 	const scriptnode = document.createElement("TINY-PS");
 	scriptnode.id = "tinyps"+id;
-	scriptnode.setAttribute("width","576");
-	scriptnode.setAttribute("height","324");
+	scriptnode.setAttribute("width","640");
+	scriptnode.setAttribute("height","360");
 	scriptnode.setAttribute("format","svg,svgurl,canvasurl");
 	scriptnode.setAttribute("textmode","1");
 	scriptnode.setAttribute("error","1");
-	scriptnode.setAttribute("interval","500");
+	scriptnode.setAttribute("interval","100");
+    scriptnode.setAttribute("movie","1");
+    scriptnode.setAttribute("zip","1");
 	scriptnode.setAttribute("oversampling","4");
-	scriptnode.setAttribute("transparent","1");
+	scriptnode.setAttribute("transparent","0");
 	scriptnode.innerHTML = code;
 	
 	const tabledump = []

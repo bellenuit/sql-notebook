@@ -27,7 +27,7 @@ grestore end newpath
 rpnOperators.preparechart = function(context) {
     const code = `
 /TGL017 findfont 16 scalefont setfont
-/chartrect [ 0 0 576 576 16 div 9 mul ] def
+/chartrect [ 0 0 640 640 16 div 9 mul ] def
 /chartmargins [ 100 80 5 60 ] def
 /xlimits [ 0 0.2 1 ] def
 /ylimits [ 0 0.2 1 ] def

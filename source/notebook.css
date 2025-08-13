@@ -9,11 +9,11 @@ body{
 	text-align: justify;
 	color: black;
 	margin: 0px;
-	max-width: 595px; /* A4 */
+	max-width: 794px; /* A4 96 dpi */
 	padding-top: 48px;
 	padding-bottom: 48px;
-	padding-left: 48px;
-	padding-right: 48px;
+	padding-left: 72px;
+	padding-right: 96px;
 	background-color: white;
 /*
 	background-size: 12px 12px;
@@ -152,14 +152,14 @@ footer {
 	font-size: 14px;
 	border: none;
     background-color: transparent;
-    resize: none;
+    /* resize: none; */
     outline: none;
     width: 100%;
 	margin-bottom: 12px;
 	padding: 4px;
 	line-height: 20px;
 	display: none;
-	max-height: 600px;
+	max-height: 50vh;
 }
 
 .cellbak {
@@ -362,6 +362,16 @@ div.canvasurl {
 	text-decoration: none;
 }
 
+::part(svgurla)  { 
+	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
+	font-weight: bold;
+	font-size: 11px;
+	cursor: pointer;
+	color:black;
+	padding: 4px;
+	text-decoration: none;
+}
+
 ::part(canvasurl)  { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
@@ -371,6 +381,27 @@ div.canvasurl {
 	padding: 4px;
 	text-decoration: none;
 }
+
+::part(canvasurlz)  { 
+	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
+	font-weight: bold;
+	font-size: 11px;
+	cursor: pointer;
+	color: black;
+	padding: 4px;
+	text-decoration: none;
+} 
+
+::part(canvasurlm)  { 
+	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
+	font-weight: bold;
+	font-size: 11px;
+	cursor: pointer;
+	color: black;
+	padding: 4px;
+	text-decoration: none;
+} 
+
 
 ::part(rawurl)  { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
@@ -397,10 +428,26 @@ div.canvasurl {
 	color: white;
 }
 
+::part(svgurla):hover{
+	background-color: black;
+	color: white;
+}
+
 ::part(canvasurl):hover{
 	background-color: black;
 	color: white;
 }
+
+::part(canvasurlz):hover{
+	background-color: black;
+	color: white;
+}
+
+::part(canvasurlm):hover{
+	background-color: black;
+	color: white;
+}
+
 
 ::part(rawurl):hover{
 	background-color: black;
@@ -425,7 +472,10 @@ footer { display: none }
 #shadow-root a { visibility: hidden }
 p.link { display: none }
 ::part(svgurl)  { display:none; }
+::part(svgurla)  { display:none; }
 ::part(canvasurl)  { display:none; }
+::part(canvasurlz)  { display:none; }
+::part(canvasurlm)  { display:none; }
 
 @page {
     counter-increment: page;
