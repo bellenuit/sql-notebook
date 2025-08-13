@@ -97,12 +97,15 @@ But the main use case is to extend SQL.
 
 You can define a custom function for SQL.
 
+<code>
 alasql.fn.double = function(x) { return x*2 );
-
+</code>
 
 ## Movies
 
 You can export multiple pages as movie (option movie). The movie is encoded as MJPEG MP4 movie in double resolution. The compression is not very effective, but ok for social networks. If you want good comnpression (H.264) and full (four time) resolution, use ffmpeg to convert the PNG in the ZIP to MP4.
 
-<code>unzip PS__.zip
-ffmpeg -i PS__/ PS.mp4</code>
+<code>
+unzip PS__.zip
+ffmpeg -i PS__/ PS.mp4
+</code>
