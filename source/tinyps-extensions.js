@@ -232,7 +232,7 @@ x 0.5 add  y hchartproj lineto
 x y hchartproj lineto 
 closepath patterns col get exec 0 setgray
 /s y y0 sub round cvs def
-x y0 y add 2 div hchartproj moveto y y0 s stringwidth pop 2 div neg -36 rmoveto s show
+x y0 y add 2 div hchartproj moveto y y0 s stringwidth pop 2 div neg -20 rmoveto s show
 /y0 y def
 legendstyle col { 
 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath 
@@ -501,7 +501,8 @@ rpnOperators.preparepatterns = function(context) {
 
 rpnOperators.table = function(context) {
     const [haslabel, tablename] = context.pop("number", "string");
-    if (!tablename) return context; console.log("table " +tablename.value )
+    if (!tablename) return context; 
+    console.log("table " +tablename.value )
 	results = rpnTables[tablename.value];	
 	list = [];
 	list.push('[');
@@ -546,3 +547,34 @@ rpnOperators.table = function(context) {
 	context = rpn(s, context);
     return context;
 };
+
+
+rpnOperators.imagedata = function (context) {
+	const [id] = context.pop("string");
+	
+// 		postMessage("log", context.id, "imagedata");
+// 		postMessage("log", context.id, dataimages);
+	
+	const imagedata = dataimages[id.value];
+	
+	context.stack.push(new rpnNumber(imagedata.width));
+	context.stack.push(new rpnNumber(imagedata.height));
+	
+// 	postMessage("log", context.id, imagedata.width);
+	
+    const binary = imagedata.data;
+    const arr = new Array(binary.length);
+    for (var i = 0; i < binary.length; i++) {
+        // arr[i] = new rpnNumber(binary[i]);
+        arr[i] = String.fromCharCode(binary[i])
+    }
+
+    // context.stack.push(new rpnNumber(binary.length));
+    // const ar = 	new rpnArray(arr, context.heap);
+    const ar = new rpnString(arr.join(''),context.heap)
+    ar.reference.inc();
+    context.stack.push(ar);	
+
+	
+	return context;
+}

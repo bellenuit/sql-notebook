@@ -13,13 +13,19 @@
   <header>SQL Notebook</header>
   <div id="header">
 	 <button onclick="cellRun(0,true)">Run All</button>
-     <button onclick="window.open('index.html?new=1','_blank')">New</button><button onclick="openProject()">Open</button><button onclick="saveProject()">Save</button>
+	 <button onclick="window.open('index.html?url=https://www.belle-nuit.com/site/files/help.json','_blank')">Help</button>
+	 <button onclick="cellFullScreen(0)">Present</button>
+     <button onclick="window.open('index.html?new=1','_blank')">New</button>
+     <button onclick="openProject()">Open</button>
+     <button onclick="saveProject()">Save</button>
   </div>
+  <div id='fs'></div>
   <div id="cellzone"></div>
 
   
 
   <footer>
+  	<br/><br/>
   	MIT License v 1.7 13.8.2025<br/>
 	SQL Notebook by matti <a href='https://github.com/bellenuit/'>bellenuit</a><br/>
     SQL engine by Andrey Gershun and Mathias Rangel Wulff <a href='https://alasql.org'>AlaSQL</a><br/>
@@ -30,7 +36,7 @@
   </footer>
 <script type="text/javascript" src="alasql.js"></script>
 <script type="text/javascript" src="alasql-extensions.js"></script>
-<script type="text/javascript" src="tinyps120.js"></script>
+<script type="text/javascript" src="tinyps121.js"></script>
 <script type="text/javascript" src="tinyps-extensions.js"></script>
 <script type="text/javascript" src="ASCIIMathML.js"></script>
 <script type="text/javascript" src="fonts.js"></script>

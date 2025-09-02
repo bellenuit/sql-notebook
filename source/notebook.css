@@ -12,8 +12,8 @@ body{
 	max-width: 794px; /* A4 96 dpi */
 	padding-top: 48px;
 	padding-bottom: 48px;
-	padding-left: 72px;
-	padding-right: 96px;
+	padding-left: min(9%,72px);
+	padding-right: min(12%,96px);
 	background-color: white;
 /*
 	background-size: 12px 12px;
@@ -65,6 +65,11 @@ button {
 button:hover {
 	background-color: black;
 	color: white;
+}
+
+code {
+	display: block;
+	text-align: left;
 }
 
 textarea:focus {
@@ -174,9 +179,32 @@ footer {
 
 .celloutput {
 	margin-bottom: 12px;
+	margin-top: 12px;
 	width: 100%;
 }
 
+.fulloutput {
+	display: none;
+}
+
+
+div.cell.data ul {
+  display: table;
+}
+
+div.cell.data li {
+  display: table-row;
+}
+
+div.cell.data label, input {
+  display: table-cell;
+  margin-right: 12px;
+  margin-bottom: 12px;
+}
+
+span.radiovalue {
+	margin-right: 12px;
+}
 
 
 button.wiki { display : none; }
@@ -194,7 +222,9 @@ button.dup { display : none;}
 button.new { display : none; }
 button.run { display : none; }
 button.rundown { display : none; }
-
+button.fullscreenclose { display : none; }
+button.fullscreenprevious { display : none; }
+button.fullscreennext { display : none; }
 div.edit button.run { display: inline }
 div.edit button.rundown { display: inline }
 div.edit button.wiki { display: inline }
@@ -217,31 +247,34 @@ div.edit textarea.cellsource {
 	height: auto;
 }
 
+div textarea.cellsource { display: none }
+div.sql textarea.cellsource { display: none }
+
+
 div.wiki button.wiki { background-color: black; color: white; }
 div.wiki button.run { display: none; }
 div.wiki button.rundown { display: none; }
 div.sql button.sql { background-color: black; color: white; }
 div.sql textarea.cellsource {
-	color: #008;
+	color: #146EAA;
 	display: block;
 	height: auto;
 }
 div.data textarea.cellsource {
-	color: #080;
+	color: #F07C28;
 	height: auto;
 }
 div.data div.celloutput {
-	font-family: Courier, "Courier New", monospace;
-	font-size: 14px;
-	color: #080;
 	height: auto;
 	padding: 4px;
 }
 
 div.js textarea.cellsource {
-	color: #800;
+	color: #D23228;
 	height: auto;
 }
+
+
 
 pre.js {
 	font-family: Courier, "Courier New", monospace;
@@ -265,7 +298,7 @@ pre.error {
 }
 
 div.ps textarea.cellsource {
-	color: #080;
+	color: #00825A;
 	height: auto;
 }
 div.edit textarea.cellsource {
@@ -331,6 +364,7 @@ input.sortable {
 
 tiny-ps {
 	max-width: 100%;
+	display: block;
 }
 
 
@@ -349,7 +383,8 @@ div.canvasurl {
 
 ::part(divsvg)  { 
 	max-width: 100%;
-	max-height: 100%;
+	display: block;
+	background-color: white;
 }
 
 ::part(svgurl)  { 
@@ -459,6 +494,40 @@ div.canvasurl {
 	color: white;
 }
 
+.fullscreen { 
+  position: absolute;
+  top: 0px; left: 0px; bottom: 0px; right: 0px;
+  font-size: 200%;
+  line-height: 200%;
+  text-align: left;
+}
+.fullscreen h2 { font-size: 150%; line-height: 150%; }
+.fullscreen h3 { font-size: 150%; line-height: 150%; }
+.fullscreen h4 { font-size: 150%; line-height: 150%; }
+.fullscreen th { font-size: 120%; line-height: 120%; }
+.fullscreen td { font-size: 120%; line-height: 120%; }
+.fullscreen .cellsource {  width: calc(100% - 100px); padding: 50px; height: calc(100% - 100px);} 
+
+.fullscreen .celloutput {  width: calc(100% - 100px); padding: 50px; height: calc(100% - 100px);} 
+div.data.fullscreen .celloutput {  width: calc(100% - 100px); padding: 50px; height: calc(100% - 100px);} 
+.fullscreen .cellheader {  width: calc(100% - 100px); padding-right: 50px; padding-left: 50px; } 
+/* .fullscreen .fulloutput {   display: block; padding: 50px; } */
+.fullscreen button.fullscreenclose { display : inline; }
+.fullscreen button.fullscreenprevious { display : inline; }
+.fullscreen button.fullscreennext { display : inline; }
+.fullscreen button.edit { display: none }
+.fullscreen ::part(divsvg) { height: 100%; width: 100%; }
+.fullscreen #shadow-root a { visibility: hidden }
+.fullscreen p.link { display: none }
+.fullscreen ::part(svgurl)  { display:none; }
+.fullscreen ::part(canvasurl)  { display:none; }
+.fullscreen ::part(canvasurlz)  { display:none; }
+.fullscreen ::part(canvasurlm)  { display:none; }
+.fullscreen tiny-ps { width: 100%; height: 100%; }
+div.sql.fullscreen .cellsource { font-size: 120%; line-height: 120%; overflow: show }
+.fullscreen pre.js { font-size: 120%; line-height: 120%; }
+
+
 @media print {
 button { visibility: hidden; }
 input { visibility: hidden; }
@@ -472,7 +541,6 @@ footer { display: none }
 #shadow-root a { visibility: hidden }
 p.link { display: none }
 ::part(svgurl)  { display:none; }
-::part(svgurla)  { display:none; }
 ::part(canvasurl)  { display:none; }
 ::part(canvasurlz)  { display:none; }
 ::part(canvasurlm)  { display:none; }

@@ -208,12 +208,14 @@ function tablefilter(id) {
   
 }
 
+
 function cellEditor(code, type = "wiki", zeroid = false) {
 	const id = zeroid? 0 : Math.floor(Math.random() * 1000000);  // create unique id for console.log
     const node = document.createElement("DIV");   // build the HTML nodes
 	node.id = "cell" + id;
 	node.setAttribute("type", type);
-    node.className = "cell " + type;
+	node.className = "cell " + type ;
+
 	const header = document.createElement("DIV"); 
 	header.className = "cellheader";
 	const runbutton = document.createElement("BUTTON");
@@ -281,7 +283,7 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	downbutton.innerHTML = "Down";
 	downbutton.onclick = function() {cellDown(id)};
 	downbutton.className = "down";
-	header.appendChild(downbutton); 
+	header.appendChild(downbutton);
 	const newbutton = document.createElement("BUTTON");
 	newbutton.id = "new" + id;
 	newbutton.innerHTML = "Insert";
@@ -313,6 +315,25 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	savebutton.className = "save";
 	savebutton.onclick = function() {cellSave(id)};
 	header.appendChild(savebutton);
+	const closeButton = document.createElement("BUTTON");
+	closeButton.id = "fullscreenclose" + id;
+	closeButton.innerHTML = "Close";
+	closeButton.className = "fullscreenclose";
+	closeButton.onclick = function() {cellFullScreenClose(id)};
+	header.appendChild(closeButton);
+	const previousButton = document.createElement("BUTTON");
+	previousButton.id = "fullscreenprevious" + id;
+	previousButton.innerHTML = "Previous";
+	previousButton.className = "fullscreenprevious";
+	previousButton.onclick = function() {cellFullScreenPrevious(id)};
+	header.appendChild(previousButton)
+	const nextButton = document.createElement("BUTTON");
+	nextButton.id = "fullscreennext" + id;
+	nextButton.innerHTML = "Next";
+	nextButton.className = "fullscreennext";
+	nextButton.onclick = function() {cellFullScreenNext(id)};
+	header.appendChild(nextButton);
+
 
 
 	const source = document.createElement("TEXTAREA");   // build the HTML nodes
@@ -344,6 +365,11 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	output.id = "output" + id;
     output.className = "celloutput";
 	node.appendChild(output);
+		const fulloutput = document.createElement("DIV");   // build the HTML nodes
+	fulloutput.id = "fulloutput" + id;
+    fulloutput.className = "fulloutput";
+	node.appendChild(fulloutput);
+	
 	const console = document.createElement("DIV");   // build the HTML nodes
 	console.id = "console" + id;
     console.className = "cellconsole";
@@ -381,16 +407,33 @@ function cellDup(id) {
 function cellImport(id) { 
 	const cell = document.getElementById('cell'+id);
 	const source = document.getElementById('source'+id);
+	const output = document.getElementById('output'+id);
     const input = document.createElement('input');
     input.type = 'file';
+    input.value = null;
 	input.onchange = _ => {
         const files = Array.from(input.files);
-		const tablename = files[0].name.replace(".csv","");
-        const reader = new FileReader();
-        reader.onload = function(){ 
-            source.innerHTML = tablename + "\n" + (reader.result);
-        };
-        reader.readAsText(input.files[0]);
+        const file = files[0];
+        const filename = file.name;
+        console.log("import " +filename);
+        
+        if (filename.substr(-4) == ".csv") {
+			const tablename = filename.replace(".csv","");
+			const reader = new FileReader();
+			reader.onload = function(){ 
+            	source.innerHTML = tablename + "\n" + (reader.result);
+        	};
+			reader.readAsText(file);
+        } else {
+	        // try as image
+	        const reader = new FileReader();
+			reader.onload = function(){ 
+            	var dataURL = reader.result;
+				source.innerHTML = dataURL;
+        	};
+        	source.innerHTML = "Reading image " + filename;
+			reader.readAsDataURL(file);
+        }
     }
     input.click();
 	setTimeout(() => { source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
@@ -401,7 +444,7 @@ function cellEdit(id) {
 	const source = document.getElementById('source'+id); 
 	const bak = document.getElementById('bak'+id);
 	bak.innerHTML = source.value;
-	cell.className = "cell " + cell.getAttribute("type") + " edit"; 
+	cell.setAttribute("class", cell.getAttribute("class") + " edit "); 
     source.removeAttribute("readonly");
 	setTimeout(() => { 
 		source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
@@ -421,13 +464,15 @@ function cellCancel(id) {
 }
 
 function cellSave(id) { 
+	console.log("cellsave " + id);
 	const cell = document.getElementById('cell'+id);
     const source = document.getElementById('source'+id);
     const bak = document.getElementById('bak'+id);
     // if (bak.innerHTML !== source.innerHTML)
     projectTouched = true;
     source.setAttribute("readonly", true);
-	cell.className = "cell " + cell.getAttribute("type"); 
+	//cell.className = "cell " + cell.getAttribute("type"); 
+	cell.setAttribute("class", cell.getAttribute("class").replace("edit", " "));
 	if (cell.getAttribute("type") == "wiki") cellRun(id);
 }
 
@@ -449,13 +494,62 @@ function cellDown(id) {
 	newsource = document.getElementById('source' + id);
     newsource.removeAttribute("readonly");
 	newsource.focus();	
+}
 
+function cellShow(id) {
+	const cell = document.getElementById('cell'+id);
+	const source = document.getElementById('source'+id);
+	setTimeout(() => { 
+		source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
 }
 
 function cellDelete(id) { 
 	const cell = document.getElementById('cell'+id);
 	cell.parentElement.removeChild(cell);
 }
+
+function cellFullScreen(id) {
+	const cell = document.getElementById('cell'+id);
+	const output = document.getElementById('output'+id);
+	const fulloutput = document.getElementById('fulloutput'+id);
+	cell.className = cell.className + " fullscreen ";
+	cell.setAttribute('fsid', id);
+    const source = document.getElementById('source'+id);
+    source.style.height = 1.5 * source.style.height; 
+
+
+}
+
+function cellFullScreenClose(id) {
+// 	document.exitFullscreen?.(); // syntax from fullscreen API page MS
+    const cell = document.getElementById('cell'+id);
+    cell.className = cell.className.replace(' fullscreen ','')
+}
+
+function cellFullScreenPrevious(id) {
+	const cell = document.getElementById('cell'+id);
+   	const newcell = cell.previousSibling;
+   	if (newcell) {
+    cell.className = cell.className.replace(' fullscreen ','');
+    newcell.className = newcell.className + ' fullscreen ';
+    } 	
+	
+	const source = document.getElementById('source'+id); 	
+   	source.style.height = 1.5 * source.style.height; 
+}
+
+function cellFullScreenNext(id) {
+   	const cell = document.getElementById('cell'+id);
+   	const newcell = cell.nextSibling;
+   	if (newcell) {
+    cell.className = cell.className.replace(' fullscreen ','');
+    newcell.className = newcell.className + ' fullscreen ';
+    }
+   	   
+   	 const source = document.getElementById('source'+id); 	
+   	 source.style.height = 1.5 * source.style.height; 
+ }
+
 
 runner = {};
 
@@ -535,8 +629,14 @@ runner.wiki = function(id, down = false) {
     html = html.replace(/''(.*?)''/g, function (match, contents) {
         return '<i>' + contents + '</i>';
     });
-	html = html.replace(/https:\/\/(\S+)/gm, function (match, contents) {
-        return '<a href="https://' + contents +'" target="_blank">https://' + contents + '</a>'; 
+	html = html.replace(/(\s)(https:\/\/\S+)(\s)/gm, function (match, prespace, contents, postspace) {
+        return prespace + '<a href="' + contents +'" target="_blank">' + contents + '</a>' + postspace; 
+    });
+    html = html.replace(/\[(https:\/\/\S+) (.*?)\]/gm, function (match, contents, text) {
+        return '<a href="' + contents +'" target="_blank">' + text + '</a>'; 
+    });
+    html = html.replace(/\[\[help:(.*?)\]\]/gm, function (match, contents) {
+        return '<a href="index.html?url=../site/files/' + contents.replaceAll(' ','-').toLowerCase() +'.json&autorun=1">' + contents + '</a>'; 
     });
 	html = html.replace(/notebook:\/\/(\S+)/gm, function (match, contents) {
         return '<a href="index.html?' + content +'" target="_blank">' + content + '</a>'; 
@@ -573,7 +673,17 @@ runner.sql = function(id, down = false) {
 	// we do not know if there were single or multiple statements
 	// if there were single statements, then we have to make an array of it.
 	// workaround: we add a dummy statement to the commands to force multiple statements
-	alasql.promise(source.value+"; SET dummy = 1;")
+	const intolist = [];
+	for(let t of source.value.matchAll(/CREATE TABLE ([A-Za-z_]\w*)/gi)) {
+		console.log(t[1]);
+		intolist.push("DROP TABLE IF EXISTS " + t[1] + "; ");
+	} 
+	for(let t of source.value.matchAll(/ INTO ([A-Za-z_]\w*) FROM /gi)) {
+		console.log(t[1]);
+		intolist.push("DROP TABLE IF EXISTS " + t[1] + "; CREATE TABLE " + t[1] + "; ");
+	} 
+	console.log(intolist);
+	alasql.promise(intolist.join(" ") + source.value + "; SET dummy = 1;")
 	.then(function(results){ console.log((Date.now() - timerstart) +" ms sql");
 		var s = "";
 		for(elem of results) {
@@ -706,21 +816,199 @@ function parseCSV(str2) {
 runner.data = function(id, down = false) {
     const source = document.getElementById('source'+id);
     const output = document.getElementById('output'+id);
+    const cell =  document.getElementById('cell'+id);
 	// we do not know if there were single or multiple statements
 	// if there were single statements, then we have to make an array of it.
 	// workaround: we add a dummy statement to the commands to force multiple statements
+	
+	//image
+	if (source.value.substr(0,10) == "data:image") {
+		const img = document.createElement("IMG");
+		img.src = source.value;
+		img.style = "max-width: 100%;";
+		const hash = "i"+generateHash(source.value) % 1000000;
+		output.innerHTML = img.outerHTML;
+		setTimeout(() => { 
+			const canvas = document.createElement('canvas');
+			const context = canvas.getContext('2d');
+			canvas.width = img.width;
+			canvas.height = img.height;
+			context.drawImage(img, 0, 0 );
+			const data = context.getImageData(0, 0, img.width, img.height);
+			console.log(data.data.length);
+			console.log(typeof data.data)
+			arr = new Array(data.data.length);
+			for(let i = 0; i < data.data.length; i++) arr[i] = data.data[i];
+			dataimages[hash] = { 
+				width: data.width,
+				height: data.height,
+				data: arr
+			};
+			
+			const tablename = hash;
+			const tabledata = [];
+			for(let i = 0; i < data.data.length; i += 4) 
+			{
+				let p = Math.floor(i/4);
+				let x = p % data.width;
+				let y = Math.floor(p / data.width);
+				let r = data.data[i];
+				let g = data.data[i+1];
+				let b = data.data[i+2];
+				let a = data.data[i+3];
+				tabledata.push( { "x": x, "y": y, "r": r, "g": g, "b": b, "a": a});
+			}
+			alasql('CREATE TABLE ' + tablename);
+			console.log(tabledata.length);
+			console.log(alasql.tables);
+			console.log(alasql.tables[tablename]);
+			alasql.tables[tablename].data = tabledata;
+			output.innerHTML += "<p>" + tablename + "<br>cols x, y, r, g, b a<br>rows "+tabledata.length;
+			
+			if (down) { 
+			let cell = document.getElementById("cell"+id);
+			let nextcell = cell.nextSibling;
+			if (nextcell) {
+				let nextid = nextcell.id.replace("cell","");
+				cellRun(nextid, true);
+			} else {
+				console.log("run end");
+			}
+			
+		} else {
+			console.log("run end");
+		}
+			
+		    
+	    }, 300);
+		cell.style.backgroundColor = 'white';
+		
+		
+		return;
+		
+	}
+	
+	
 
 	const lines = source.value.split(/\r?\n/);
 	const tablename = lines.shift();
 	const data = lines.join("\n");
 	const list = parseCSV(data);
+	
+    var isform = false;
+    output.innerHTML = ""
+	if (tablename.substr(0,5) == "_form") {
+		isform = true;
+		// display form and add user value to the data 
+		// columns: id, label, type, initial, minval, maxval, val
+		let listholder = document.createElement("UL");
+		output.appendChild(listholder);
+		for (elem of list) {
+			let listelem = document.createElement("LI");
+			listholder.appendChild(listelem);
+			var node;
+			var q;
+			if (elem.type == "radio") {
+			  node = document.createElement("SPAN");
+			  
+			  for (e of elem.list.split("|")) {
+			  	let node3 = document.createElement("INPUT");
+			  	node3.id = elem.id;
+			  	node3.name = elem.id;
+			  	node3.type = "radio";
+			  	node3.setAttribute("value",e);
+			  	q = "UPDATE " + tablename + " SET val = '" + e + "' WHERE id = '" + elem.id + "'";
+			  	node3.setAttribute("oninput","alasql(\""+q+"\")");
+			  	if (e == elem.val) {
+			  		node3.setAttribute("checked", 1);
+			  	}
+			  	node.appendChild(node3);
+			  	let node4 = document.createElement("SPAN");
+			  	node4.className = "radiovalue";
+			  	node4.innerHTML = e;
+			  	node.appendChild(node4);
+			  }
+			} else {
+			    node = document.createElement("INPUT");
+				node.id = elem.id;
+				node.name = elem.id.substr(0,3);
+				node.type = elem.type;
+				node.setAttribute("value", elem.val);
+				if(elem.type == "range") {
+					node.setAttribute("min", elem.minval);
+					node.setAttribute("max", elem.maxval);
+					node.setAttribute("step", elem.stepval);
+				}
+				q = "UPDATE " + tablename + " SET val = '\" + this.value + \"' WHERE id = '" + node.id + "'";
+
+				if (elem.type == "checkbox") {
+					q = "UPDATE " + tablename + " SET val = 1 - val WHERE id = '" + node.id + "'";
+					if (elem.checked == "1") node.setAttribute("checked", 1)
+					else node.removeAttribute("checked");
+				}
+			/*if (elem.type == "radio") {
+				
+				q = "UPDATE " + tablename + " SET checked = 0 WHERE substr(id,1,3) = '" + node.id.substr(0,3) + "'; UPDATE " + tablename + " SET checked = 1 WHERE id = '" + node.id + "'";
+				node.setAttribute("checked", elem.checked);
+			} */
+			
+				node.setAttribute("oninput","alasql(\""+q+"\")");
+			}
+			let node2 = document.createElement("LABEL");
+			node2.setAttribute("for", elem.id);
+			node2.innerHTML = elem.label;
+			listelem.appendChild(node2);
+			listelem.appendChild(node);
+		    if (elem.type == "range") {
+		    	let node3 = document.createElement("SPAN");
+		    	node3.id = node.id + "_label";
+		    	node3.innerHTML = elem.val;
+		    	listelem.appendChild(node3);
+		    	node.setAttribute("onchange","let n = document.getElementById('" + node3.id + "'); console.log(n); n.innerHTML = this.value; alasql(\""+q+"\");");
+		    }
+		    
+		    if (elem.type == "text" && elem.datalist) {
+				let dlnode = document.createElement("DATALIST");
+				dlnode.id = node.id;
+				listelem.appendChild(dlnode);
+				let dl = alasql("SELECT COLUMN * FROM " + elem.datalist);
+				
+				for (let delem of dl) {
+					let opt = document.createElement("OPTION");
+					opt.value = delem;
+					dlnode.appendChild(opt);
+				}
+			}
+		}
+		
+		let nextcell = cell.nextSibling;
+		if (nextcell) {
+			let listelem = document.createElement("LI");
+			listholder.appendChild(listelem);
+			let node = document.createElement("INPUT");
+			node.type = "submit";
+			node.value = "Run Next";
+			let nextid = nextcell.id.replace("cell","");
+			node.setAttribute("onclick", "cellRun(" + nextid + ", false);" );
+			listelem.appendChild(node);
+			let node2 = document.createElement("INPUT");
+			node2.type = "submit";
+			node2.value = "Run Next Down";
+			node2.setAttribute("onclick", "cellRun(" + nextid + ", true);" );
+			listelem.appendChild(node2);
+		}	
+		
+		 
+	}
+	
+	
 	const header = lines.shift();
 	var separator = ",";
 	if (header.indexOf(";") > -1) separator = ";";
 	if (header.indexOf("\t") > -1) separator = "\t";
 	try {
-	    const sql = 'DROP TABLE IF EXISTS '+tablename+'; CREATE TABLE '+tablename+"("+header.split(separator).join(",")+")";
-		console.log(sql);
+
+// 		console.log(sql);
 		alasql('DROP TABLE IF EXISTS '+tablename+'; CREATE TABLE '+tablename+"("+header.split(separator).join(",")+")"); 
 		for(let elem of list){
 			// clean data type- after space
@@ -759,10 +1047,10 @@ runner.data = function(id, down = false) {
 		s += '<br>columns ' + cols.join(", ");
 		s += '<br>rows ' + results[0][0].c; 
 		
-		output.innerHTML = s;
+		if (! isform)output.innerHTML = s;
 		const cell = document.getElementById('cell'+id);
 		cell.style.backgroundColor = 'white';
-		output.outerHTML = output.outerHTML; // force
+		output.outerHTML = output.outerHTML; // force 
 		
 		console.log((Date.now() - timerstart) +" ms");
 		
@@ -891,10 +1179,17 @@ runner.ps = function(id, down = false) {
 	tabledump.push("rpnTables = []");
     for (t in alasql.tables) {
 	    if (t.substr(0,1)=="_") {
-		    tabledump.push("rpnTables[\""+t+"\"] = " + JSON.stringify(alasql.tables[t].data) + " ;\n");
+	    	let t2 = alasql("SELECT * FROM " + t);
+	    	// unescape undefined
+	    	let j = JSON.stringify(t2, (k, v) => v === undefined ? null : v)
+	        tabledump.push("rpnTables[\""+t+"\"] = " + j + " ;\n");
+	        // §console.log(j);
 	    }
     }
-    rpnExtensions = tabledump.join("\n");
+    
+    const di = "\n dataimages = " + JSON.stringify(dataimages) + ";" ;
+    
+    rpnExtensions = tabledump.join("\n") + di ;
 
     output.innerHTML = "";		
 	const cell = document.getElementById('cell'+id);
@@ -1026,6 +1321,7 @@ function openProject() {
 	console.log("openProject");
     const input = document.createElement('input');
     input.type = 'file';
+    input.value = null;
 	input.onchange = _ => {
 		console.log("change");
         const files = Array.from(input.files);
@@ -1048,14 +1344,14 @@ function readProject(json) {
 	const list = JSON.parse(json);
 	console.log(list);
 	var first = true;
-		for(const elem of list) {
-			const cell = cellEditor(elem.source, elem.type, first);
-			first = false;
-			zone.appendChild(cell);
-			const id = cell.getAttribute("id").replace("cell","");
-			if (elem.type == 'wiki') cellRun(id);
-		}
-	
+	for(const elem of list) {
+		const cell = cellEditor(elem.source, elem.type, first);
+		first = false;
+		zone.appendChild(cell);
+		const id = cell.getAttribute("id").replace("cell","");
+		if (elem.type == 'wiki') cellRun(id);
+	}
+	if (autorun) cellRun(0,true);
 }
 
 function btoaUnicode(s) {
@@ -1064,7 +1360,17 @@ function btoaUnicode(s) {
 		}
 	));
 };
-        		
+    
+// https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript
+    
+function generateHash(string) {
+  var hash = 0;
+  for (const char of string) {
+    hash = (hash << 5) - hash + char.charCodeAt(0);
+    hash |= 0; // Constrain to 32bit integer
+  }
+  return Math.abs(hash);
+};    		
 
 function saveProject()
 {
@@ -1099,11 +1405,15 @@ function saveProject()
 const zone = document.getElementById('cellzone');
 const url = window.location;
 const urlParams = new URLSearchParams(url.search);
+const dataimages = {};
 var timerstart = Date.now();
+var autorun = false;
+
+if (urlParams.get("autorun") == 1) autorun = true;
 
 if (urlParams.get('new') == 1) {
 	zone.innerHTML = '';
-	cell = cellEditor('','wiki', true);
+	cell = cellEditor('','wiki', true, 1);
 	zone.appendChild(cell);
 	cellEdit(cell.id.replace("cell",""));
 } else if (urlParams.get('example')) {
@@ -1111,6 +1421,7 @@ if (urlParams.get('new') == 1) {
 } else if (urlParams.get('url')) {
 	fetch(urlParams.get('url')).then(response => response.text()).then(body => readProject(body));
 } else {
+	autorun = true;
     readProject(examples["home"]);
 }
 
