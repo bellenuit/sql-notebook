@@ -512,10 +512,11 @@ function cellFullScreen(id) {
 	const cell = document.getElementById('cell'+id);
 	const output = document.getElementById('output'+id);
 	const fulloutput = document.getElementById('fulloutput'+id);
+    cell.setAttribute("class", cell.getAttribute("class").replace("edit", " "));
 	cell.className = cell.className + " fullscreen ";
 	cell.setAttribute('fsid', id);
     const source = document.getElementById('source'+id);
-    source.style.height = 1.5 * source.style.height; 
+    
 
 
 }
@@ -535,19 +536,28 @@ function cellFullScreenPrevious(id) {
     } 	
 	
 	const source = document.getElementById('source'+id); 	
-   	source.style.height = 1.5 * source.style.height; 
+//    	source.style.height = 1.5 * source.style.height; 
 }
 
 function cellFullScreenNext(id) {
    	const cell = document.getElementById('cell'+id);
    	const newcell = cell.nextSibling;
    	if (newcell) {
-    cell.className = cell.className.replace(' fullscreen ','');
-    newcell.className = newcell.className + ' fullscreen ';
+    	cell.className = cell.className.replace(' fullscreen ','');
+    	newcell.setAttribute("class", newcell.getAttribute("class").replace("edit", " "));
+    	newcell.className = newcell.className + ' fullscreen ';
+    	console.log(newcell.id);
+       	const source = document.getElementById('source'+newcell.id.replace("cell","")); 	
+   	 	console.log(source.value);
+   	 	console.log("next" + source.style.height);
+    	 	setTimeout( function() {
+   	 	source.style.height = Math.max(source.scrollHeight, 16) + "px";
+   	 	console.log("timeout" + source.style.height);
+   	 	}, 25); 
     }
    	   
-   	 const source = document.getElementById('source'+id); 	
-   	 source.style.height = 1.5 * source.style.height; 
+
+    
  }
 
 
@@ -1088,8 +1098,11 @@ runner.js = function(id, down = false) {
 	echo = function(s) {
 		output.innerHTML += s;
 	}
-	dump = function(fn) {
-		echo('<pre class="js">' + fn.name + ' = ' + fn.toString() + '</pre>');
+	echocode = function(s) {
+		echo('<code class="js">' + s + '</code>');
+	}
+	dump = function(fn, s = "") {
+		echo('<code class="js">' + (fn.name ? fn.name : s) + ' = ' + fn.toString() + '</code>');
 	}
 	htmlTable = function(query) {
 		let first = query[0];

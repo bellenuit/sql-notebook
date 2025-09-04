@@ -84,7 +84,7 @@ textarea:read-only {
 .error {
 	color:red;
 	transition:.5s;
-	font-size: 14px;
+	font-size: 16px;
 	overflow: auto;
 	margin: 15px;
 }
@@ -154,7 +154,7 @@ footer {
 
 .cellsource {
 	font-family: Courier, "Courier New", monospace;
-	font-size: 14px;
+	font-size: 16px;
 	border: none;
     background-color: transparent;
     /* resize: none; */
@@ -265,6 +265,8 @@ div.data textarea.cellsource {
 	height: auto;
 }
 div.data div.celloutput {
+    font-family: Courier, "Courier New", monospace;
+	color: #F07C28;
 	height: auto;
 	padding: 4px;
 }
@@ -276,9 +278,9 @@ div.js textarea.cellsource {
 
 
 
-pre.js {
+code.js {
 	font-family: Courier, "Courier New", monospace;
-	font-size: 14px;
+	font-size: 16px;
 	color: #800;
 	height: auto;
 	padding: 4px;
@@ -497,20 +499,20 @@ div.canvasurl {
 .fullscreen { 
   position: absolute;
   top: 0px; left: 0px; bottom: 0px; right: 0px;
-  font-size: 200%;
-  line-height: 200%;
+  font-size: 24px;
+  line-height: 30px;
   text-align: left;
 }
-.fullscreen h2 { font-size: 150%; line-height: 150%; }
-.fullscreen h3 { font-size: 150%; line-height: 150%; }
-.fullscreen h4 { font-size: 150%; line-height: 150%; }
-.fullscreen th { font-size: 120%; line-height: 120%; }
-.fullscreen td { font-size: 120%; line-height: 120%; }
-.fullscreen .cellsource {  width: calc(100% - 100px); padding: 50px; height: calc(100% - 100px);} 
+.fullscreen h2 { font-size: 36px; line-height: 48px; }
+.fullscreen h3 { font-size: 30px; line-height: 36px; }
+.fullscreen h4 { font-size: 24px; line-height: 30px; }
+.fullscreen th { font-size: 20px; line-height: 20px; }
+.fullscreen td { font-size: 20px; line-height: 20px; }
+.fullscreen .cellsource {  width: calc(100% - 100px); padding-left: 50px; padding-right: 50px; height: calc(100% - 100px); font-size: 20px; line-height: 24px; } 
 
-.fullscreen .celloutput {  width: calc(100% - 100px); padding: 50px; height: calc(100% - 100px);} 
-div.data.fullscreen .celloutput {  width: calc(100% - 100px); padding: 50px; height: calc(100% - 100px);} 
-.fullscreen .cellheader {  width: calc(100% - 100px); padding-right: 50px; padding-left: 50px; } 
+.fullscreen .celloutput {  width: calc(100% - 100px); padding-left: 50px; padding-right: 50px; height: calc(100% - 100px);} 
+div.data.fullscreen .celloutput {  width: calc(100% - 100px); padding-left: 50px; padding-right: 50px; height: calc(100% - 100px);} 
+.fullscreen .cellheader {  width: calc(100% - 100px); padding-right: 50px; padding-left: 50px; padding-bottom: 25px; } 
 /* .fullscreen .fulloutput {   display: block; padding: 50px; } */
 .fullscreen button.fullscreenclose { display : inline; }
 .fullscreen button.fullscreenprevious { display : inline; }
@@ -524,8 +526,7 @@ div.data.fullscreen .celloutput {  width: calc(100% - 100px); padding: 50px; hei
 .fullscreen ::part(canvasurlz)  { display:none; }
 .fullscreen ::part(canvasurlm)  { display:none; }
 .fullscreen tiny-ps { width: 100%; height: 100%; }
-div.sql.fullscreen .cellsource { font-size: 120%; line-height: 120%; overflow: show }
-.fullscreen pre.js { font-size: 120%; line-height: 120%; }
+.fullscreen code.js { font-size: 20px; line-height: 24px; }
 
 
 @media print {
