@@ -747,6 +747,7 @@ runner.wiki = function(id, down = false) {
 
 
 runner.sql = function(id, down = false) {
+	const cell = document.getElementById('cell'+id);
 	const source = document.getElementById('source'+id);
     const output = document.getElementById('output'+id);
 	// we do not know if there were single or multiple statements
@@ -762,7 +763,11 @@ runner.sql = function(id, down = false) {
 		intolist.push("DROP TABLE IF EXISTS " + t[1] + "; CREATE TABLE " + t[1] + "; ");
 	} 
 	console.log(intolist);
-	alasql.promise(intolist.join(" ") + source.value + "; SET dummy = 1;")
+	const hidestats = (source.value.substr(0,1) == "!");
+	const sourcevalue = hidestats ? source.value.substr(1) : source.value ;
+	cell.className = cell.className.replace(" hide", "");
+	if (hidestats) cell.className += " hide";
+	alasql.promise(intolist.join(" ") + sourcevalue + "; SET dummy = 1;")
 	.then(function(results){ console.log((Date.now() - timerstart) +" ms sql");
 		var s = "";
 		for(elem of results) {
