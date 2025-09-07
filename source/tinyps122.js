@@ -31,6 +31,8 @@ Version 1.2.1 2025-09-02
 - Fixed SVG viewbox
 - Fixed PNG size
 - operatir cvr
+Version 1.2.2 2025-09-07
+- On multiple PNG, the zip file is created immediately to lower memory footprint.
 
 Renders as subset PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
 The output can be displayed or proposed as downloadable link. It can be transparent.
@@ -429,7 +431,9 @@ rpnCanvasDevice = class {
     }
     showpage(context) {
 	    const data = this.ctx.getImageData(0, 0, this.node.width, this.node.height);
-	    postMessage(["canvas", context.id, data, null]);       
+	    
+	    postMessage(["canvas", context.id, data, null]);  		
+	         
         this.ctx = null;
         return context;
     }
@@ -4509,7 +4513,55 @@ mjpeg = class {
 	}
 }
 
+// https://dev.to/fkrasnowski/simple-kv-storage-on-top-of-indexeddb-3jcg
 
+const STORE_NAME = "store";
+const openKVDatabase = (dbName) =>
+  new Promise((resolve, reject) => {
+    const request = indexedDB.open(dbName);
+
+    request.onsuccess = () => {
+      resolve(request.result);
+    };
+    request.onerror = () => {
+      reject("indexedDB request error");
+    };
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(STORE_NAME, { keyPath: "key" });
+    };
+  });
+
+
+function idbRequestToPromise(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function openKV(dbName) {
+  const db = await openKVDatabase(dbName);
+
+  const openStore = () => {
+    return db.transaction(STORE_NAME, "readwrite").objectStore(STORE_NAME);
+  };
+
+  return {
+    async get(key) {
+	    const pair = await idbRequestToPromise(openStore().get(key));
+	    return pair?.value;
+    },
+
+    async set(key, value) {
+	    const pair = { key, value };
+        await idbRequestToPromise(openStore().put(pair));
+    },
+
+    async delete(key) {
+	    return idbRequestToPromise(openStore().delete(key));
+    },
+  };
+}
 
 /* TINYPS TAG */
 
@@ -4728,7 +4780,13 @@ class tinyPStag extends HTMLElement {
             	urlnode2z.className = "jscanvasurlz";
             	urlnode2z.innerHTML = "";
             	urlnode2z.style.display = "none";
-            	rpnFrames[urlnode2z.id] = [];
+            	
+            	let d = new Date();
+				let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13);
+				let z = new rpnZip(fn);
+            	
+            	
+            	rpnFrames[urlnode2z.id] = z;
             }
             if (context.device.movie) {
             	urlnode2m = document.createElement("A");
@@ -4893,14 +4951,18 @@ class tinyPStag extends HTMLElement {
 								let urljpg = oc.toDataURL("image/jpeg", 0.8);
 								urlnode.href = url;
                                 let d = new Date();
-	                            let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13)+".png";
+	                            let fn = "PS" + '_' + d.toISOString().replaceAll("-", "").replaceAll(":", "").replaceAll("T", "_").substr(0, 13) + ".png";
                                 urlnode.setAttribute("download", fn);
                                 if (context.device.zip) {
-                                		let urlnodez = shadow.querySelector('.jscanvasurlz');
-								    rpnFrames[urlnodez.id].push(url);
+                                	let urlnodez = shadow.querySelector('.jscanvasurlz');
+								    //rpnFrames[urlnodez.id].push(url);
+								    const b = atob(url.split(",")[1]);
+								    const i = Object.keys(rpnFrames[urlnodez.id].zip).length;
+									rpnFrames[urlnodez.id].binary2zip(("0000" + i).slice(-4)+".png", b, "");
+								    
 								}
 								if (context.device.movie) {
-                                		let urlnodem = shadow.querySelector('.jscanvasurlm');
+                                	let urlnodem = shadow.querySelector('.jscanvasurlm');
 								    rpnImageData [urlnodem.id].push(urljpg);
 								}
 							}
@@ -4911,24 +4973,10 @@ class tinyPStag extends HTMLElement {
 
 								if (context.device.zip) {
 									let urlnodez = shadow.querySelector('.jscanvasurlz');
-									if (rpnFrames[urlnodez.id].length > 1) {
-								    let d = new Date();
-									let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13);
-								    let z = new rpnZip(fn);
-								    var i = 0;
-												                  	
-								    for (let u of rpnFrames[urlnodez.id]) {
-									     if (u && u !== 'null') { 
-										      const b = atob(u.split(",")[1]);
-											  z.binary2zip(("0000"+i).slice(-4)+".png",b,"");
-											  i++;
-									     }
-																		  
-								     }
-									z.makeZip(urlnodez);
+									rpnFrames[urlnodez.id].makeZip(urlnodez);
 								    urlnodez.innerHTML = "ZIP";
 								    urlnodez.style.display = "inline";
-								}}
+								}
 													                  
 								if (context.device.movie) {
 									let urlnodem = shadow.querySelector('.jscanvasurlm');

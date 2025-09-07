@@ -266,12 +266,6 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	jsbutton.onclick = function() {setJS(id)};
 	jsbutton.className = "js";
 	header.appendChild(jsbutton);
-	const editbutton = document.createElement("BUTTON");
-	editbutton.id = "edit" + id;
-	editbutton.innerHTML = "...";
-	editbutton.onclick = function() {cellEdit(id)};
-	editbutton.className = "edit";
-	header.appendChild(editbutton);
 	const upbutton = document.createElement("BUTTON");
 	upbutton.id = "up" + id;
 	upbutton.innerHTML = "Up";
@@ -332,7 +326,19 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	nextButton.innerHTML = "Next";
 	nextButton.className = "fullscreennext";
 	nextButton.onclick = function() {cellFullScreenNext(id)};
+	const editbutton = document.createElement("BUTTON");
+	editbutton.id = "edit" + id;
+	editbutton.innerHTML = "Edit";
+	editbutton.onclick = function() {cellEdit(id)};
+	editbutton.className = "edit";
+	header.appendChild(editbutton);
+	const menuButton = document.createElement("BUTTON");
 	header.appendChild(nextButton);
+	menuButton.id = "edit" + id;
+	menuButton.innerHTML = "...";
+	menuButton.onclick = function() {cellMenu(id)};
+	menuButton.className = "menu";
+	header.appendChild(menuButton);
 
 
 
@@ -340,7 +346,7 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	source.id = "source" + id;
     source.className = "cellsource";
 	source.setAttribute("readonly", true);
-	source.setAttribute("autocomplete", "on");
+	source.setAttribute("autocomplete", "off");
     source.setAttribute("spellcheck", false);	
 	source.addEventListener("input", function() {
         this.style.height = "auto";
@@ -354,7 +360,7 @@ function cellEditor(code, type = "wiki", zeroid = false) {
     */
 	// force at beginning, js dom does not know layout on load
     setTimeout(() => { source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
-	source.innerHTML = code;
+	source.value = code;
 	node.appendChild(source);
 	const bak = document.createElement("TEXTAREA");   // build the HTML nodes
 	bak.id = "bak" + id;
@@ -381,7 +387,7 @@ function cellNew(id) {
 	const cell = document.getElementById('cell'+id);
 	let newcell = cellEditor("");
     const newid = newcell.id.replace('cell',''); 
-	newcell.className = "cell " + newcell.getAttribute("type") + " edit"; 
+	newcell.className = "cell " + newcell.getAttribute("type") + " menu edit"; 
 	cell.after(newcell);
     newsource = document.getElementById('source' + newid);
     newsource.removeAttribute("readonly");
@@ -394,7 +400,7 @@ function cellDup(id) {
 	let newcell = cellEditor(source.value);
 	newcell.setAttribute("type", cell.getAttribute("type"))
     const newid = newcell.id.replace('cell',''); 
-	newcell.className = "cell " + newcell.getAttribute("type") + " edit"; 
+	newcell.className = "cell " + newcell.getAttribute("type") + " menu edit"; 
 	cell.after(newcell);
     newsource = document.getElementById('source' + newid);
     newsource.removeAttribute("readonly");
@@ -403,6 +409,37 @@ function cellDup(id) {
 	newsource.setSelectionRange(length, length);
 	newsource.focus();	
 }
+
+
+
+async function opfsSaveFile(filename, data) {
+	
+	// safari does not support writable, so we use indexedDB
+	/*
+	console.log("opfsSaveFile");
+	const opfsRoot = await navigator.storage.getDirectory();
+	console.log("opfsRoot");
+	const fileHandle = await opfsRoot.getFileHandle(filename, {create: true});
+	console.log("fileHandle " + filename);
+	console.log(fileHandle);
+	const writable = await fileHandle.createWritable();
+	console.log("writable");
+	writable.write(reader.result);
+	console.log("write");
+	writable.close();
+	console.log("close");
+	*/
+	const kv = await openKV("kv");
+	kv.set(filename, data);
+}
+
+async function opfsReadFile(filename) {
+	
+	const kv = await openKV("kv");
+	const data = await kv.get(filename);
+	return data;
+}
+
 
 function cellImport(id) { 
 	const cell = document.getElementById('cell'+id);
@@ -415,36 +452,68 @@ function cellImport(id) {
         const files = Array.from(input.files);
         const file = files[0];
         const filename = file.name;
-        console.log("import " +filename);
-        
+        console.log("import " +filename);   
         if (filename.substr(-4) == ".csv") {
 			const tablename = filename.replace(".csv","");
 			const reader = new FileReader();
+			output.innerHTML = "Reading CSV " + filename;
+			reader.onprogress = (event) => { output.innerHTML += "."; }
 			reader.onload = function(){ 
-            	source.innerHTML = tablename + "\n" + (reader.result);
+            	source.value = tablename + "\n" + (reader.result);
+            	console.log(source.value.substr(0,300));
+                setData(id);
+            	cellSave(id);
+            	output.innerHTML = "Inserting data";
+            	setTimeout( () => {cellRun(id);}, 50);
         	};
+        	reader.onerror = (reason) => {
+	        	output.innerHTML = '<span class="error">' + reader.error + '</span>';
+        	}
 			reader.readAsText(file);
         } else {
 	        // try as image
 	        const reader = new FileReader();
 			reader.onload = function(){ 
             	var dataURL = reader.result;
-				source.innerHTML = dataURL;
+				source.value = dataURL;
+				console.log(source.value.substr(0,300));
+				setData(id);
+				cellSave(id);
+				cellRun(id);
         	};
-        	source.innerHTML = "Reading image " + filename;
+        	output.innerHTML = "Reading image " + filename;
+        	reader.onprogress = (event) => { output.innerHTML += "."; }
+        	reader.onerror = (reason) => {
+	        	output.innerHTML = '<span class="error">' + reader.error + '</span>';
+        	}
 			reader.readAsDataURL(file);
         }
+        
     }
+    console.log("import click"); 
     input.click();
-	setTimeout(() => { source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
+}
+
+function cellMenu(id) {
+	const cell = document.getElementById('cell'+id);
+	//console.log("menu " + cell.className.indexOf(" menu"));
+	if (cell.className.indexOf(" menu") == -1)
+	{
+	    cell.className = cell.className + " menu";	
+	} else
+	{
+		cell.className = cell.className.replace(" menu","");
+		//console.log("edit " + cell.className.indexOf(" edit"));
+		if (cell.className.indexOf(" edit") > -1) cellSave(id);
+	}
 }
 
 function cellEdit(id) { 
 	const cell = document.getElementById('cell'+id);
 	const source = document.getElementById('source'+id); 
 	const bak = document.getElementById('bak'+id);
-	bak.innerHTML = source.value;
-	cell.setAttribute("class", cell.getAttribute("class") + " edit "); 
+	bak.value = source.value;
+	cell.className = cell.className + " edit "; 
     source.removeAttribute("readonly");
 	setTimeout(() => { 
 		source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
@@ -457,7 +526,7 @@ function cellCancel(id) {
 	const cell = document.getElementById('cell'+id);
 	const source = document.getElementById('source'+id);
 	const bak = document.getElementById('bak'+id);
-	source.innerHTML = bak.innerHTML;
+	source.value = bak.value;
     source.setAttribute("readonly", true);
 	source.outerHTML = source.outerHTML;  // force update textarea
 	cell.className = "cell " + cell.getAttribute("type"); 
@@ -755,7 +824,7 @@ runner.sql = function(id, down = false) {
 
 // https://stackoverflow.com/questions/1293147/how-to-parse-csv-data
 // a proper state machine would be better
-function parseCSV(str2) {
+function*  parseCSV(str2) {
     const arr = [];
     let quote = false;  // 'true' means we're inside a quoted field
 	var hadquote = false;  // when quoted, do not trim
@@ -813,17 +882,36 @@ function parseCSV(str2) {
 		 for (var j in header) {
 			 s[header[j]] = arr[i][j];
 		 }
-		 result.push(s);
+		 // result.push(s);
+		 yield s;
 	 }
 	 
 	 
-    return result;
+    // return result;
 }
 
 
+function cleanName(s) {
+	// remove space and invalid characters, but we need to keep " number";
+	
+	
+	
+	
+	if (s.substr(-7,7) == " number")
+	{
+		return cleanName(s.replace(" number","")) + " number";
+	}
+	
+	const keywordlist = ['VALUE', 'OF', 'SEARCH', 'SELECT', 'ROW', 'COLUMN', 'MATRIX', 'INDEX', 'RECORDSET', 'TEXT', 'ABSOLUTE', 'ACTION', 'ADD', 'AFTER', 'AGGR', 'AGGREGATE', 'AGGREGATOR', 'ALL', 'ALTER', 'AND', 'ANTI', 'ANY', 'APPLY', 'ARRAY', 'AS', 'ASSERT', 'ASC', 'ATTACH', 'AUTOINCREMENT', 'AUTO_INCREMENT', 'AVG', 'BEFORE', 'BEGIN', 'BETWEEN', 'BREAK', 'NOT', 'LIKE', 'BY', 'ILIKE', 'CALL', 'CASE', 'CAST', 'CHECK', 'CLASS', 'CLOSE', 'COLLATE', 'COLUMNS', 'COMMIT', 'CONSTRAINT', 'CONTENT', 'CONTINUE', 'CONVERT', 'CORRESPONDING', 'COUNT', 'CREATE', 'CROSS', 'CUBE', 'CURRENT_TIMESTAMP', 'DECLARE', 'DEFAULT', 'DELETE', 'DELETED', 'DESC', 'DETACH', 'DISTINCT', 'DROP', 'ECHO', 'EDGE', 'END', 'ENUM', 'ELSE', 'ESCAPE', 'EXCEPT', 'EXEC', 'EXECUTE', 'EXISTS', 'EXPLAIN', 'FALSE', 'FETCH', 'FIRST', 'FOR', 'FOREIGN', 'FROM', 'FULL', 'FUNCTION', 'GLOB', 'GO', 'GRAPH', 'GROUP', 'GROUPING', 'HAVING', 'IF', 'IDENTITY', 'IS', 'IN', 'INDEX', 'INDEXED', 'INNER', 'INSTEAD', 'INSERT', 'INSERTED', 'INTERSECT', 'INTERVAL', 'INTO', 'JOIN', 'KEY', 'LAST', 'lET', 'LEFT', 'LIKE', 'LIMIT', 'MATCHED', 'MAX', 'MIN', 'MERGE', 'MINUS', 'MODIFY', 'NATURAL', 'NEXT', 'NEW', 'NOCASE', 'NO', 'NOT', 'NULL', 'NULLS', 'OFF', 'ON', 'ONLY', 'OF', 'OFFSET', 'OPEN', 'OPTION', 'OR', 'ORDER', 'OUTER', 'OVER', 'PATH', 'PARTICION', 'PERCENT', 'PIVOT', 'PLAN', 'PRIMARY', 'PRINT', 'PRIOR', 'QUERY', 'READ', 'REDCORDSET', 'REDUCE', 'REFERENCES', 'REGEXP', 'REINDEX', 'RELATIVE', 'REMOVE', 'RENAME', 'REPEAT', 'REPLACE', 'REQUIRE', 'RESTORE', 'RETURN', 'RETURNS', 'RIGHT', 'ROLLBACK', 'ROLLUP', 'ROWS', 'SCHEMA', 'SCHEMAS', 'SEMI', 'SET', 'SETS', 'SHOW', 'SOME', 'SOURCE', 'STRATEGY', 'STORE', 'SUM', 'TOTAL', 'TABLE', 'TABLES', 'TARGET', 'TEMP', 'TEMPORARY', 'TEXTSTRING', 'THEN', 'TIMEOUT', 'TO', 'TOP', 'TRAN', 'TRANSACTION', 'TRIGGER', 'TRUE', 'TRUNCATE', 'UNION', 'UNIQUE', 'UNPIVOT', 'UPDATE', 'USE', 'USING', 'VALUE', 'VALUES', 'VERTEX', 'VIEW', 'WHEN', 'WHERE', 'WHILE', 'WITH', 'WORK' ];
+	
+	if (keywordlist.includes(s)) return s + "_";
+	if (keywordlist.map( (x) => (x.toLowerCase()) ).includes(s)) return s + "_";
+	
+	
+	return s.replaceAll('"','').trim().replace(/^[^a-zA-Z]/,"_").replaceAll(/[^a-zA-Z0-9]+/g,"_");
+}
 
-
-runner.data = function(id, down = false) {
+runner.data = function(id, down = false, diskdata = null) {
     const source = document.getElementById('source'+id);
     const output = document.getElementById('output'+id);
     const cell =  document.getElementById('cell'+id);
@@ -832,9 +920,15 @@ runner.data = function(id, down = false) {
 	// workaround: we add a dummy statement to the commands to force multiple statements
 	
 	//image
-	if (source.value.substr(0,10) == "data:image") {
+		
+	if (source.value.substr(0,10) == "data:image" || source.value.substr(0,11) == "!data:image") {
 		const img = document.createElement("IMG");
-		img.src = source.value;
+		const hidestats = (source.value.substr(0,1) == "!");
+		if (hidestats) 
+			img.src = source.value.substr(1);
+		else
+			img.src = source.value;
+		console.log(img.src.substr(0,300));
 		img.style = "max-width: 100%;";
 		const hash = "i"+generateHash(source.value) % 1000000;
 		output.innerHTML = img.outerHTML;
@@ -868,30 +962,28 @@ runner.data = function(id, down = false) {
 				let a = data.data[i+3];
 				tabledata.push( { "x": x, "y": y, "r": r, "g": g, "b": b, "a": a});
 			}
-			alasql('CREATE TABLE ' + tablename);
+			alasql('DROP TABLE IF EXISTS ' + tablename + '; CREATE TABLE ' + tablename);
 			console.log(tabledata.length);
 			console.log(alasql.tables);
 			console.log(alasql.tables[tablename]);
 			alasql.tables[tablename].data = tabledata;
-			output.innerHTML += "<p>" + tablename + "<br>cols x, y, r, g, b a<br>rows "+tabledata.length;
-			
+			if (!hidestats) output.innerHTML += "<p>" + tablename + "<br>cols x, y, r, g, b a<br>rows "+tabledata.length;
+			cell.style.backgroundColor = 'white';
 			if (down) { 
-			let cell = document.getElementById("cell"+id);
-			let nextcell = cell.nextSibling;
-			if (nextcell) {
-				let nextid = nextcell.id.replace("cell","");
-				cellRun(nextid, true);
+				let cell = document.getElementById("cell"+id);
+				let nextcell = cell.nextSibling;
+				
+				if (nextcell) {
+					let nextid = nextcell.id.replace("cell","");
+					cellRun(nextid, true);
+				} else {
+					console.log("run end");
+				}	
 			} else {
 				console.log("run end");
-			}
-			
-		} else {
-			console.log("run end");
-		}
-			
-		    
-	    }, 300);
-		cell.style.backgroundColor = 'white';
+			}	    
+	    	}, 300);
+		
 		
 		
 		return;
@@ -900,20 +992,66 @@ runner.data = function(id, down = false) {
 	
 	
 
-	const lines = source.value.split(/\r?\n/);
-	const tablename = lines.shift();
+	var lines = source.value.split(/\r?\n/);
+	
+	if (lines.length < 3) {
+		output.innerHTML = '<span class="error">Error: invalid or empty CSV</span>';
+		cell.style.backgroundColor = 'white';
+		return;
+	}
+	
+	const tablename = cleanName(lines.shift());
+	
+	if (!tablename) {
+		output.innerHTML = '<span class="error">Error: missing tablename</span>';
+		cell.style.backgroundColor = 'white';
+		return;
+	}
+	
+	const headerline = lines.shift();
+	
+	if (!headerline) {
+		output.innerHTML = '<span class="error">Error: missing column names</span>';
+		cell.style.backgroundColor = 'white';
+		return;
+	}
+	
+		
+	/* if (!diskdata && lines[0] == "@") { console.log("@");
+		opfsReadFile(tablename).then( 
+			(data) => { console.log("data " + data.length);
+				runner.data(id, down, data);
+			},
+			(reason) => {
+				console.error(reason);
+			}
+		);
+		return;
+	}
+	*/
+	
+	
+	var comma = ",";
+	if (headerline.substr(0,80).indexOf(";") > -1) comma = ";";
+	if (headerline.substr(0,80).indexOf("\t") > -1) comma = "\t";
+	const cleanheader = headerline.split(comma).map( (s) => cleanName(s) );
+	lines.unshift(cleanheader);
+	//const data = diskdata ? diskdata : (lines.join("\n"));
 	const data = lines.join("\n");
+	console.log("data");
+	console.log(data.substr(0,300));
 	const list = parseCSV(data);
 	
     var isform = false;
-    output.innerHTML = ""
+    output.innerHTML = "Inserting data";
 	if (tablename.substr(0,5) == "_form") {
 		isform = true;
 		// display form and add user value to the data 
 		// columns: id, label, type, initial, minval, maxval, val
 		let listholder = document.createElement("UL");
 		output.appendChild(listholder);
-		for (elem of list) {
+		while (elem = list.next().value) {
+// 		for (elem of list) {
 			let listelem = document.createElement("LI");
 			listholder.appendChild(listelem);
 			var node;
@@ -1018,8 +1156,7 @@ runner.data = function(id, down = false) {
 	if (header.indexOf("\t") > -1) separator = "\t";
 	try {
 
-// 		console.log(sql);
-		alasql('DROP TABLE IF EXISTS '+tablename+'; CREATE TABLE '+tablename+"("+header.split(separator).join(",")+")"); 
+		alasql('DROP TABLE IF EXISTS '+tablename+'; CREATE TABLE ' + tablename + "(" + header.join(", ") + ")"); 
 		for(let elem of list){
 			// clean data type- after space
 			const elem2 = {};
@@ -1032,6 +1169,7 @@ runner.data = function(id, down = false) {
 					elem2[key2] = elem[key];
 			}
 			alasql("INSERT INTO "+tablename+" VALUES ?", [elem2]);
+			if (Math.random() / list.length > 0.1) { output.innerHTML += "."; output.outerHTML = output.outerHTML; }
 		}
 	}
 	catch(reason){
@@ -1442,3 +1580,5 @@ projectTouched = false;
 currentCell = undefined;
 window.onbeforeunload = askConfirm;
 function askConfirm(){ if (projectTouched) return false; }
+
+console.log("Secure context " + window.isSecureContext);
