@@ -228,6 +228,8 @@ button.fullscreenprevious { display : none; }
 button.fullscreennext { display : none; }
 div.menu button.run { display: inline }
 div.menu button.rundown { display: inline }
+div.edit button.run { display: inline }
+div.edit button.rundown { display: inline }
 div.edit button.wiki { display: inline }
 div.edit button.sql { display: inline }
 div.edit button.data { display: inline }
