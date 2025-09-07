@@ -32,15 +32,15 @@ h2 {
 	font-weight: bold;
 	font-size: 24px;
 	line-height: 36px;
-	margin-top: 12px;
-	margin-bottom: 0px;
+	margin-top: 20px;
+	margin-bottom: 20px;
 }
 
 h3 {
 	font-weight: bold;
 	font-size: 20px;
 	line-height: 36px;
-	margin-top: 12px;
+	margin-top: 20px;
 	margin-bottom: 0px;
 }
 
@@ -512,7 +512,7 @@ div.canvasurl {
   text-align: left;
 }
 .fullscreen h2 { font-size: 36px; line-height: 48px; margin-bottom: 20px; }
-.fullscreen h3 { font-size: 30px; line-height: 36px; }
+.fullscreen h3 { font-size: 30px; line-height: 36px; margin-bottom: 20px; }
 .fullscreen h4 { font-size: 24px; line-height: 30px; }
 .fullscreen th { font-size: 20px; line-height: 20px; }
 .fullscreen td { font-size: 20px; line-height: 20px; }
