@@ -511,7 +511,7 @@ div.canvasurl {
   line-height: 30px;
   text-align: left;
 }
-.fullscreen h2 { font-size: 36px; line-height: 48px; }
+.fullscreen h2 { font-size: 36px; line-height: 48px; margin-bottom: 20px; }
 .fullscreen h3 { font-size: 30px; line-height: 36px; }
 .fullscreen h4 { font-size: 24px; line-height: 30px; }
 .fullscreen th { font-size: 20px; line-height: 20px; }
