@@ -340,7 +340,9 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	menuButton.className = "menu";
 	header.appendChild(menuButton);
 
-
+    const sourcelabel = document.createElement("LABEL"); 
+    sourcelabel.setAttribute("for", "source" + id);
+    sourcelabel.innerHTML = '';
 
 	const source = document.createElement("TEXTAREA");   // build the HTML nodes
 	source.id = "source" + id;
@@ -352,6 +354,8 @@ function cellEditor(code, type = "wiki", zeroid = false) {
         this.style.height = "auto";
         this.style.height = Math.max(this.scrollHeight, 16) + "px";
     });
+    
+    
     /*
 	source.addEventListener("click", function() {
         this.style.height = "auto";
@@ -361,6 +365,7 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	// force at beginning, js dom does not know layout on load
     setTimeout(() => { source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
 	source.value = code;
+	node.appendChild(sourcelabel);
 	node.appendChild(source);
 	const bak = document.createElement("TEXTAREA");   // build the HTML nodes
 	bak.id = "bak" + id;
@@ -470,7 +475,7 @@ function cellImport(id) {
 	        	output.innerHTML = '<span class="error">' + reader.error + '</span>';
         	}
 			reader.readAsText(file);
-        } else {
+	    } else {
 	        // try as image
 	        const reader = new FileReader();
 			reader.onload = function(){ 
@@ -489,6 +494,9 @@ function cellImport(id) {
 			reader.readAsDataURL(file);
         }
         
+    }
+    input.onerror = (reason) => {
+	        output.innerHTML = '<span class="error">' + reader.error + '</span>';
     }
     console.log("import click"); 
     input.click();
@@ -755,14 +763,12 @@ runner.sql = function(id, down = false) {
 	// workaround: we add a dummy statement to the commands to force multiple statements
 	const intolist = [];
 	for(let t of source.value.matchAll(/CREATE TABLE ([A-Za-z_]\w*)/gi)) {
-		console.log(t[1]);
 		intolist.push("DROP TABLE IF EXISTS " + t[1] + "; ");
 	} 
 	for(let t of source.value.matchAll(/ INTO ([A-Za-z_]\w*) FROM /gi)) {
-		console.log(t[1]);
 		intolist.push("DROP TABLE IF EXISTS " + t[1] + "; CREATE TABLE " + t[1] + "; ");
 	} 
-	console.log(intolist);
+	console.log(intolist.join(", "));
 	const hidestats = (source.value.substr(0,1) == "!");
 	const sourcevalue = hidestats ? source.value.substr(1) : source.value ;
 	cell.className = cell.className.replace(" hide", "");
@@ -925,6 +931,30 @@ runner.data = function(id, down = false, diskdata = null) {
 	// workaround: we add a dummy statement to the commands to force multiple statements
 	
 	//image
+	
+	if (source.value.substr(0,9) == "data:font" )
+	{
+		const hash = "f"+generateHash(source.value) % 1000000;
+		rpnFontURLs[hash] = source.value;
+		cell.style.backgroundColor = 'white';
+		output.innerHTML = "Font /"+hash;
+		
+		if (down) { 
+			let cell = document.getElementById("cell"+id);
+			let nextcell = cell.nextSibling;
+			
+			if (nextcell) {
+				let nextid = nextcell.id.replace("cell","");
+				cellRun(nextid, true);
+			} else {
+				console.log("run end");
+			}	
+		} else {
+			console.log("run end");
+		}
+		
+		return;
+	}
 		
 	if (source.value.substr(0,10) == "data:image" || source.value.substr(0,11) == "!data:image") {
 		const img = document.createElement("IMG");
@@ -1317,7 +1347,10 @@ runner.ps = function(id, down = false) {
     const source = document.getElementById('source'+id);
     const output = document.getElementById('output'+id);
     const code = source.value;
-	const scriptnode = document.createElement("TINY-PS");
+	
+	var test = output.querySelector('.ps');	
+	
+	const scriptnode = test ? test : document.createElement("TINY-PS");
 	scriptnode.id = "tinyps"+id;
 	scriptnode.setAttribute("width","640");
 	scriptnode.setAttribute("height","360");
@@ -1329,6 +1362,7 @@ runner.ps = function(id, down = false) {
     scriptnode.setAttribute("zip","1");
 	scriptnode.setAttribute("oversampling","4");
 	scriptnode.setAttribute("transparent","0");
+	scriptnode.className = "ps";
 	scriptnode.innerHTML = code;
 	
 	const tabledump = []
@@ -1347,10 +1381,10 @@ runner.ps = function(id, down = false) {
     
     rpnExtensions = tabledump.join("\n") + di ;
 
-    output.innerHTML = "";		
+    // output.innerHTML = "";		
 	const cell = document.getElementById('cell'+id);
 	cell.style.backgroundColor = 'white';
-	output.appendChild(scriptnode);
+	if (!test) {  output.appendChild(scriptnode); console.log("psnode added"); }
 
 	console.log("runner.ps changes tag")
 	console.log((Date.now() - timerstart) +" ms");
@@ -1478,7 +1512,10 @@ function openProject() {
     const input = document.createElement('input');
     input.type = 'file';
     input.value = null;
-	input.onchange = _ => {
+    input.onclick = () => {
+	    console.log("click");
+    };
+	input.onchange = () => {
 		console.log("change");
         const files = Array.from(input.files);
         const reader = new FileReader();
@@ -1486,8 +1523,17 @@ function openProject() {
 	        console.log("file");
             readProject(reader.result);
         };
+        reader.onerror = (reason) => {
+	    let console = document.getElementById('console');
+	        console.innerHTML = '<span class="error">' + reader.error + '</span>';
+        }
         reader.readAsText(input.files[0]);
-    }
+    };
+    input.onerror = (reason) => {
+	    let console = document.getElementById('console');
+	        console.innerHTML = '<span class="error">' + reader.error + '</span>';
+    };
+
     input.click();
 // sinput.remove();    
   };
@@ -1495,17 +1541,28 @@ function openProject() {
   
 function readProject(json) {
 	console.log("readProject");
-	const zone = document.getElementById('cellzone');
-	zone.innerHTML = "";
-	const list = JSON.parse(json);
-	console.log(list);
-	var first = true;
-	for(const elem of list) {
-		const cell = cellEditor(elem.source, elem.type, first);
-		first = false;
-		zone.appendChild(cell);
-		const id = cell.getAttribute("id").replace("cell","");
-		if (elem.type == 'wiki') cellRun(id);
+		try {
+		const list = JSON.parse(json);
+		console.log(list);
+		const zone = document.getElementById('cellzone');
+		zone.innerHTML = "";
+		var first = true;
+		for(const elem of list) {
+			const cell = cellEditor(elem.source, elem.type, first);
+			first = false;
+			zone.appendChild(cell);
+			const id = cell.getAttribute("id").replace("cell","");
+			if (elem.type == 'wiki') cellRun(id);
+		}
+	} catch(error) {
+	        alert(error);
+	        const zone = document.getElementById('cellzone');
+	        if (!zone.childElementCount) {
+		        zone.innerHTML = '';
+				cell = cellEditor('','wiki', true, 1);
+				zone.appendChild(cell);
+				cellEdit(cell.id.replace("cell",""));
+			}
 	}
 	if (autorun) cellRun(0,true);
 }
