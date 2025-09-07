@@ -913,7 +913,7 @@ function cleanName(s) {
 	if (keywordlist.map( (x) => (x.toLowerCase()) ).includes(s)) return s + "_";
 	
 	
-	return s.replaceAll('"','').trim().replace(/^[^a-zA-Z]/,"_").replaceAll(/[^a-zA-Z0-9]+/g,"_");
+	return s.replaceAll('"','').trim().replace(/^[^a-zA-Z_]/,"_").replaceAll(/[^a-zA-Z0-9_]+/g,"_");
 }
 
 runner.data = function(id, down = false, diskdata = null) {
@@ -1049,13 +1049,15 @@ runner.data = function(id, down = false, diskdata = null) {
 	
     var isform = false;
     output.innerHTML = "Inserting data";
-	if (tablename.substr(0,5) == "_form") {
+	if (tablename.substr(0,5) == "_form") { 
+		output.innerHTML = "";
 		isform = true;
 		// display form and add user value to the data 
 		// columns: id, label, type, initial, minval, maxval, val
 		let listholder = document.createElement("UL");
 		output.appendChild(listholder);
-		while (elem = list.next().value) {
+		const list2 = parseCSV(data);
+		while (elem = list2.next().value) {
 // 		for (elem of list) {
 			let listelem = document.createElement("LI");
 			listholder.appendChild(listelem);
@@ -1162,6 +1164,7 @@ runner.data = function(id, down = false, diskdata = null) {
 	try {
 
 		alasql('DROP TABLE IF EXISTS '+tablename+'; CREATE TABLE ' + tablename + "(" + header.join(", ") + ")"); 
+		console.log(list);
 		for(let elem of list){
 			// clean data type- after space
 			const elem2 = {};
@@ -1173,6 +1176,7 @@ runner.data = function(id, down = false, diskdata = null) {
 				else
 					elem2[key2] = elem[key];
 			}
+			console.log(elem2);
 			alasql("INSERT INTO "+tablename+" VALUES ?", [elem2]);
 			if (Math.random() / list.length > 0.1) { output.innerHTML += "."; output.outerHTML = output.outerHTML; }
 		}

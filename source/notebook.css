@@ -194,6 +194,7 @@ div.cell.data ul {
 
 div.cell.data li {
   display: table-row;
+  color: black;
 }
 
 div.cell.data label, input {
@@ -259,19 +260,19 @@ div.sql textarea.cellsource { display: none }
 div.wiki button.wiki { background-color: black; color: white; }
 div.sql button.sql { background-color: black; color: white; }
 div.sql textarea.cellsource {
-	color: #146EAA;
+	color: #045E9A;
 	display: block;
 	height: auto;
 }
 div.sql.hide textarea.cellsource { display: none }
 div.sql.hide.edit textarea.cellsource { display: block }
 div.data textarea.cellsource {
-	color: #F07C28;
+	color: #D05C08;
 	height: auto;
 }
 div.data div.celloutput {
     font-family: Courier, "Courier New", monospace;
-	color: #F07C28;
+	color: #D05C08;
 	height: auto;
 	padding: 4px;
 }
@@ -371,6 +372,7 @@ input.sortable {
 
 tiny-ps {
 	max-width: 100%;
+	min-height: 360px;
 	display: block;
 }
 
@@ -390,6 +392,7 @@ div.canvasurl {
 
 ::part(divsvg)  { 
 	max-width: 100%;
+	min-height: 360px;
 	display: block;
 	background-color: white;
 }
