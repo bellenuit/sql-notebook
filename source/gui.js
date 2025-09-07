@@ -1037,9 +1037,10 @@ runner.data = function(id, down = false, diskdata = null) {
 	
 	
 	var comma = ",";
+	console.log("headerline: " +headerline);
 	if (headerline.substr(0,80).indexOf(";") > -1) comma = ";";
 	if (headerline.substr(0,80).indexOf("\t") > -1) comma = "\t";
-	const cleanheader = headerline.split(comma).map( (s) => cleanName(s) );
+	const cleanheader = headerline.split(comma).map( (s) => cleanName(s) ).join(comma);
 	lines.unshift(cleanheader);
 	//const data = diskdata ? diskdata : (lines.join("\n"));
 	const data = lines.join("\n");
@@ -1156,15 +1157,10 @@ runner.data = function(id, down = false, diskdata = null) {
 		 
 	}
 	
-	
-	const header = lines.shift();
 	var separator = ",";
-	if (header.indexOf(";") > -1) separator = ";";
-	if (header.indexOf("\t") > -1) separator = "\t";
 	try {
 
-		alasql('DROP TABLE IF EXISTS '+tablename+'; CREATE TABLE ' + tablename + "(" + header.join(", ") + ")"); 
-		console.log(list);
+		alasql('DROP TABLE IF EXISTS '+tablename+'; CREATE TABLE ' + tablename + "(" + cleanheader.split(comma).join(", ") + ")"); 
 		for(let elem of list){
 			// clean data type- after space
 			const elem2 = {};

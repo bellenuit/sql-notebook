@@ -260,7 +260,7 @@ div.sql textarea.cellsource { display: none }
 div.wiki button.wiki { background-color: black; color: white; }
 div.sql button.sql { background-color: black; color: white; }
 div.sql textarea.cellsource {
-	color: #045E9A;
+	color: #004E8A;
 	display: block;
 	height: auto;
 }
