@@ -5075,9 +5075,9 @@ class tinyPStag extends HTMLElement {
 			                node.setAttribute("width", data.width);
 			                node.setAttribute("height", data.height);
 			                node.parentNode.setAttribute("width", data.width);
-			                node.parentNode.setAttribute("height", data.height);
-			                node.parentNode.style.width = data.width + "px"; 
-			                node.parentNode.style.height = data.height + "px"; 
+			                node.parentNode.setAttribute("height", data.height + 20);
+			                node.parentNode.style.width = (data.width) + "px"; 
+			                node.parentNode.style.height = (data.height + 20) + "px"; 
 			                shadow = node.shadowRoot; 
 							svgnode = shadow.querySelector('.divsvg');
 							if (svgnode) {

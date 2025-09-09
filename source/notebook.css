@@ -504,13 +504,20 @@ div.canvasurl {
 	color: white;
 }
 
+::part(error) {
+	background-color: white;
+}
+
 .fullscreen { 
   position: absolute;
   top: 0px; left: 0px; bottom: 0px; right: 0px;
   font-size: 24px;
   line-height: 30px;
   text-align: left;
+  background-color: white;
 }
+.fullscreen .cell { display: none; }
+.fullscreen .cell.fullscreen { display: block; }
 .fullscreen h2 { font-size: 36px; line-height: 48px; margin-bottom: 20px; }
 .fullscreen h3 { font-size: 30px; line-height: 36px; margin-bottom: 20px; }
 .fullscreen h4 { font-size: 24px; line-height: 30px; }

@@ -586,6 +586,8 @@ function cellDelete(id) {
 }
 
 function cellFullScreen(id) {
+	const cellzone = document.getElementById('cellzone');
+	cellzone.className = 'fullscreen';
 	const cell = document.getElementById('cell'+id);
 	const output = document.getElementById('output'+id);
 	const fulloutput = document.getElementById('fulloutput'+id);
@@ -600,6 +602,8 @@ function cellFullScreen(id) {
 
 function cellFullScreenClose(id) {
 // 	document.exitFullscreen?.(); // syntax from fullscreen API page MS
+    const cellzone = document.getElementById('cellzone');
+	cellzone.className = '';
     const cell = document.getElementById('cell'+id);
     cell.className = cell.className.replace(' fullscreen ','')
 }
@@ -932,12 +936,15 @@ runner.data = function(id, down = false, diskdata = null) {
 	
 	//image
 	
-	if (source.value.substr(0,9) == "data:font" )
+	const hidestats = (source.value.substr(0,1) == "!");
+    const sourcevalue = hidestats ? source.value.substr(1) : source.value ;
+	
+	if (sourcevalue.substr(0,9) == "data:font" )
 	{
-		const hash = "f"+generateHash(source.value) % 1000000;
-		rpnFontURLs[hash] = source.value;
+		const hash = "f"+generateHash(sourcevalue) % 1000000;
+		rpnFontURLs[hash] = sourcevalue;
 		cell.style.backgroundColor = 'white';
-		output.innerHTML = "Font /"+hash;
+		output.innerHTML =  hidestats ? "" : "Font /"+hash;
 		
 		if (down) { 
 			let cell = document.getElementById("cell"+id);
@@ -956,16 +963,12 @@ runner.data = function(id, down = false, diskdata = null) {
 		return;
 	}
 		
-	if (source.value.substr(0,10) == "data:image" || source.value.substr(0,11) == "!data:image") {
+	if (sourcevalue.substr(0,10) == "data:image") {
 		const img = document.createElement("IMG");
-		const hidestats = (source.value.substr(0,1) == "!");
-		if (hidestats) 
-			img.src = source.value.substr(1);
-		else
-			img.src = source.value;
+		img.src = sourcevalue;
 		console.log(img.src.substr(0,300));
 		img.style = "max-width: 100%;";
-		const hash = "i"+generateHash(source.value) % 1000000;
+		const hash = "i"+generateHash(sourcevalue) % 1000000;
 		output.innerHTML = img.outerHTML;
 		setTimeout(() => { 
 			const canvas = document.createElement('canvas');
@@ -1027,7 +1030,7 @@ runner.data = function(id, down = false, diskdata = null) {
 	
 	
 
-	var lines = source.value.split(/\r?\n/);
+	var lines = sourcevalue.split(/\r?\n/);
 	
 	if (lines.length < 3) {
 		output.innerHTML = '<span class="error">Error: invalid or empty CSV</span>';
@@ -1050,21 +1053,7 @@ runner.data = function(id, down = false, diskdata = null) {
 		cell.style.backgroundColor = 'white';
 		return;
 	}
-	
 		
-	/* if (!diskdata && lines[0] == "@") { console.log("@");
-		opfsReadFile(tablename).then( 
-			(data) => { console.log("data " + data.length);
-				runner.data(id, down, data);
-			},
-			(reason) => {
-				console.error(reason);
-			}
-		);
-		return;
-	}
-	*/
-	
 	
 	var comma = ",";
 	console.log("headerline: " +headerline);
@@ -1230,7 +1219,9 @@ runner.data = function(id, down = false, diskdata = null) {
 		s += '<br>columns ' + cols.join(", ");
 		s += '<br>rows ' + results[0][0].c; 
 		
-		if (! isform)output.innerHTML = s;
+		if (! isform ) {
+			output.innerHTML = hidestats? "" : s;
+		}
 		const cell = document.getElementById('cell'+id);
 		cell.style.backgroundColor = 'white';
 		output.outerHTML = output.outerHTML; // force 
