@@ -28,6 +28,10 @@ header {
 	font-size: 16px;
 }
 
+.draghover { 
+	background-color: yellow;
+}
+
 h2 {
 	font-weight: bold;
 	font-size: 24px;
@@ -54,7 +58,7 @@ h4 {
 button {
     margin-left: 4px;
     border: none;
-	background-color: white;
+	background-color: transparent;
 	color: black;
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;

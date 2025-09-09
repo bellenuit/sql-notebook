@@ -596,8 +596,29 @@ function cellFullScreen(id) {
 	cell.setAttribute('fsid', id);
     const source = document.getElementById('source'+id);
     
+    window.addEventListener("keyup", fullScreenKeyUp);
 
+}
 
+function fullScreenKeyUp (e) {
+	const list = document.getElementsByClassName("cell fullscreen");
+	const cell = list[0];
+	const id = cell.id.replace("cell",""); 
+	console.log(e.code); console.log(id);
+	
+	if (cell.className.indexOf("edit") > -1)
+	{
+		if (e.code == "Escape") cellSave(id); e.preventDefault(); return true;
+		return false;
+	}
+	
+	switch(e.code) {
+		    case "ArrowRight" : cellFullScreenNext(id); e.preventDefault(); return true;
+		    case "ArrowLeft" : cellFullScreenPrevious(id); e.preventDefault(); return true;
+		    case "KeyC" : cellFullScreenClose(id); e.preventDefault(); return true;
+		    case "KeyR" : cellRun(id); e.preventDefault(); return true;
+		    case "KeyE" : cellEdit(id); e.preventDefault(); return true;
+    }
 }
 
 function cellFullScreenClose(id) {
@@ -606,18 +627,17 @@ function cellFullScreenClose(id) {
 	cellzone.className = '';
     const cell = document.getElementById('cell'+id);
     cell.className = cell.className.replace(' fullscreen ','')
+    
+    window.removeEventListener("keyup", fullScreenKeyUp);
 }
 
 function cellFullScreenPrevious(id) {
 	const cell = document.getElementById('cell'+id);
    	const newcell = cell.previousSibling;
    	if (newcell) {
-    cell.className = cell.className.replace(' fullscreen ','');
-    newcell.className = newcell.className + ' fullscreen ';
+    	cell.className = cell.className.replace(' fullscreen ','');
+		newcell.className = newcell.className + ' fullscreen ';
     } 	
-	
-	const source = document.getElementById('source'+id); 	
-//    	source.style.height = 1.5 * source.style.height; 
 }
 
 function cellFullScreenNext(id) {
@@ -635,10 +655,7 @@ function cellFullScreenNext(id) {
    	 	source.style.height = Math.max(source.scrollHeight, 16) + "px";
    	 	console.log("timeout" + source.style.height);
    	 	}, 25); 
-    }
-   	   
-
-    
+    }    
  }
 
 
@@ -1546,6 +1563,7 @@ function readProject(json) {
 			if (elem.type == 'wiki') cellRun(id);
 		}
 	} catch(error) {
+	        console.log(json);
 	        alert(error);
 	        const zone = document.getElementById('cellzone');
 	        if (!zone.childElementCount) {
@@ -1635,3 +1653,54 @@ window.onbeforeunload = askConfirm;
 function askConfirm(){ if (projectTouched) return false; }
 
 console.log("Secure context " + window.isSecureContext);
+
+// drop files https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/File_drag_and_drop
+
+window.addEventListener("dragover", (e) => {  e.preventDefault(); });
+window.addEventListener("drop", (e) => { e.preventDefault(); });
+const dropZone = document.getElementById("header");
+dropZone.addEventListener("drop", dropHandler);
+dropZone.addEventListener("dragenter", (e) => { e.target.classList.add("draghover"); } );
+dropZone.addEventListener("dragleave", (e) => { e.target.classList.remove("draghover"); } );
+
+
+function dropHandler(ev) {
+  // Prevent default behavior (Prevent file from being opened)
+  ev.preventDefault();
+  ev.target.classList.remove("draghover");
+  let result = "";
+  // Use DataTransferItemList interface to access the file(s)
+  [...ev.dataTransfer.items].forEach((item, i) => {
+    // If dropped items aren't files, reject them
+    if (item.kind === "file") {
+      const file = item.getAsFile();
+      const reader = new FileReader();
+        reader.onload = function(){ 
+	        console.log("file");
+            readProject(reader.result);
+            
+        };
+        reader.onerror = (reason) => {
+	    let console = document.getElementById('console');
+	        console.innerHTML = '<span class="error">' + reader.error + '</span>';
+        }
+        reader.readAsText(file);
+        return;
+
+    }
+  });
+}
+
+/*
+function normalKeyUp (e) {
+	switch(e.code) {
+		    case "KeyR" : cellRun(0, true); e.preventDefault(); return true;
+		    case "KeyP" : cellFullScreen(0); e.preventDefault(); return true;
+		    case "KeyO" : openProject(); e.preventDefault(); return true;
+		    case "KeyN" : document.getElementById("newbutton").click(); e.preventDefault(); return true;
+		    case "KeyS" : document.getElementById("savebutton").click(); e.preventDefault(); return true;
+		    case "KeyH" : document.getElementById("helpbutton").click(); e.preventDefault(); return true;
+   }
+}
+window.addEventListener("keyup", normalKeyUp );
+*/
