@@ -48,6 +48,7 @@ var tableCreate = function () {
 		    var special = false;
 		    let th = document.createElement('th');
 		    var ca;
+		    c = c.replace(/^'(.*)'$/,"$1");
 		    if (c.match(/__$/) && c.match(/^__/)) {
 			    ca = "center";
 			    c = c.replace(/__$/,"").replace(/^__/,"");
@@ -65,7 +66,7 @@ var tableCreate = function () {
 		    } else {
 			    ca = "left";
 		    }
-		    th.innerHTML = c.replace(/^'(.*)'$/,"$1");
+		    th.innerHTML = c;
 		    th.style.textAlign = ca;
 		    columnaligns.push(ca);
 		    if (!special)
@@ -209,12 +210,13 @@ function tablefilter(id) {
 }
 
 
-function cellEditor(code, type = "wiki", zeroid = false) {
-	const id = zeroid? 0 : Math.floor(Math.random() * 1000000);  // create unique id for console.log
-    const node = document.createElement("DIV");   // build the HTML nodes
-	node.id = "cell" + id;
-	node.setAttribute("type", type);
-	node.className = "cell " + type ;
+function cellEditor(code, type = "wiki", theid = -1 ) { 
+	// console.log("theid", theid);
+	const id = (theid > -1) ? theid : Math.floor(Math.random() * 1000000);  // create unique id for console.log
+    const cell = document.createElement("DIV");   // build the HTML nodes
+	cell.id = "cell" + id;
+	cell.setAttribute("type", type);
+	cell.className = "cell " + type ;
 
 	const header = document.createElement("DIV"); 
 	header.className = "cellheader";
@@ -296,7 +298,7 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	deletebutton.onclick = function() {cellDelete(id)};
 	deletebutton.className = "delete";
 	header.appendChild(deletebutton);
-	node.appendChild(header);
+	cell.appendChild(header);
 	const cancelbutton = document.createElement("BUTTON");
 	cancelbutton.id = "cancel" + id;
 	cancelbutton.innerHTML = "Cancel";
@@ -365,30 +367,31 @@ function cellEditor(code, type = "wiki", zeroid = false) {
 	// force at beginning, js dom does not know layout on load
     setTimeout(() => { source.style.height =  Math.max(source.scrollHeight, 16) + "px";}, "25");
 	source.value = code;
-	node.appendChild(sourcelabel);
-	node.appendChild(source);
+	source.setAttribute("hash", generateHash(cell.type+source.value));	
+	cell.appendChild(sourcelabel);
+	cell.appendChild(source);
 	const bak = document.createElement("TEXTAREA");   // build the HTML nodes
 	bak.id = "bak" + id;
     bak.className = "cellbak";
 	bak.setAttribute("readonly", true);
-	node.appendChild(bak);
+	cell.appendChild(bak);
 	const output = document.createElement("DIV");   // build the HTML nodes
 	output.id = "output" + id;
     output.className = "celloutput";
-	node.appendChild(output);
+	cell.appendChild(output);
 		const fulloutput = document.createElement("DIV");   // build the HTML nodes
 	fulloutput.id = "fulloutput" + id;
     fulloutput.className = "fulloutput";
-	node.appendChild(fulloutput);
+	cell.appendChild(fulloutput);
 	
 	const console = document.createElement("DIV");   // build the HTML nodes
 	console.id = "console" + id;
     console.className = "cellconsole";
-	node.appendChild(console);
-	return node;
+	cell.appendChild(console);
+	return cell;
 }
 
-function cellNew(id) {
+cellNew = function(id) {
 	const cell = document.getElementById('cell'+id);
 	let newcell = cellEditor("");
     const newid = newcell.id.replace('cell',''); 
@@ -397,9 +400,10 @@ function cellNew(id) {
     newsource = document.getElementById('source' + newid);
     newsource.removeAttribute("readonly");
     newsource.focus();	
+    zone.setAttribute("editing", "1");
 }
 
-function cellDup(id) {
+cellDup = function(id) {
 	const cell = document.getElementById('cell'+id);
 	const source = document.getElementById('source'+id);
 	let newcell = cellEditor(source.value);
@@ -520,7 +524,9 @@ function cellEdit(id) {
 	const cell = document.getElementById('cell'+id);
 	const source = document.getElementById('source'+id); 
 	const bak = document.getElementById('bak'+id);
+	const zone = document.getElementById('cellzone');
 	bak.value = source.value;
+	bak.setAttribute("type", cell.getAttribute("type"));
 	cell.className = cell.className + " edit "; 
     source.removeAttribute("readonly");
 	setTimeout(() => { 
@@ -528,42 +534,47 @@ function cellEdit(id) {
 	const length = source.value.length;
 	source.focus();
 	source.setSelectionRange(length, length);
+	zone.setAttribute("editing", "1");
 }
 
-function cellCancel(id) { 
+cellCancel =  function(id) { 
 	const cell = document.getElementById('cell'+id);
 	const source = document.getElementById('source'+id);
 	const bak = document.getElementById('bak'+id);
+	const zone = document.getElementById('cellzone');
 	source.value = bak.value;
     source.setAttribute("readonly", true);
 	source.outerHTML = source.outerHTML;  // force update textarea
 	cell.className = "cell " + cell.getAttribute("type"); 
+	zone.setAttribute("editing", "0");
+
 }
 
-function cellSave(id) { 
+cellSave = function(id) { 
 	console.log("cellsave " + id);
 	const cell = document.getElementById('cell'+id);
-    const source = document.getElementById('source'+id);
-    const bak = document.getElementById('bak'+id);
-    // if (bak.innerHTML !== source.innerHTML)
-    projectTouched = true;
-    source.setAttribute("readonly", true);
-	//cell.className = "cell " + cell.getAttribute("type"); 
+	const source = document.getElementById('source'+id);
+	const bak = document.getElementById('bak'+id);
+	const zone = document.getElementById('cellzone');
+	projectTouched = true;
+	source.setAttribute("readonly", true);
 	cell.setAttribute("class", cell.getAttribute("class").replace("edit", " "));
 	if (cell.getAttribute("type") == "wiki") cellRun(id);
+	zone.setAttribute("editing", "0");
 }
 
-function cellUp(id) {
+cellUp = function(id) {
 	const cell = document.getElementById('cell'+id);
 	const previousCell = cell.previousSibling;
 	cell.parentNode.insertBefore(cell, previousCell);
 	newsource = document.getElementById('source' + id);
     newsource.removeAttribute("readonly");
 	newsource.focus();	
+	syncProject();
 
 }
 
-function cellDown(id) {
+cellDown = function(id) {
 	const cell = document.getElementById('cell'+id);
 	const nextcell = cell.nextSibling;
 	nextcell.parentNode.insertBefore(nextcell, cell);
@@ -571,6 +582,7 @@ function cellDown(id) {
 	newsource = document.getElementById('source' + id);
     newsource.removeAttribute("readonly");
 	newsource.focus();	
+	syncProject();
 }
 
 function cellShow(id) {
@@ -583,13 +595,17 @@ function cellShow(id) {
 function cellDelete(id) { 
 	const cell = document.getElementById('cell'+id);
 	cell.parentElement.removeChild(cell);
+	syncProject();
 }
 
 function cellFullScreen(id) {
+	if (!id) {
+		id = document.getElementById('cellzone').firstChild.id.replace("cell","");
+	}
 	const cellzone = document.getElementById('cellzone');
 	cellzone.className = 'fullscreen';
 	const cell = document.getElementById('cell'+id);
-	const output = document.getElementById('output'+id);
+    const output = document.getElementById('output'+id);
 	const fulloutput = document.getElementById('fulloutput'+id);
     cell.setAttribute("class", cell.getAttribute("class").replace("edit", " "));
 	cell.className = cell.className + " fullscreen ";
@@ -676,45 +692,102 @@ function parseLists(str)
     });
 }
 
-runner.wiki = function(id, down = false) {
-    const source = document.getElementById('source'+id);
-    const output = document.getElementById('output'+id);
-    html = source.value;
-	// 	// http://www.cs.sjsu.edu/faculty/pollett/masters/Semesters/Spring14/eswara/cs298/deliverable3/index1.php
-	html = "\n" + html.replace(/\r\n/g, "\n") + "\n";
-	html = html.replace(/\n====(.*)====\n/gm, function (match, contents) {
-        return '<h4>' + contents + '</h4>';
+function cleanString(s) {
+	if(!s) return "";
+	if(s=="") return "";
+	s = s.replaceAll(/[^a-zA-Z0-9]/g,"-");
+	s = s.replaceAll(/-+/g,"-");
+	s = s.toLowerCase();
+}
+
+function wikiText(s) {
+	var html = s;
+	
+	/*
+	html = html.replaceAll(/^#DISPLAYNAME (.*?)\n/g, function (match, contents) {
+        return "<style>#h1 {display:none}</style><h1>" + contents + "</h1>";
     });
-    html = html.replace(/\n===(.*)===\n/gm, function (match, contents) {
-        return '<h3>' + contents + '</h3>';
+    */
+		
+    html = "\n" + html.replaceAll(/\r\n/g, "\n") + "\n";
+	html = html.replaceAll(/====(.*)====/gm, function (match, contents) {
+        return '<h4>' + contents.trim() + '</h4>';
     });
-	html = html.replace(/\n==(.*)==\n/gm, function (match, contents) {
-        return '<h2>' + contents + '</h2>';
+    html = html.replaceAll(/===(.*)===/gm, function (match, contents) {
+        return '<h3>' + contents.trim() + '</h3>';
     });
-    html = html.replace(/^\*\*\*(.*?)$/gm, function (match, contents) {
-        return '<ul><ul><ul><li>' + contents + '</li></ul></ul></ul>';
+	html = html.replaceAll(/==(.*)==/gm, function (match, contents) {
+        return '<h2>' + contents.trim() + '</h2>';
     });
-    html = html.replace(/^\*\*(.*?)$/gm, function (match, contents) {
-        return '<ul><ul><li>' + contents + '</li></ul></ul>';
+    html = html.replaceAll(/^\*\*\*(.*)/gm, function (match, contents) {
+        return '<ul><ul><ul><li>' + contents.trim() + '</li></ul></ul></ul>';
     });
-    html = html.replace(/^\*(.*?)$/gm, function (match, contents) {
-        return '<ul><li>' + contents + '</li></ul>';
+    html = html.replaceAll(/^\*\*(.*)/gm, function (match, contents) {
+        return '<ul><ul><li>' + contents.trim() + '</li></ul></ul>';
+    });
+    html = html.replaceAll(/^\*(.*)/gm, function (match, contents) {
+        return '<ul><li>' + contents.trim() + '</li></ul>';
     });
     // clean-up
-    html = html.replaceAll('</ul>\n','</ul>');
-    html = html.replaceAll('</ul><ul>','');
-     html = html.replace(/^###(.*?)$/gm, function (match, contents) {
-        return '<ol><ol><ol><li>' + contents + '</li></ol></ol></ol>';
+    html = html.replaceAll('</ul>\n<ul>','');
+     html = html.replaceAll(/^###(.*)/gm, function (match, contents) {
+        return '<ol><ol><ol><li>' + contents.trim() + '</li></ol></ol></ol>';
     });
-    html = html.replace(/^##(.*?)$/gm, function (match, contents) {
-        return '<ol><ol><li>' + contents + '</li></ol></ol>';
+    html = html.replaceAll(/^##(.*)/gm, function (match, contents) {
+        return '<ol><ol><li>' + contents.trim() + '</li></ol></ol>';
     });
-    html = html.replace(/^#(.*?)$/gm, function (match, contents) {
-        return '<ol><li>' + contents + '</li></ol>';
+    html = html.replaceAll(/^#(.*)/gm, function (match, contents) {
+        return '<ol><li>' + contents.trim() + '</li></ol>';
     });
     // clean-up
-    html = html.replaceAll('</ol>\n','</ol>');
-    html = html.replaceAll('</ol><ol>','');
+    html = html.replaceAll('</ol>\n<ol>','');	
+    
+    //table
+    html = html.replaceAll(/\n\{\|(.*?)(\n(\s|\S)*?)\|\}/g, function (match, parameters, contents) {
+	    
+	    contents = contents.replaceAll(/\|\+(.*)/gm, function(match, contents) {
+		    return '<caption>' + contents.trim() + '</caption>';
+	    });
+	    contents = contents.replaceAll(/\|\-(.*)/gm, function(match, contents) {
+		    return '<tr>' + contents.trim();
+	    });
+	    contents = contents.replaceAll(/!(.*)/gm, function(match, contents) { 
+		    if (contents) return '<th>' + contents.split(' !! ').join('</th><th>').trim() + '</th>';
+		    else return '<th></th>';
+	    });
+	    contents = contents.replaceAll(/\|(.*)/gm, function(match, contents) { 
+		    if (contents) return '<td>' + contents.split(' || ').join('</td><td>').trim() + '</td>';
+		    else return '<td></td>';
+	    });
+	    
+	    contents = contents.replaceAll("\n<caption","<caption");
+	    contents = contents.replaceAll("\n<t","<t");
+
+		    
+        return '<table' + parameters + '>' + contents.trim() + '</table>';
+    });
+    
+    //extensions
+    html = html.replaceAll(/\{\{(.*?)\}\}/g, function (match, contents) { 
+	    const list = contents.split('|');
+	    if (extensions[list[0]]) {
+		    let fn = extensions[list.shift()]; 
+		    return fn(...list);
+		    
+	    } else {
+		    return contents;
+	    }
+	});
+        
+	html = html.replaceAll(/'''''(.*?)'''''/g, function (match, contents) {
+        return '<b><i>' + contents + '</i></b>';
+    });
+    html = html.replaceAll(/'''(.*?)'''/g, function (match, contents) {
+        return '<b>' + contents + '</b>';
+    });
+    html = html.replaceAll(/''(.*?)''/g, function (match, contents) {
+        return '<i>' + contents + '</i>';
+    });
     
     html = html.replace(/\$\$\$(.*?)\$\$\$/g, function (match, contents) {
 	    let node = asciimath.parseMath(contents, false);
@@ -726,34 +799,58 @@ runner.wiki = function(id, down = false) {
 	    mathcolor = "black";
         return asciimath.parseMath(contents, false).outerHTML ;
     });
-
     
-	html = html.replace(/'''''(.*?)'''''/g, function (match, contents) {
-        return '<b><i>' + contents + '</i></b>';
-    });
-    html = html.replace(/'''(.*?)'''/g, function (match, contents) {
-        return '<b>' + contents + '</b>';
-    });
-    html = html.replace(/''(.*?)''/g, function (match, contents) {
-        return '<i>' + contents + '</i>';
-    });
-	html = html.replace(/(\s)(https:\/\/\S+)(\s)/gm, function (match, prespace, contents, postspace) {
+    
+	html = html.replaceAll(/(\s)(https:\/\/\S+)(\s)/gm, function (match, prespace, contents, postspace) {
         return prespace + '<a href="' + contents +'" target="_blank">' + contents + '</a>' + postspace; 
     });
-    html = html.replace(/\[(https:\/\/\S+) (.*?)\]/gm, function (match, contents, text) {
+    html = html.replaceAll(/\[(https:\/\/\S+) (.*?)\]/gm, function (match, contents, text) {
         return '<a href="' + contents +'" target="_blank">' + text + '</a>'; 
     });
+    html = html.replaceAll(/\[\[Image:(.*?)\|(.*?)\]\]/gm, function (match, contents, width) {
+	    return '<img src="'+ contents + '" width=' + width + '>'; 
+    });
+
+    html = html.replaceAll(/\[\[Image:(.*?)\]\]/gm, function (match, contents) {
+	    return '<img src="'+ contents + '">'; 
+    });
+    
+    /* 
+	    html = html.replaceAll(/\[\[(.*?)\]\]/gm, function (match, contents) {
+	    const url2 = cleanString(contents);
+	    const link = source[url2];
+	    if (link) {
+        	return '<a href="javascript:readPage(\''+ url2 +'\')">' + link.name + '</a>'; 
+        } else {
+	        return '<a class="invalid" href="javascript:readPage(\''+ contents +'\')">' + contents + '</a>'; 
+        }
+    });
+    */ 
+    
     html = html.replace(/\[\[help:(.*?)\]\]/gm, function (match, contents) {
         return '<a href="index.html?url=../site/files/' + contents.replaceAll(' ','-').toLowerCase() +'.json&autorun=1">' + contents + '</a>'; 
     });
 	html = html.replace(/notebook:\/\/(\S+)/gm, function (match, contents) {
         return '<a href="index.html?' + content +'" target="_blank">' + content + '</a>'; 
-    });
-    html = html.replace(/^\n/gi, "");
-    html = html.replace(/\n$/gi, "");
-    html = html.replace(/(<\/h\d>)\n/gi, "$1");
-	html = html.replace(/\n/gi, "<br/>");
-	
+    });  
+      
+    html = html.replace(/^\n/g, "");
+    html = html.replace(/\n$/g, "");
+    html = html.replaceAll(/\n\n/g, "<p>");
+	html = html.replaceAll(/\n/g, "<br>");
+	html = html.replaceAll("<p><ul>", "<ul>");
+	html = html.replaceAll("<p><uol>", "<ol>");
+	html = html.replaceAll(/<(h1|h2|h3|h4|ul|ol|li|p|br|table|caption|tr|th|td)/g, function (match, contents) { 
+		return "\n<" + contents;
+	});
+	return html;
+}
+
+
+runner.wiki = function(id, down = false) {
+    const source = document.getElementById('source'+id);
+    const output = document.getElementById('output'+id);
+    html = wikiText(source.value);	
     output.innerHTML = html;
 	const cell = document.getElementById('cell'+id);
 	cell.style.backgroundColor = 'white';
@@ -783,10 +880,10 @@ runner.sql = function(id, down = false) {
 	// if there were single statements, then we have to make an array of it.
 	// workaround: we add a dummy statement to the commands to force multiple statements
 	const intolist = [];
-	for(let t of source.value.matchAll(/CREATE TABLE ([A-Za-z_]\w*)/gi)) {
+	for(let t of source.value.matchAll(/CREATE\s+TABLE\s+([A-Za-z_]\w*)/gi)) {
 		intolist.push("DROP TABLE IF EXISTS " + t[1] + "; ");
 	} 
-	for(let t of source.value.matchAll(/ INTO ([A-Za-z_]\w*) FROM /gi)) {
+	for(let t of source.value.matchAll(/\sINTO\s+([A-Za-z_]\w*)\s+FROM\s/gi)) {
 		intolist.push("DROP TABLE IF EXISTS " + t[1] + "; CREATE TABLE " + t[1] + "; ");
 	} 
 	console.log(intolist.join(", "));
@@ -1388,8 +1485,7 @@ runner.ps = function(id, down = false) {
     const di = "\n dataimages = " + JSON.stringify(dataimages) + ";" ;
     
     rpnExtensions = tabledump.join("\n") + di ;
-
-    // output.innerHTML = "";		
+	
 	const cell = document.getElementById('cell'+id);
 	cell.style.backgroundColor = 'white';
 	if (!test) {  output.appendChild(scriptnode); console.log("psnode added"); }
@@ -1413,17 +1509,20 @@ runner.ps = function(id, down = false) {
 }
 
 function cellRun(id, down = false) {
+	
+	if (!id) {
+		id = document.getElementById('cellzone').firstChild.id.replace("cell","");
+	}
 
-	 if (id == 0) {
-		 const cell0 = document.getElementById('cellzone').firstChild;
-		 id = cell0.id.replace('cell','');
-	 } 
+	 console.log(id);
 	 currentCell = id;
-
 	 
 	 const cell = document.getElementById('cell'+id);
 	 
-	 console.log(cell.id);
+	 if (!cell) {
+		 console.log("no cell with id " +id);
+		 return;
+	 }
 	 
 	 const type = cell.getAttribute("type");
 	 if (type != "wiki") {
@@ -1449,8 +1548,11 @@ function cellRunNext() {
 	}
 }
 
-function setWiki(id)
-{
+function cellRunAll() {
+	cellRun(document.getElementById('cellzone').firstChild.id.replace("cell",""),true);
+}
+
+setWiki = function(id) {
 	const cell = document.getElementById('cell'+id);
     cell.setAttribute("type", "wiki"); 
 	if (cell.className.indexOf("edit") > -1)
@@ -1458,17 +1560,64 @@ function setWiki(id)
     else
 		cell.className = "cell " + cell.getAttribute("type");
 	cellRun(id);
+	syncProject();
 }
 
-function setSQL(id)
-{
+setSQL = function (id){
 	const cell = document.getElementById('cell'+id);
+	const output = document.getElementById('output'+id);
+
     cell.setAttribute("type", "sql");
 	if (cell.className.indexOf("edit") > -1)
 		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
     else
 		cell.className = "cell " + cell.getAttribute("type");
+	output.innerHTML = "";
+	syncProject();
+}
 
+
+
+setData = function(id) {
+	const cell = document.getElementById('cell'+id);
+	const output = document.getElementById('output'+id);
+
+    cell.setAttribute("type", "data");
+	if (cell.className.indexOf("edit") > -1)
+		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
+    else
+		cell.className = "cell " + cell.getAttribute("type");
+	output.innerHTML = "";
+	syncProject();
+}
+
+setJS = function (id) {
+	const cell = document.getElementById('cell'+id);
+	const output = document.getElementById('output'+id);
+
+    cell.setAttribute("type", "js");
+	/* const source = document.getElementById('source'+id);
+	source.ondrop = undefined;*/
+	if (cell.className.indexOf("edit") > -1)
+		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
+    else
+		cell.className = "cell " + cell.getAttribute("type");
+	output.innerHTML = ""; 
+	syncProject();
+}
+
+setPS = function (id) {
+	const cell = document.getElementById('cell'+id);
+	const output = document.getElementById('output'+id);
+    cell.setAttribute("type", "ps");
+	/* const source = document.getElementById('source'+id);
+	source.ondrop = undefined;*/
+	if (cell.className.indexOf("edit") > -1)
+		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
+    else
+		cell.className = "cell " + cell.getAttribute("type"); 
+	output.innerHTML = "";
+	syncProject();
 }
 
 function dropfile(file, id) {
@@ -1479,40 +1628,6 @@ function dropfile(file, id) {
 	source.outerHTML = source.outerHTML;
   };
   reader.readAsText(file, "UTF-8");
-}
-
-function setData(id)
-{
-	const cell = document.getElementById('cell'+id);
-    cell.setAttribute("type", "data");
-	if (cell.className.indexOf("edit") > -1)
-		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
-    else
-		cell.className = "cell " + cell.getAttribute("type");
-}
-
-function setJS(id)
-{
-	const cell = document.getElementById('cell'+id);
-    cell.setAttribute("type", "js");
-	/* const source = document.getElementById('source'+id);
-	source.ondrop = undefined;*/
-	if (cell.className.indexOf("edit") > -1)
-		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
-    else
-		cell.className = "cell " + cell.getAttribute("type"); 
-}
-
-function setPS(id)
-{
-	const cell = document.getElementById('cell'+id);
-    cell.setAttribute("type", "ps");
-	/* const source = document.getElementById('source'+id);
-	source.ondrop = undefined;*/
-	if (cell.className.indexOf("edit") > -1)
-		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
-    else
-		cell.className = "cell " + cell.getAttribute("type"); 
 }
 
 function openProject() {
@@ -1554,12 +1669,11 @@ function readProject(json) {
 		console.log(list);
 		const zone = document.getElementById('cellzone');
 		zone.innerHTML = "";
-		var first = true;
 		for(const elem of list) {
-			const cell = cellEditor(elem.source, elem.type, first);
-			first = false;
+			var id = (elem.id) ? elem.id : -1;
+			const cell = cellEditor(elem.source, elem.type, id);
 			zone.appendChild(cell);
-			const id = cell.getAttribute("id").replace("cell","");
+			id = cell.getAttribute("id").replace("cell","");
 			if (elem.type == 'wiki') cellRun(id);
 		}
 	} catch(error) {
@@ -1573,7 +1687,7 @@ function readProject(json) {
 				cellEdit(cell.id.replace("cell",""));
 			}
 	}
-	if (autorun) cellRun(0,true);
+	if (autorun) cellRunAll();
 }
 
 function btoaUnicode(s) {
@@ -1604,7 +1718,7 @@ function saveProject()
 		for (const cell of children) {
 			const cellid = cell.id.replace("cell","");
 			const source = document.getElementById('source' + cellid);
-			result.push({"type": cell.getAttribute("type"), "source": source.value });
+			result.push({"type": cell.getAttribute("type"), "id": cellid, "hash": source.getAttribute("hash"), "source": source.value });
 			if (first) {
 				suggestedTitle = source.value.split('\n').shift().replace(/^==+(.*)==+$/,"$1").replaceAll(' ','-').toLowerCase();
 			}
@@ -1624,6 +1738,8 @@ function saveProject()
 
 }
 
+syncProject = function() {}
+
 const zone = document.getElementById('cellzone');
 const url = window.location;
 const urlParams = new URLSearchParams(url.search);
@@ -1631,20 +1747,24 @@ const dataimages = {};
 var timerstart = Date.now();
 var autorun = false;
 
-if (urlParams.get("autorun") == 1) autorun = true;
 
-if (urlParams.get('new') == 1) {
-	zone.innerHTML = '';
-	cell = cellEditor('','wiki', true, 1);
-	zone.appendChild(cell);
-	cellEdit(cell.id.replace("cell",""));
-} else if (urlParams.get('example')) {
-	readProject(examples[urlParams.get('example')]);
-} else if (urlParams.get('url')) {
-	fetch(urlParams.get('url')).then(response => response.text()).then(body => readProject(body));
-} else {
-	autorun = true;
-    readProject(examples["home"]);
+handleParameters = function() {
+
+	if (urlParams.get("autorun") == 1) autorun = true;
+	
+	if (urlParams.get('new') == 1) {
+		zone.innerHTML = '';
+		cell = cellEditor('','wiki', true, 1);
+		zone.appendChild(cell);
+		cellEdit(cell.id.replace("cell",""));
+	} else if (urlParams.get('example')) {
+		readProject(examples[urlParams.get('example')]);
+	} else if (urlParams.get('url')) {
+		fetch(urlParams.get('url')).then(response => response.text()).then(body => readProject(body));
+	} else {
+		autorun = true;
+	    readProject(examples["home"]);
+	}
 }
 
 projectTouched = false;
@@ -1691,16 +1811,3 @@ function dropHandler(ev) {
   });
 }
 
-/*
-function normalKeyUp (e) {
-	switch(e.code) {
-		    case "KeyR" : cellRun(0, true); e.preventDefault(); return true;
-		    case "KeyP" : cellFullScreen(0); e.preventDefault(); return true;
-		    case "KeyO" : openProject(); e.preventDefault(); return true;
-		    case "KeyN" : document.getElementById("newbutton").click(); e.preventDefault(); return true;
-		    case "KeyS" : document.getElementById("savebutton").click(); e.preventDefault(); return true;
-		    case "KeyH" : document.getElementById("helpbutton").click(); e.preventDefault(); return true;
-   }
-}
-window.addEventListener("keyup", normalKeyUp );
-*/

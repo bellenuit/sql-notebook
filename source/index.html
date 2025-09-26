@@ -1,11 +1,14 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf8">
   <title>SQL Notebook</title>
   <link rel="stylesheet" href="notebook.css">
+  <style id = "fontface">
+  </style>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="The SQL notebook is a playground where you can explore data. You can import data and run queries on it. You can visualize the data using PostScript. And you can enhance both SQL and PostScript with JavaScript. You can save the notebook as JSON document and reopen it later. The JSON document is self contained, meaning that it contains all the data.">
 </head>
 
 <body>
@@ -13,13 +16,14 @@
   <header>SQL Notebook</header>
   <div id="header">
 	 <button onclick="cellRun(0,true)">Run All</button>
-	 <button id="helpbutton" onclick="window.open('index.html?url=https://www.belle-nuit.com/site/files/help.json','_blank')">Help</button>
+	 <button onclick="window.open('index.html?url=https://www.belle-nuit.com/site/files/help.json','_blank')">Help</button>
 	 <button onclick="cellFullScreen(0)">Present</button>
-     <button id="newbutton" onclick="window.open('index.html?new=1','_blank')">New</button>
+     <button onclick="window.open('index.html?new=1','_blank')">New</button>
      <button onclick="openProject()">Open</button>
-     <button id="savebutton" onclick="saveProject()">Save</button>
+     <button onclick="saveProject()">Save</button>
   </div>
   <div id='fs'></div>
+  <div id="console"></div>
   <div id="cellzone"></div>
 
   
@@ -27,7 +31,7 @@
   <footer>
   	<br/><br/>
   	<small>
-  	MIT License version 2.1 7.9.2025<br/>
+  	MIT License version 2.2 26.9.2025<br/>
 	SQL Notebook by Matthias Bürcher <a href='https://github.com/bellenuit/sql-notebook' target="_blank">sql-notebook</a><br/>
     SQL engine by Andrey Gershun and Mathias Rangel Wulff <a href='https://alasql.org' target="_blank">AlaSQL</a><br/>
 	PostScript by Matthias Bürcher <a href="https://github.com/bellenuit/tiny-ps" target="_blank">tiny-ps</a><br/> 
@@ -42,8 +46,12 @@
 <script type="text/javascript" src="tinyps-extensions.js"></script>
 <script type="text/javascript" src="ASCIIMathML.js"></script>
 <script type="text/javascript" src="fonts.js"></script>
+<script>fontfacestyle = document.getElementById("fontface");
+	fontfacestyle.innerHTML = "@font-face { font-family: 'TGL017'; font-weight: normal; src:  url('" + rpnFontURLs['TGL017'] + "') format(truetype)"
+</script>
 <script type="text/javascript" src="examples.js"></script>
 <script type="text/javascript" src="gui.js"></script>
+<script>handleParameters()</script>
 </body>
 
 </html>

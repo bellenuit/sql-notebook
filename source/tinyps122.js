@@ -850,7 +850,7 @@ rpnSVGDevice = class {
         for (const font in this.fonts) {
             const style = rpnDocument.createElement("style");
             const url = rpnFontURLs[font];
-            const src = readSyncDataURL(url, "font/ttf");
+            const src = readSyncDataURL(url, "font/truetype");
             style.innerHTML = "@font-face { font-family: '" + font + "'; font-weight: normal; src:  url('" + src + "') format('truetype')} }";
             node.appendChild(style);
         }

@@ -1,4 +1,26 @@
 
+rpnOperators.imagedata = function (context) {
+	const [id] = context.pop("string");	
+	const imagedata = dataimages[id.value];
+	
+	context.stack.push(new rpnNumber(imagedata.width));
+	context.stack.push(new rpnNumber(imagedata.height));
+	
+    const binary = imagedata.data;
+    const arr = new Array(binary.length);
+    for (var i = 0; i < binary.length; i++) {
+        arr[i] = String.fromCharCode(binary[i])
+    }
+
+    const ar = new rpnString(arr.join(''),context.heap)
+    ar.reference.inc();
+    context.stack.push(ar);	
+
+	
+	return context;
+}
+
+
 rpnOperators.numberformat = function(context) {
     const [r] = context.pop("number");
     if (!r) return context;
@@ -499,6 +521,9 @@ rpnOperators.preparepatterns = function(context) {
 
 
 
+
+
+
 rpnOperators.table = function(context) {
     const [haslabel, tablename] = context.pop("number", "string");
     if (!tablename) return context; 
@@ -517,7 +542,8 @@ rpnOperators.table = function(context) {
 			   
 			   list.push('[');
 			   for(key in first) {
-				   list.push('(' + key + ')');
+				   // remove pretty format
+				   list.push('(' + key.replace(/^"/,"").replace(/"$/,"").replace(/^'/,"").replace(/'$/,"").replace(/^__/,"").replace(/__$/,"") + ')');
 			   }
 			   list.push(']');
 			   
@@ -528,8 +554,12 @@ rpnOperators.table = function(context) {
 				   for(key in row) {
 					   if (k < haslabel.value)
 						   list.push('(' + row[key] + ')');
-					   else
-					       if (row[key]) list.push(row[key]); else list.push('0');
+					   else {
+						   let v = row[key] ?? "0";
+						   console.log("v " +v);
+						   list.push(parseFloat(v.toString().replaceAll(/[^0-9-.]/g,"")).toString());
+					   }
+					       
 			           k++;
 				   }
 				   list.push(']');
@@ -547,34 +577,3 @@ rpnOperators.table = function(context) {
 	context = rpn(s, context);
     return context;
 };
-
-
-rpnOperators.imagedata = function (context) {
-	const [id] = context.pop("string");
-	
-// 		postMessage("log", context.id, "imagedata");
-// 		postMessage("log", context.id, dataimages);
-	
-	const imagedata = dataimages[id.value];
-	
-	context.stack.push(new rpnNumber(imagedata.width));
-	context.stack.push(new rpnNumber(imagedata.height));
-	
-// 	postMessage("log", context.id, imagedata.width);
-	
-    const binary = imagedata.data;
-    const arr = new Array(binary.length);
-    for (var i = 0; i < binary.length; i++) {
-        // arr[i] = new rpnNumber(binary[i]);
-        arr[i] = String.fromCharCode(binary[i])
-    }
-
-    // context.stack.push(new rpnNumber(binary.length));
-    // const ar = 	new rpnArray(arr, context.heap);
-    const ar = new rpnString(arr.join(''),context.heap)
-    ar.reference.inc();
-    context.stack.push(ar);	
-
-	
-	return context;
-}

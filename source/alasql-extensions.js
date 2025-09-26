@@ -5,6 +5,12 @@ alasql.fn.gaussian = function(mean = 0, stdev = 1) {
 	return z * stdev + mean;
 }
 
+alasql.fn.ln = function(x) { return Math.log(x); }
+
+alasql.fn.log2 = function(x) { return Math.log2(x); }
+
+alasql.fn.log10 = function(x) { return Math.log10(x); }
+
 alasql.fn.numberformat = function(r) {
     const x = new Intl.NumberFormat('en-US',{maximumFractionDigits: 2}).format(r).replaceAll(","," ");
     return x;

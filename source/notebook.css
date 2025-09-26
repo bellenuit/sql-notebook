@@ -542,8 +542,6 @@ div.data.fullscreen .celloutput {  width: calc(100% - 100px); padding-left: 50px
 .fullscreen button.new { display: none!important }
 .fullscreen button.down { display: none!important }
 .fullscreen button.up { display: none!important }
-.fullscreen button.run { display: none!important }
-.fullscreen button.rundown { display: none!important }
 .fullscreen ::part(divsvg) { height: 100%; width: 100%; }
 .fullscreen #shadow-root a { visibility: hidden }
 .fullscreen p.link { display: none }
