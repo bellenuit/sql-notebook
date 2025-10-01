@@ -538,13 +538,13 @@ function cellEdit(id) {
 }
 
 cellCancel =  function(id) { 
+
 	const cell = document.getElementById('cell'+id);
 	const source = document.getElementById('source'+id);
 	const bak = document.getElementById('bak'+id);
 	const zone = document.getElementById('cellzone');
 	source.value = bak.value;
-    source.setAttribute("readonly", true);
-	source.outerHTML = source.outerHTML;  // force update textarea
+	source.setAttribute("readonly", true);
 	cell.className = "cell " + cell.getAttribute("type"); 
 	zone.setAttribute("editing", "0");
 
@@ -1022,10 +1022,7 @@ function*  parseCSV(str2) {
 
 function cleanName(s) {
 	// remove space and invalid characters, but we need to keep " number";
-	
-	
-	
-	
+		
 	if (s.substr(-7,7) == " number")
 	{
 		return cleanName(s.replace(" number","")) + " number";
