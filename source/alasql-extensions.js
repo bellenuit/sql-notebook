@@ -106,7 +106,7 @@ alasql.into.MOVINGAVERAGE = function (filename, opts = 12, data, columns, cb) {
         if (arr.length > n) arr.shift();
         
         let item = {};
-		item.id = row[firstfield];
+		item[firstfield] = row[firstfield];
 		item[xcol] = arr.reduce((partialSum, a) => partialSum + a, 0) / arr.length;
 		
 		alasql("INSERT INTO " + newtable + " VALUES ?", [item]);
