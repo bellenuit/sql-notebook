@@ -84,6 +84,81 @@ alasql.into.DESERIALIZE = function (filename, opts, data, columns, cb) {
 	return res;
 };
 
+lgamma = function(x) {
+   if (x <= 1) return 0;
+   const k = (x <100) ? Math.pow(1.035,1/(x-1)) : 1;
+   return k*Math.log(Math.sqrt(2 * Math.PI *x)) + Math.log(x/Math.E) * x;
+}
+
+gammageometric = function(arr) { 
+    const n = arr.reduce((partialSum, a) => partialSum + a, 0);
+    const cut = arr.length/2;
+    const row0 = arr.slice(0,cut).reduce((partialSum, a) => partialSum + a, 0)
+    const row1 = arr.slice(cut).reduce((partialSum, a) => partialSum + a, 0)
+    const cols = [];
+    for (let i = 0; i < cut; i++) cols.push(arr[i]+arr[i+cut]);
+    return Math.exp(lgamma(row0) + lgamma(row1) + cols.reduce((partialSum, a) => partialSum + lgamma(a),0) - arr.reduce((partialSum,a) => partialSum + lgamma(a),0) - lgamma(n));
+}
+
+generateFisherVariants = function(arr) {
+if (arr.length == 0) return [];
+if (arr.length == 2) return [arr]; 
+const result = [];
+const row0 = arr.slice(0,arr.length/2);
+const row1 = arr.slice(arr.length/2);
+const constraint = row0.reduce((partialSum,a) => partialSum + a, 0);
+for (let i = 0; i <= constraint; i++ ) {
+   let left0 = i;
+   let left1 = row0[0] + row1[0] - i;
+   if (left1 >= 0) {  
+       let left01 = row0[0] + row0[1] - i;
+       let left11 = row0[1] + row1[1] - left01;
+       if (left01 >= 0 && left11 >= 0) { 
+         let restarr = [left01].concat(arr.slice(2,arr.length/2)).concat([left11]).concat(arr.slice(arr.length/2+2));
+         for (restvar of generateFisherVariants(restarr)) {
+             result.push([left0].concat(restvar.slice(0,restvar.length/2)).concat([left1]).concat(restvar.slice(restvar.length/2)));
+         }
+       }
+   }
+}
+return result;
+}
+
+fishertest = function(arr) { 
+if (arr.length % 2) throw "fishertest uneven array";
+const ppoint = gammageometric(arr);
+const variants = generateFisherVariants(arr);
+var p = 0;
+var pelse = 0;
+for (let v of variants) { 
+   let t = gammageometric(v);
+   if (t <= ppoint) p += t; 
+}
+return p;
+}
+
+alasql.into.FISHERTEST = function (filename, opts, data, columns, cb) { 
+    let res = 1;
+    const newtable = cleanName(filename);
+    alasql("DROP TABLE IF EXISTS " + filename);
+    alasql("CREATE TABLE " + filename);
+    if (data.length != 2) throw "fishertest needs exactly 2 rows";
+    const arr = [];
+    for(let row of data) { 
+        let fields = Object.keys(row);
+        for(let i = 0; i < fields.length; i++) {
+           arr.push(row[fields[i]]);echo(".");
+        }
+    }
+    const f = fishertest(arr);
+    alasql("INSERT INTO " + newtable + " (fishertest) VALUES (" + f + ")");
+	if (cb) {
+		res = cb(res);
+	}
+	return res;
+};
+
+
 alasql.into.MOVINGAVERAGE = function (filename, opts = 12, data, columns, cb) { 
     let res = 1;
 	const newtable = cleanName(filename);

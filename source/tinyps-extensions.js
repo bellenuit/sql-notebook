@@ -77,6 +77,8 @@ ymax ymin div 2 gt { /ymin 0 def } if
 /ylimits [ ymin ystep ymax ] def 
 /xlimits [ 0 1 data length 1 sub ] def
 chartmargins 0 ymax numberformat stringwidth pop 10 add put } if
+/xlog 0 def
+/ylog 0 def
 
 
 /square {
@@ -84,8 +86,12 @@ chartmargins 0 ymax numberformat stringwidth pop 10 add put } if
 chartmargins 2 chartrect 2 get chartmargins 0 get sub h sub put
 } def
 
-/chartproj { ylimits 0 get sub ylimits 2 get ylimits 0 get sub div chartrect 3 get chartmargins 1 get sub chartmargins 3 get sub mul chartrect 1 get add chartmargins 1 get add exch 
+/chartproj { 
+ylog { 10 ylimits 0 get exp max log  } if
+ylimits 0 get sub ylimits 2 get ylimits 0 get sub div chartrect 3 get chartmargins 1 get sub chartmargins 3 get sub mul chartrect 1 get add chartmargins 1 get add exch 
+xlog { 10 xlimits 0 get exp max log  } if
 xlimits 0 get sub xlimits 2 get xlimits 0 get sub div chartrect 2 get chartmargins 0 get sub chartmargins 2 get sub mul chartrect 0 get add chartmargins 0 get add exch } def
+
 
 /hchartproj { ylimits 0 get sub ylimits 2 get ylimits 0 get sub div chartrect 2 get chartmargins 0 get sub chartmargins 2 get sub mul chartrect 0 get add chartmargins 0 get add exch 
 xlimits 2 get exch sub xlimits 2 get xlimits 0 get sub div chartrect 3 get chartmargins 1 get sub chartmargins 3 get sub mul chartrect 1 get add chartmargins 1 get add exch   exch } def
@@ -110,13 +116,17 @@ preparepatterns
 
 /legendstyle [ {} {} {} {} {} {} {} ] def
 
-/xaxis { 0 setgray 1 setlinewidth xlimits 
-xlimits 0 get 0 chartproj moveto xlimits 2 get 0 chartproj lineto stroke } def
-/hxaxis { 0 setgray 1 setlinewidth xlimits 
-xlimits 0 get 0 hchartproj moveto xlimits 2 get 0 hchartproj lineto stroke } def
+/xaxis { 0 setgray 1 setlinewidth  
+xlimits 0 get xlog { 10 exch exp } if
+0 chartproj moveto 
+xlimits 2 get xlog { 10 exch exp } if
+0 chartproj lineto stroke } def
 
 /yaxis { 0 setgray 1 setlinewidth
-0 ylimits 0 get chartproj moveto 0 ylimits 2 get chartproj lineto stroke } def
+0 ylimits 0 get ylog { 10 exch exp } if
+chartproj moveto 0 ylimits 2 get ylog { 10 exch exp } if
+chartproj lineto stroke } def
+
 /hyaxis { 0 setgray 1 setlinewidth
 xlimits 2 get ylimits 0 get hchartproj moveto xlimits 2 get ylimits 2 get hchartproj lineto stroke } def
 
@@ -132,14 +142,20 @@ xlimits 0 get ylimits 2 get chartproj lineto closepath stroke
 
 /xticks { 0 setgray 0.5 setlinewidth
 xlimits 0 get xlimits 1 get xlimits 2 get { /x exch def
+xlog { /x x 10 exch exp def } if
 x { x 0 ylimits 0 get max chartproj moveto 0 -5 rlineto stroke
 x 0 ylimits 0 get max chartproj exch x numberformat stringwidth pop 2 div sub exch 20 sub moveto x numberformat show} if
 } for } def 
+
 /yticks { 0 setgray 0.5 setlinewidth
-ylimits 0 get ylimits 1 get ylimits 2 get { /y exch def
+ylimits 0 get ylimits 1 get ylimits 2 get {
+/y exch def
+ylog { /y y 10 exch exp def } if
 y { 0 xlimits 0 get max y chartproj moveto -5 0 rlineto stroke
-0 xlimits 0 get max y chartproj exch y numberformat stringwidth pop sub 7 sub exch 5 sub moveto y numberformat show} if
+0 xlimits 0 get max y chartproj exch y numberformat stringwidth pop sub 7 sub exch 5 sub moveto y 
+numberformat show} if
 } for } def
+
 /ticks { xticks yticks } def
 /hyticks { 0 setgray 0.5 setlinewidth
 ylimits 0 get ylimits 1 get ylimits 2 get { /y exch def
@@ -149,19 +165,28 @@ xlimits 2 get y hchartproj exch y numberformat stringwidth pop 2 div sub exch 20
 
 /xgrid { 0.5 setlinewidth
 xlimits 0 get xlimits 1 get xlimits 2 get { /x exch def
-x { x ylimits 0 get chartproj moveto x ylimits 2 get chartproj lineto stroke
+xlog { /x 10 x exp def } if
+x { x ylimits 0 get ylog { 10 exch exp } if
+chartproj moveto x ylimits 2 get ylog { 10 exch exp } if
+chartproj lineto stroke
 } if
 } for } def 
+
 /hxgrid { 0.5 setlinewidth
 xlimits 0 get xlimits 1 get xlimits 2 get { /x exch def
 x { x ylimits 0 get hchartproj moveto x ylimits 2 get hchartproj lineto stroke
 } if
 } for } def 
+
 /ygrid { 0.5 setlinewidth
 ylimits 0 get ylimits 1 get ylimits 2 get { /y exch def
-y { xlimits 0 get y chartproj moveto xlimits 2 get y chartproj lineto stroke
+ylog { /y 10 y exp def } if
+y { xlimits 0 get xlog { 10 exch exp } if
+y chartproj moveto xlimits 2 get xlog { 10 exch exp } if
+y chartproj lineto stroke
 } if
 } for } def
+
 /hygrid { 0.5 setlinewidth
 ylimits 0 get ylimits 1 get ylimits 2 get { /y exch def
 y { xlimits 0 get y hchartproj moveto xlimits 2 get y hchartproj lineto stroke
@@ -525,6 +550,13 @@ rpnOperators.preparepatterns = function(context) {
 
 
 rpnOperators.table = function(context) {
+	function parseNumber(s) {
+    if (typeof s == 'unefined') return 0;
+	if (s ==  '') return 0;
+	s = s.toString().replaceAll(/[^0-9-.]/g,"");
+	return parseFloat(s);
+}
+	
     const [haslabel, tablename] = context.pop("number", "string");
     if (!tablename) return context; 
     console.log("table " +tablename.value )
@@ -555,9 +587,7 @@ rpnOperators.table = function(context) {
 					   if (k < haslabel.value)
 						   list.push('(' + row[key] + ')');
 					   else {
-						   let v = row[key] ?? "0";
-						   console.log("v " +v);
-						   list.push(parseFloat(v.toString().replaceAll(/[^0-9-.]/g,"")).toString());
+						   list.push(parseNumber(row[key]).toString());
 					   }
 					       
 			           k++;

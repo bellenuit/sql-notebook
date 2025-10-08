@@ -1019,6 +1019,13 @@ function*  parseCSV(str2) {
     // return result;
 }
 
+function parseNumber(s) {
+	if (typeof s == 'unefined') return 0;
+	if (s ==  '') return 0;
+	s = s.toString().replaceAll(/[^0-9-.]/g,"");
+	return parseFloat(s);
+}
+
 
 function cleanName(s) {
 	// remove space and invalid characters, but we need to keep " number";
@@ -1298,7 +1305,7 @@ runner.data = function(id, down = false, diskdata = null) {
 				const key2 = key.replace(/\s.*/,"");
 				const datatype = key.replace(/.*\s/,"");
 				if (datatype == "number")
-					elem2[key2] = parseFloat(elem[key]);
+					elem2[key2] = parseNumber(elem[key]);
 				else
 					elem2[key2] = elem[key];
 			}
