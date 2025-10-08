@@ -122,6 +122,9 @@ xlimits 0 get xlog { 10 exch exp } if
 xlimits 2 get xlog { 10 exch exp } if
 0 chartproj lineto stroke } def
 
+/hxaxis { 0 setgray 1 setlinewidth xlimits 
+xlimits 0 get 0 hchartproj moveto xlimits 2 get 0 hchartproj lineto stroke } def
+
 /yaxis { 0 setgray 1 setlinewidth
 0 ylimits 0 get ylog { 10 exch exp } if
 chartproj moveto 0 ylimits 2 get ylog { 10 exch exp } if
