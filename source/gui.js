@@ -24,7 +24,7 @@ function exportCSV(columns, values) {
 
 // Create an HTML table
 var tableCreate = function () {
-	return function (columns, values) {
+	return function (columns, values) { console.log(values);
 		const div = document.createElement('div');
 		div.className = 'tablefilter';
 		const id = Math.floor(Math.random() * 1000000);
@@ -92,9 +92,7 @@ var tableCreate = function () {
                   // ignore	   
 			    } else {
 			    	const td = document.createElement('td');
-					if (typeof f !== 'undefined') {
-						td.innerHTML = f;
-					}
+			    	td.innerHTML = f ?? ".";
 					td.style.textAlign = columnaligns[j];
 				    tr.appendChild(td);
 				    
@@ -895,7 +893,7 @@ runner.sql = function(id, down = false) {
 	alasql.promise(intolist.join(" ") + sourcevalue + "; SET dummy = 1;")
 	.then(function(results){ console.log((Date.now() - timerstart) +" ms sql");
 		var s = "";
-		for(elem of results) {
+		for(elem of results) { 
 		   if (Array.isArray(elem)) {
 			   let first = elem[0];
 			   if (typeof first === 'object') {
@@ -1021,9 +1019,11 @@ function*  parseCSV(str2) {
 }
 
 function parseNumber(s) {
-	if (typeof s == 'unefined') return 0;
-	if (s ==  '') return 0;
+	if (typeof s == 'undefined') return undefined;
 	s = s.toString().replaceAll(/[^0-9-.]/g,"");
+    if (s ==  '') return undefined;
+    if (s ==  '-') return undefined;
+    if (s ==  '.') return undefined;
 	return parseFloat(s);
 }
 
@@ -1182,7 +1182,7 @@ runner.data = function(id, down = false, diskdata = null) {
 	lines.unshift(cleanheader);
 	//const data = diskdata ? diskdata : (lines.join("\n"));
 	const data = lines.join("\n");
-	console.log("data");
+	console.log("data " + data.length);
 	console.log(data.substr(0,300));
 	const list = parseCSV(data);
 	
@@ -1308,9 +1308,9 @@ runner.data = function(id, down = false, diskdata = null) {
 				if (datatype == "number")
 					elem2[key2] = parseNumber(elem[key]);
 				else
-					elem2[key2] = elem[key];
+					elem2[key2] = elem[key] ?? "";
 			}
-			console.log(elem2);
+			// console.log(elem2);
 			alasql("INSERT INTO "+tablename+" VALUES ?", [elem2]);
 			if (Math.random() / list.length > 0.1) { output.innerHTML += "."; output.outerHTML = output.outerHTML; }
 		}
@@ -1331,9 +1331,9 @@ runner.data = function(id, down = false, diskdata = null) {
 	.then(function(results){ 
 		var s = "";
 		s += '<p>table '+tablename;		
-		const cols = [];
+		const cols = []; 
 		for (row of results[1]) {
-			cols.push(row.columnid);
+			cols.push((row.columnid + " " +row.dbtypeid.toLowerCase()).trim());
 		}
 		s += '<br>columns ' + cols.join(", ");
 		s += '<br>rows ' + results[0][0].c; 
