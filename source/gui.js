@@ -48,19 +48,20 @@ var tableCreate = function () {
 		    var special = false;
 		    let th = document.createElement('th');
 		    var ca;
-		    c = c.replace(/^'(.*)'$/,"$1");
+		    c = c.replace(/^'(.*)'$/,"$1"); // should not
+		    console.log(c);
 		    if (c.match(/__$/) && c.match(/^__/)) {
 			    ca = "center";
 			    c = c.replace(/__$/,"").replace(/^__/,"");
 			} else if (c.match(/__$/)) {
 				 ca = "right";
 				 c = c.replace(/__$/,"");
-		    } else if (c.match(/^'\^/)) {
-  			     caption = c.substr(2,c.length-3);
+		    } else if (c.match(/^\^/)) {
+  			     caption = c.substr(1);
   			     captionid = i;
   			     special = true;
-		    } else if (c.match(/^'\$/)) {
-  			     footer = c.substr(2,c.length-3);
+		    } else if (c.match(/^\$/)) {
+  			     footer = c.substr(1);
   			     footerid = i;
   			     special = true;
 		    } else {
