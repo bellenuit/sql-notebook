@@ -24,7 +24,7 @@ function exportCSV(columns, values) {
 
 // Create an HTML table
 var tableCreate = function () {
-	return function (columns, values) { console.log(values);
+	return function (columns, values) { 
 		const div = document.createElement('div');
 		div.className = 'tablefilter';
 		const id = Math.floor(Math.random() * 1000000);
@@ -49,7 +49,7 @@ var tableCreate = function () {
 		    let th = document.createElement('th');
 		    var ca;
 		    c = c.replace(/^'(.*)'$/,"$1"); // should not
-		    console.log(c);
+		    //console.log(c);
 		    if (c.match(/__$/) && c.match(/^__/)) {
 			    ca = "center";
 			    c = c.replace(/__$/,"").replace(/^__/,"");
@@ -130,7 +130,7 @@ var tableCreate = function () {
  	    button.className = 'sortable';
  	    button.href = '#';
  	    button.innerHTML = '+';
- 	    if (values.length > 50 ) {
+ 	    if (values.length > 30 ) {
 	 	    button.style.display = '';
  	    } else {
  	    	button.style.display = 'none';
@@ -215,7 +215,7 @@ function cellEditor(code, type = "wiki", theid = -1 ) {
     const cell = document.createElement("DIV");   // build the HTML nodes
 	cell.id = "cell" + id;
 	cell.setAttribute("type", type);
-	cell.className = "cell " + type ;
+	cell.className = "cell menu " + type ;
 
 	const header = document.createElement("DIV"); 
 	header.className = "cellheader";
@@ -1020,7 +1020,9 @@ function*  parseCSV(str2) {
 
 function parseNumber(s) {
 	if (typeof s == 'undefined') return undefined;
-	s = s.toString().replaceAll(/[^0-9-.]/g,"");
+	s = s.toString();
+	s = s.replaceAll(',','.');
+	s = s.replaceAll(/[^0-9-.]/g,"");
     if (s ==  '') return undefined;
     if (s ==  '-') return undefined;
     if (s ==  '.') return undefined;
@@ -1030,6 +1032,7 @@ function parseNumber(s) {
 
 function cleanName(s) {
 	// remove space and invalid characters, but we need to keep " number";
+	s = s.toString();
 		
 	if (s.substr(-7,7) == " number")
 	{
@@ -1042,7 +1045,7 @@ function cleanName(s) {
 	if (keywordlist.map( (x) => (x.toLowerCase()) ).includes(s)) return s + "_";
 	
 	
-	return s.replaceAll('"','').trim().replace(/^[^a-zA-Z_]/,"_").replaceAll(/[^a-zA-Z0-9_]+/g,"_");
+	return s.replaceAll('"','').trim().replace(/^([0-9])/,"_$1").replace(/^[^a-zA-Z_]/,"_").replaceAll(/[^a-zA-Z0-9_]+/g,"_");
 }
 
 runner.data = function(id, down = false, diskdata = null) {
@@ -1560,11 +1563,11 @@ function cellRunAll() {
 setWiki = function(id) {
 	const cell = document.getElementById('cell'+id);
     cell.setAttribute("type", "wiki"); 
-	if (cell.className.indexOf("edit") > -1)
-		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
-    else
-		cell.className = "cell " + cell.getAttribute("type");
-	cellRun(id);
+	 const oldClass = cell.className;
+    cell.className = cell.getAttribute("type");   
+	if (oldClass.indexOf("edit") > -1) cell.classList.add("edit");
+    if (oldClass.indexOf("menu") > -1) cell.classList.add("menu");
+    cellRun(id);
 	syncProject();
 }
 
@@ -1573,10 +1576,10 @@ setSQL = function (id){
 	const output = document.getElementById('output'+id);
 
     cell.setAttribute("type", "sql");
-	if (cell.className.indexOf("edit") > -1)
-		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
-    else
-		cell.className = "cell " + cell.getAttribute("type");
+    const oldClass = cell.className;
+    cell.className = cell.getAttribute("type");   
+	if (oldClass.indexOf("edit") > -1) cell.classList.add("edit");
+    if (oldClass.indexOf("menu") > -1) cell.classList.add("menu");
 	output.innerHTML = "";
 	syncProject();
 }
@@ -1588,10 +1591,10 @@ setData = function(id) {
 	const output = document.getElementById('output'+id);
 
     cell.setAttribute("type", "data");
-	if (cell.className.indexOf("edit") > -1)
-		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
-    else
-		cell.className = "cell " + cell.getAttribute("type");
+	const oldClass = cell.className;
+    cell.className = cell.getAttribute("type");   
+	if (oldClass.indexOf("edit") > -1) cell.classList.add("edit");
+    if (oldClass.indexOf("menu") > -1) cell.classList.add("menu");
 	output.innerHTML = "";
 	syncProject();
 }
@@ -1601,12 +1604,10 @@ setJS = function (id) {
 	const output = document.getElementById('output'+id);
 
     cell.setAttribute("type", "js");
-	/* const source = document.getElementById('source'+id);
-	source.ondrop = undefined;*/
-	if (cell.className.indexOf("edit") > -1)
-		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
-    else
-		cell.className = "cell " + cell.getAttribute("type");
+	const oldClass = cell.className;
+    cell.className = cell.getAttribute("type");   
+	if (oldClass.indexOf("edit") > -1) cell.classList.add("edit");
+    if (oldClass.indexOf("menu") > -1) cell.classList.add("menu");
 	output.innerHTML = ""; 
 	syncProject();
 }
@@ -1615,12 +1616,10 @@ setPS = function (id) {
 	const cell = document.getElementById('cell'+id);
 	const output = document.getElementById('output'+id);
     cell.setAttribute("type", "ps");
-	/* const source = document.getElementById('source'+id);
-	source.ondrop = undefined;*/
-	if (cell.className.indexOf("edit") > -1)
-		cell.className = "cell " + cell.getAttribute("type") + " edit"; 
-    else
-		cell.className = "cell " + cell.getAttribute("type"); 
+	 const oldClass = cell.className;
+    cell.className = cell.getAttribute("type");   
+	if (oldClass.indexOf("edit") > -1) cell.classList.add("edit");
+    if (oldClass.indexOf("menu") > -1) cell.classList.add("menu");
 	output.innerHTML = "";
 	syncProject();
 }

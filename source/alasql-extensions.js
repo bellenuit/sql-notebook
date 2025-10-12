@@ -247,7 +247,7 @@ alasql.into.SERIALIZE = function (filename, opts, data, columns, cb) {
         for(let i = 1; i < fields.length; i++) {
            let item = {};
            item[firstfield] = row[fields[0]];
-           item.c = fields[i]
+           item.k = fields[i]
            item.v = row[fields[i]];
            alasql("INSERT INTO " + newtable + " VALUES ?", [item]);
         }
