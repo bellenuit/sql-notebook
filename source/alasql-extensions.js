@@ -11,9 +11,14 @@ alasql.fn.log2 = function(x) { return Math.log2(x); }
 
 alasql.fn.log10 = function(x) { return Math.log10(x); }
 
-alasql.fn.numberformat = function(r, d = 0, p="") {
+alasql.fn.numberformat = function(r, d = 0, s=" ", p="") {
 	
-    const x = new Intl.NumberFormat('en-US',{minimumFractionDigits: d, maximumFractionDigits: d}).format(r).replaceAll(","," ")+p;
+    if (d < 0) { console.log("minus " + d)
+	    let divider = Math.pow(10,-d);
+	    r = Math.round( r / divider ) * divider;
+	    d = 0;
+    }
+    const x = new Intl.NumberFormat('en-US',{minimumFractionDigits: d, maximumFractionDigits: d}).format(r).replaceAll(",",s)+p;
     return x;
 };
 
