@@ -1678,6 +1678,7 @@ function readProject(json) {
 			const cell = cellEditor(elem.source, elem.type, id);
 			zone.appendChild(cell);
 			id = cell.getAttribute("id").replace("cell","");
+			cell.classList.remove("menu");
 			if (elem.type == 'wiki') cellRun(id);
 		}
 	} catch(error) {
