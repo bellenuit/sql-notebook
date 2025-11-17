@@ -414,7 +414,8 @@ cellDup = function(id) {
     newsource.removeAttribute("readonly");
 	newsource.focus();
 	const length = newsource.value.length;
-	newsource.setSelectionRange(length, length);
+// 	newsource.setSelectionRange(length, length);
+	source.scrollTop = 0;
 	newsource.focus();	
 }
 
@@ -533,6 +534,7 @@ function cellEdit(id) {
 	const length = source.value.length;
 	source.focus();
 	source.setSelectionRange(length, length);
+    source.scrollTop = 0;
 	zone.setAttribute("editing", "1");
 }
 
@@ -1464,18 +1466,20 @@ runner.ps = function(id, down = false) {
 	var test = output.querySelector('.ps');	
 	
 	const scriptnode = test ? test : document.createElement("TINY-PS");
-	scriptnode.id = "tinyps"+id;
-	scriptnode.setAttribute("width","640");
-	scriptnode.setAttribute("height","360");
-	scriptnode.setAttribute("format","svg,svgurl,canvasurl");
-	scriptnode.setAttribute("textmode","1");
-	scriptnode.setAttribute("error","1");
-	scriptnode.setAttribute("interval","100");
-    scriptnode.setAttribute("movie","1");
-    scriptnode.setAttribute("zip","1");
-	scriptnode.setAttribute("oversampling","4");
-	scriptnode.setAttribute("transparent","0");
-	scriptnode.className = "ps";
+	if (!test) {
+		scriptnode.id = "tinyps"+id;
+		scriptnode.setAttribute("width","640");
+		scriptnode.setAttribute("height","360");
+		scriptnode.setAttribute("format","svg,svgurl,canvasurl");
+		scriptnode.setAttribute("textmode","1");
+		scriptnode.setAttribute("error","1");
+		scriptnode.setAttribute("interval","100");
+		scriptnode.setAttribute("movie","1");
+		scriptnode.setAttribute("zip","1");
+		scriptnode.setAttribute("oversampling","4");
+		scriptnode.setAttribute("transparent","0");
+		scriptnode.className = "ps";
+	}
 	scriptnode.innerHTML = code;
 	
 	const tabledump = []
@@ -1621,6 +1625,12 @@ setPS = function (id) {
 	if (oldClass.indexOf("edit") > -1) cell.classList.add("edit");
     if (oldClass.indexOf("menu") > -1) cell.classList.add("menu");
 	output.innerHTML = "";
+	setInterval( function() {
+		const source = document.getElementById('source'+id);
+		if (source.value.slice(0,1) == "!" && source.value.slice(-1) == " " && source.value != source.getAttribute("bak")) 
+			cellRun(id);
+		source.setAttribute("bak", source.value);
+		} , 500)
 	syncProject();
 }
 

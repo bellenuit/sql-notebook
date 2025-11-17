@@ -33,6 +33,9 @@ Version 1.2.1 2025-09-02
 - operatir cvr
 Version 1.2.2 2025-09-07
 - On multiple PNG, the zip file is created immediately to lower memory footprint.
+Version 1.2.3 2025-11-17
+- new operator currentpointexists
+- support for livestatus (code starts with "!") and better console on error and status
 
 Renders as subset PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
 The output can be displayed or proposed as downloadable link. It can be transparent.
@@ -966,6 +969,11 @@ rpn = function(s, context = null, outerContext = false, silent = false ) {
         context = new rpnContext();
     }
     context.silent = silent;
+    context.livestatus = false;
+    if (s.slice(0,1)=="!") {
+	    context.livestatus = true;
+	    s = s.slice(1);
+    }
     const list =  (typeof s == "string") ? s.concat(" ").split("") : [];
     var state = "start";
     var current = "";
@@ -979,14 +987,22 @@ rpn = function(s, context = null, outerContext = false, silent = false ) {
 	       if (context.lasterror && !context.silent) {
 	           console.error("!" + context.lasterror);
 	           console.log("Recent code: " + context.currentcode);
-               console.log("Stack: " + context.stack.reduce((acc,v) => acc + v.dump + ' ' , " "));
+	           var currentstack = context.stack.reduce((acc,v) => acc + v.dump + ' ' , " ");
+			   if (currentstack.length > 140) {
+				   currentstack = currentstack.slice(-140);
+				   currentstack = currentstack.slice(currentstack.indexOf(" ")+1);
+			   }		   
+			   console.log("Stack: " + currentstack);
                console.log(context.graphics);
                console.log(context.dictstack[context.dictstack.length-1]);
                console.log(context.device);
            }
 		   if (context.lasterror) return context;
         }
-        context.currentcode = context.currentcode.slice(-140) + elem;
+        context.currentcode = context.currentcode + elem;
+        if (context.currentcode.length > 140) {
+	        context.currentcode = context.currentcode.slice(context.currentcode.indexOf(" ") +1);
+        }
         switch (state) {
             case "start":
                 if (/[0-9-.]/.test(elem)) {
@@ -1672,6 +1688,16 @@ rpnOperators.currentpoint = function(context) {
     context.stack.push(new rpnNumber(y));
     return context;
 };
+
+rpnOperators.currentpointexists = function(context) {
+    if (context.graphics.current.length) {
+	    context.stack.push(new rpnNumber(1));
+    } else {
+	    context.stack.push(new rpnNumber(0));
+    }
+    return context;
+};
+
 
 rpnOperators.currentrgbcolor= function(context) {
     const [r, g, b] = context.graphics.color;
@@ -4677,8 +4703,7 @@ class tinyPStag extends HTMLElement {
   attributeChangedCallback(name, oldValue, newValue) {
     if (!this.ready) return;
     
-    console.log(`Attribute ${name} has changed`);
-    
+    console.log(`Attribute ${name} has changed`);    
     var context = new rpnContext;
     context.width = this.getAttribute("width") ?? 360;
     context.height = this.getAttribute("height") ?? 360;
@@ -4691,217 +4716,222 @@ class tinyPStag extends HTMLElement {
     context.device.zip = this.getAttribute("zip") ?? 0;
 	const errorMode = this.getAttribute("error") ?? 0;
 	var test = this.shadow.querySelector(".output");
-    var divnode = test ? test: document.createElement("DIV");
-    divnode.part = "output";
-    divnode.className = "output";
-    divnode.style.height = "100%";
-    divnode.style.width = "100%";
-    var divurlnode = document.createElement("DIV");
-    divurlnode.part = "url";
-    test = this.shadow.querySelector(".divsvg");
-    var divsvgnode = test ? test : document.createElement("DIV");
-    divsvgnode.part = "divsvg"
-    divsvgnode.className = "divsvg"
-    divsvgnode.style.height = "100%";
-    divsvgnode.style.width = "100%";
-    var othernode;
-    const formats = this.getAttribute("format").split(",");
-    var errornode = document.createElement("DIV");
-    errornode.part = "error"
-    errornode.className = "error";
-    errornode.style.display = "none";
-
-	var node, node2, node3, node4;
-	var urlnode, urlnode2, urlnode2m, urlnode2z, urlnode3, urlnode3a, urlnode4;
-    
-    if (formats.indexOf("raw") > -1 || formats.indexOf("rawurl") > -1) {
-	    console.log("Adding rawnode");
-        node = document.createElement("CANVAS");
-        node.id = "raw" + this.id;
-        node.part = "raw";
-        node.className = "jsraw";
-        node.style.display = "none";
-        node.width = context.width * context.device.oversampling;
-        node.height = context.height *  context.device.oversampling;
-        node.style.width = context.width + "px";
-		node.style.height = context.height + "px";
-        context.device.raw = 1;
-        
-        if (formats.indexOf("raw") > -1)  {
-	        node.style.display = "block";
-        }
-        
-        if (formats.indexOf("rawurl") > -1) {
-	        urlnode = document.createElement("A");
-            urlnode.id = "rawurl" + this.id;
-            urlnode.part = "rawurl";
-            urlnode.className = "jsrawurl";
-            urlnode.innerHTML = "PNG";
-            urlnode.style.display = "inline";
-            rpnFrames[urlnode.id] = [];
-            context.device.rawurl = 1;
-            this.nodes.raw = node;
-            this.nodes.rawurl = urlnode;
-
-        } else {
-	        this.nodes.raw = node;
-        }
-    }
-    if (formats.indexOf("canvas") > -1 || formats.indexOf("canvasurl") > -1) {
-        console.log("Adding canvasnode");
-        
-        let test = divnode.querySelector(".jscanvas");
-        node2 = test ? test : document.createElement("CANVAS");
-        node2.id = "canvas" + this.id;
-        node2.part = "canvas";
-        node2.className = "jscanvas";
-        node2.style.display = "none";
-        node2.width = context.width * context.device.oversampling;
-        node2.height = context.height *  context.device.oversampling;
-        node2.setAttribute("oversampling", context.device.oversampling)
-        node2.style.width = context.width + "px";
-		node2.style.height = context.height + "px";
-        context.device.canvas = 1;
-        
-        if (formats.indexOf("canvas") > -1)  {
-	        node2.style.display = "block";
-        }
-            
-        if (formats.indexOf("canvasurl") > -1) {  
-	        urlnode2 = document.createElement("A");
-            urlnode2.id = "canvasurl" + this.id;
-            urlnode2.part = "canvasurl";
-            urlnode2.className = "jscanvasurl";
-            urlnode2.innerHTML = "PNG";
-            urlnode2.style.display = "inline";
-            if (context.device.zip) {
-            	urlnode2z = document.createElement("A");
-            	urlnode2z.id = "canvasurlz" + this.id;
-            	urlnode2z.part = "canvasurlz";
-            	urlnode2z.className = "jscanvasurlz";
-            	urlnode2z.innerHTML = "";
-            	urlnode2z.style.display = "none";
-            	
-            	let d = new Date();
-				let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13);
-				let z = new rpnZip(fn);
-            	
-            	
-            	rpnFrames[urlnode2z.id] = z;
-            }
-            if (context.device.movie) {
-            	urlnode2m = document.createElement("A");
-            	urlnode2m.id = "canvasurlm" + this.id;
-            	urlnode2m.part = "canvasurlm";
-            	urlnode2m.className = "jscanvasurlm";
-            	urlnode2m.innerHTML = "";
-            	urlnode2m.style.display = "none";
-            	rpnImageData[urlnode2m.id] = [];
-            }
-
-            context.device.canvasurl = 1;
-            this.nodes.canvas = node2
-            this.nodes.canvasurl = urlnode2;
-            this.nodes.canvasurlz = urlnode2z;
-            this.nodes.canvasurlm = urlnode2m;
-        } else {
-	        this.nodes.canvas = node2;
-        }
-    }
+	var divnode = test ? test: document.createElement("DIV");
+	
+	
+	    divnode.part = "output";
+	    divnode.className = "output";
+	    divnode.style.height = "100%";
+	    divnode.style.width = "100%";
+	    var divurlnode = document.createElement("DIV");
+	    divurlnode.part = "url";
+	    test = this.shadow.querySelector(".divsvg");
+	    var divsvgnode = test ? test : document.createElement("DIV");
+	    divsvgnode.part = "divsvg"
+	    divsvgnode.className = "divsvg"
+	    divsvgnode.style.height = "100%";
+	    divsvgnode.style.width = "100%";
+	    var othernode;
+	    const formats = this.getAttribute("format").split(",");
+	    var errornode = document.createElement("DIV");
+	    errornode.part = "error"
+	    errornode.className = "error";
+	    errornode.style.display = "none";
+	
+		var node, node2, node3, node4;
+		var urlnode, urlnode2, urlnode2m, urlnode2z, urlnode3, urlnode3a, urlnode4;
+	    
+	    if (formats.indexOf("raw") > -1 || formats.indexOf("rawurl") > -1) {
+		    console.log("Adding rawnode");
+	        node = document.createElement("CANVAS");
+	        node.id = "raw" + this.id;
+	        node.part = "raw";
+	        node.className = "jsraw";
+	        node.style.display = "none";
+	        node.width = context.width * context.device.oversampling;
+	        node.height = context.height *  context.device.oversampling;
+	        node.style.width = context.width + "px";
+			node.style.height = context.height + "px";
+	        context.device.raw = 1;
 	        
-	if (formats.indexOf("svg") > -1 || formats.indexOf("svgurl") > -1) {        
-        console.log("Adding svgnode");
-        // let svgdivnode = document.createElement("DIV");
-        
-        let test = divnode.querySelector(".jssvg");
-        node3 = test ? test : document.createElement("SVG");
-        node3.setAttribute("xmlns","http://www.w3.org/2000/svg"); // must be first attribute!
-        node3.id = "svg" + this.id;
-        node3.className = "jssvg";
-        node3.part = "svg";
-        node3.style.display = "none";
-        node3.width = context.width;
-        node3.height = context.height;
-        context.device.svg = 1;
-        
-        if (formats.indexOf("svg") > -1)  {
-	        node3.style.display = "block";
-	        node3.style.width = "100%";
-        }
-        
-        if (formats.indexOf("svgurl") > -1) {
-	        urlnode3 = document.createElement("A");
-            urlnode3.id = "svgurl" + this.id;
-            urlnode3.part = "svgurl";
-            urlnode3.className = "svgurl";
-            urlnode3.innerHTML = "SVG";
-            urlnode3.style.display = "inline";
-            if (context.device.svgmovie) {
-            	urlnode3a = document.createElement("A");
-            	urlnode3a.id = "svgurla" + this.id;
-            	urlnode3a.part = "svgurla";
-            	urlnode3a.className = "svgurla";
-            	urlnode3a.innerHTML = "A..";
-            	urlnode3a.style.display = "none";
-            	rpnSVGData[urlnode3a.id] = [];
-            }
-            this.nodes.svg = node3;
-            this.nodes.svgurl = urlnode3;
-            this.nodes.svgurl = urlnode3a;
-            context.device.svgurl = 1;
-	    } else {
-		    this.nodes.svg = node3;
+	        if (formats.indexOf("raw") > -1)  {
+		        node.style.display = "block";
+	        }
+	        
+	        if (formats.indexOf("rawurl") > -1) {
+		        urlnode = document.createElement("A");
+	            urlnode.id = "rawurl" + this.id;
+	            urlnode.part = "rawurl";
+	            urlnode.className = "jsrawurl";
+	            urlnode.innerHTML = "PNG";
+	            urlnode.style.display = "inline";
+	            rpnFrames[urlnode.id] = [];
+	            context.device.rawurl = 1;
+	            this.nodes.raw = node;
+	            this.nodes.rawurl = urlnode;
+	
+	        } else {
+		        this.nodes.raw = node;
+	        }
 	    }
-	}
+	    if (formats.indexOf("canvas") > -1 || formats.indexOf("canvasurl") > -1) {
+	        console.log("Adding canvasnode");
+	        
+	        let test = divnode.querySelector(".jscanvas");
+	        node2 = test ? test : document.createElement("CANVAS");
+	        node2.id = "canvas" + this.id;
+	        node2.part = "canvas";
+	        node2.className = "jscanvas";
+	        node2.style.display = "none";
+	        node2.width = context.width * context.device.oversampling;
+	        node2.height = context.height *  context.device.oversampling;
+	        node2.setAttribute("oversampling", context.device.oversampling)
+	        node2.style.width = context.width + "px";
+			node2.style.height = context.height + "px";
+	        context.device.canvas = 1;
+	        
+	        if (formats.indexOf("canvas") > -1)  {
+		        node2.style.display = "block";
+	        }
+	            
+	        if (formats.indexOf("canvasurl") > -1) {  
+		        urlnode2 = document.createElement("A");
+	            urlnode2.id = "canvasurl" + this.id;
+	            urlnode2.part = "canvasurl";
+	            urlnode2.className = "jscanvasurl";
+	            urlnode2.innerHTML = "PNG";
+	            urlnode2.style.display = "inline";
+	            if (context.device.zip) {
+	            	urlnode2z = document.createElement("A");
+	            	urlnode2z.id = "canvasurlz" + this.id;
+	            	urlnode2z.part = "canvasurlz";
+	            	urlnode2z.className = "jscanvasurlz";
+	            	urlnode2z.innerHTML = "";
+	            	urlnode2z.style.display = "none";
+	            	
+	            	let d = new Date();
+					let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13);
+					let z = new rpnZip(fn);
+	            	
+	            	
+	            	rpnFrames[urlnode2z.id] = z;
+	            }
+	            if (context.device.movie) {
+	            	urlnode2m = document.createElement("A");
+	            	urlnode2m.id = "canvasurlm" + this.id;
+	            	urlnode2m.part = "canvasurlm";
+	            	urlnode2m.className = "jscanvasurlm";
+	            	urlnode2m.innerHTML = "";
+	            	urlnode2m.style.display = "none";
+	            	rpnImageData[urlnode2m.id] = [];
+	            }
 	
-	if (formats.indexOf("pdf") > -1 || formats.indexOf("pdfurl") > -1) {   
-        console.log("Adding pdfnode");
-        node4 = document.createElement("IMG");
-        node4.id = "pdf" + this.id;
-        node4.part = "pdf";
-        node4.className = "pdf";
-        node4.style.display = "none";
-        node4.width = context.width;
-        node4.height = context.height;
-        node4.style.backgroundColor = (context.transparent == 0) ? "white" : "transparent";  
-        context.device.pdf = 1;
-        
-        if (formats.indexOf("pdf") > -1)  {
-	        node4.style.display = "block";
-        }
-        
-        if (formats.indexOf("pdfurl") > -1) {
-	        urlnode4 = document.createElement("A");
-            urlnode4.id = "pdfurl" + this.id;
-            urlnode4.part = "pdfurl";
-            urlnode4.className = "pdfurl";
-            urlnode4.innerHTML = "PDF";
-            urlnode4.style.display = "inline";
-            this.nodes.pdf = node4;
-            this.nodes.pdfurl = urlnode4;
-            context.device.pdfurl = 1;
-
-	    } else {
-		    this.nodes.pdf = node4;
+	            context.device.canvasurl = 1;
+	            this.nodes.canvas = node2
+	            this.nodes.canvasurl = urlnode2;
+	            this.nodes.canvasurlz = urlnode2z;
+	            this.nodes.canvasurlm = urlnode2m;
+	        } else {
+		        this.nodes.canvas = node2;
+	        }
 	    }
-	}
+		        
+		if (formats.indexOf("svg") > -1 || formats.indexOf("svgurl") > -1) {        
+	        console.log("Adding svgnode");
+	        // let svgdivnode = document.createElement("DIV");
+	        
+	        let test = divnode.querySelector(".jssvg");
+	        node3 = test ? test : document.createElement("SVG");
+	        node3.setAttribute("xmlns","http://www.w3.org/2000/svg"); // must be first attribute!
+	        node3.id = "svg" + this.id;
+	        if (!test) node3.className = "jssvg";
+	        node3.part = "svg";
+	        node3.style.display = "none";
+	        if (!test) node3.width = context.width;
+	        if (!test) node3.height = context.height;
+	        context.device.svg = 1;
+	        
+	        if (formats.indexOf("svg") > -1)  {
+		        node3.style.display = "block";
+		        node3.style.width = "100%";
+	        }
+	        
+	        if (formats.indexOf("svgurl") > -1) {
+		        urlnode3 = document.createElement("A");
+	            urlnode3.id = "svgurl" + this.id;
+	            urlnode3.part = "svgurl";
+	            urlnode3.className = "svgurl";
+	            urlnode3.innerHTML = "SVG";
+	            urlnode3.style.display = "inline";
+	            if (context.device.svgmovie) {
+	            	urlnode3a = document.createElement("A");
+	            	urlnode3a.id = "svgurla" + this.id;
+	            	urlnode3a.part = "svgurla";
+	            	urlnode3a.className = "svgurla";
+	            	urlnode3a.innerHTML = "A..";
+	            	urlnode3a.style.display = "none";
+	            	rpnSVGData[urlnode3a.id] = [];
+	            }
+	            this.nodes.svg = node3;
+	            this.nodes.svgurl = urlnode3;
+	            this.nodes.svgurl = urlnode3a;
+	            context.device.svgurl = 1;
+		    } else {
+			    this.nodes.svg = node3;
+		    }
+		}
+		
+		if (formats.indexOf("pdf") > -1 || formats.indexOf("pdfurl") > -1) {   
+	        console.log("Adding pdfnode");
+	        node4 = document.createElement("IMG");
+	        node4.id = "pdf" + this.id;
+	        node4.part = "pdf";
+	        node4.className = "pdf";
+	        node4.style.display = "none";
+	        node4.width = context.width;
+	        node4.height = context.height;
+	        node4.style.backgroundColor = (context.transparent == 0) ? "white" : "transparent";  
+	        context.device.pdf = 1;
+	        
+	        if (formats.indexOf("pdf") > -1)  {
+		        node4.style.display = "block";
+	        }
+	        
+	        if (formats.indexOf("pdfurl") > -1) {
+		        urlnode4 = document.createElement("A");
+	            urlnode4.id = "pdfurl" + this.id;
+	            urlnode4.part = "pdfurl";
+	            urlnode4.className = "pdfurl";
+	            urlnode4.innerHTML = "PDF";
+	            urlnode4.style.display = "inline";
+	            this.nodes.pdf = node4;
+	            this.nodes.pdfurl = urlnode4;
+	            context.device.pdfurl = 1;
 	
-	if (node) divnode.appendChild(node);
-	if (node2) divnode.appendChild(node2);
-	if (node3) { divsvgnode.appendChild(node3); divnode.appendChild(divsvgnode) }
-	if (node4) divnode.appendChild(node4);
-	if (urlnode) divurlnode.appendChild(urlnode);
-	if (urlnode2) divurlnode.appendChild(urlnode2);
-	if (urlnode2z) divurlnode.appendChild(urlnode2z);
-    if (urlnode2m) divurlnode.appendChild(urlnode2m);
-	if (urlnode3) divurlnode.appendChild(urlnode3);
-    if (urlnode3a) divurlnode.appendChild(urlnode3a);
-	if (urlnode4) divurlnode.appendChild(urlnode4);
-	
-    while (this.shadow.lastChild) this.shadow.removeChild(this.shadow.lastChild);
-    this.shadow.appendChild(divnode);
-    this.shadow.appendChild(divurlnode);
-    this.shadow.appendChild(errornode);  
+		    } else {
+			    this.nodes.pdf = node4;
+		    }
+		}
+		
+		if (node) divnode.appendChild(node);
+		if (node2) divnode.appendChild(node2);
+		if (node3) { divsvgnode.appendChild(node3); divnode.appendChild(divsvgnode) }
+		if (node4) divnode.appendChild(node4);
+		if (urlnode) divurlnode.appendChild(urlnode);
+		if (urlnode2) divurlnode.appendChild(urlnode2);
+		if (urlnode2z) divurlnode.appendChild(urlnode2z);
+	    if (urlnode2m) divurlnode.appendChild(urlnode2m);
+		if (urlnode3) divurlnode.appendChild(urlnode3);
+	    if (urlnode3a) divurlnode.appendChild(urlnode3a);
+		if (urlnode4) divurlnode.appendChild(urlnode4);
+		
+		
+	    // while (this.shadow.lastChild) this.shadow.removeChild(this.shadow.lastChild);
+	    if (this.shadow.childNodes.length != 3) {
+	    this.shadow.appendChild(divnode);
+	    this.shadow.appendChild(divurlnode);
+	    this.shadow.appendChild(errornode);
+	   }
     
     const worker = rpnWorker(this.innerHTML, context);
     
@@ -5086,7 +5116,6 @@ class tinyPStag extends HTMLElement {
 							    svgnode.setAttribute("height", data.height);
 							}
 			                break;
-			                break;
 			
 			case "error":   node = document.getElementById(id);
 			                shadow = node.shadowRoot; 
@@ -5096,6 +5125,18 @@ class tinyPStag extends HTMLElement {
 			                errornode.width = context.width;
 			                errornode.height = context.height;
                             errornode.innerHTML = data;
+                            break;
+                            
+			case "status":  node = document.getElementById(id);
+			                shadow = node.shadowRoot; 
+							errornode = shadow.querySelector('.error');
+							errornode.style.display = "block";
+			                errornode.style.color = "#00825A";
+			                errornode.width = context.width;
+			                errornode.height = context.height;
+                            errornode.innerHTML = data;
+                            
+                            break;
                             
             case "log":     console.log(data);
 			
@@ -5136,7 +5177,7 @@ workeronmessage = function (e) {
 
 	const action = msg[0];
 	const id = msg[1];
-	const data = msg[2];
+	var data = msg[2];
 	var context = new rpnContext(JSON.parse(msg[3]));
 	// console.log(context.nodes);
 	
@@ -5163,8 +5204,25 @@ workeronmessage = function (e) {
 	
 	switch (action)
 	{
-		case "rpn": context = rpn(data, context, true); 
-		            if (context.lasterror) postMessage(["error", context.id, "!" + context.lasterror + '<p>' + "Stack: " + context.stack.reduce((acc,v) => acc + v.dump + " " , " ").slice(-140) + '<p>' + "Code executed: " + context.currentcode, null]);
+		case "rpn": console.log("rpn " + data);
+		            if (data.slice(0,1)=="!") {
+			            data += " currentpointexists { 0 0 1 setrgbcolor 1 setalpha gsave currentpoint newpath 4 0 360 arc fill grestore stroke showpage } if ";
+			            
+		            }
+		            console.log("rpn " + data);
+		            context = rpn(data, context, true); 
+		            var currentstack = context.stack.reduce((acc,v) => acc + v.dump + ' ' , " ");
+		            if (currentstack.length > 140) {
+					   currentstack = currentstack.slice(-140);
+					   currentstack = currentstack.slice(currentstack.indexOf(" ")+1);
+				    }
+				    const dictkeys = Object.keys(context.dict).join(" ");		   
+				    let action = (context.lasterror) ? "error" : "status";
+				    const state = [];
+				    for (let k of Object.keys(context.graphics))
+				    	state.push(k + ": " +context.graphics[k]); 
+				    
+		            if (context.lasterror || context.livestatus) postMessage([action, context.id,  "<p>stack: " + currentstack + "<p>code executed: " + context.currentcode + "<p>dict: " + dictkeys + "<p>"+ state.join("<br>"), null]  );  //+ .join(" ")
 					break;
 		default : handleMessageExtended(e);
 	}

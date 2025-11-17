@@ -59,15 +59,15 @@ rpnOperators.preparechart = function(context) {
 
 % preparechart
 /alpha exch def /db exch def db length {
-/data db alpha table def data 
+/data db alpha table def 
 /ymin data 1 get alpha get def 
-/ymax ymin def ymax 
+/ymax ymin def  
 alpha 1 data 0 get length 1 sub { /col exch def
 1 1 data length 1 sub { /row exch def
 /y data row get col get def
 /ymax y ymax max def
-/ymin y ymin min def
-} for
+/ymin y ymin min def 
+} for 
 } for 
 /ystep ymax ymin sub round1 def
 ystep 0 eq { /ystep 1 def } if
