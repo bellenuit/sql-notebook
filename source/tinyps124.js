@@ -36,6 +36,14 @@ Version 1.2.2 2025-09-07
 Version 1.2.3 2025-11-17
 - new operator currentpointexists
 - support for livestatus (code starts with "!") and better console on error and status
+Version 1.2.4 2026-02-01
+- new operators aload, load, setcachedevice
+- rewritten operators definefont, findfont, show
+- removed protected spaces in code (which are UTF-8 characters)
+- fixed livestatus problems
+- fiexd missing baseURL for font paths.
+- added test files
+
 
 Renders as subset PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
 The output can be displayed or proposed as downloadable link. It can be transparent.
@@ -1411,6 +1419,15 @@ rpnUnitTest("(a) 2 add","!typeerror");
 rpnUnitTest("2 add","2 !stackunderflow");
 rpnUnitTest("add","!stackunderflow");
 
+rpnOperators.aload = function(context) {
+    const [a] = context.pop("array");
+    for (elem of a.value) context.stack.push(elem);
+    context.stack.push(a);
+    // should we add reference count?
+    return context;
+};  
+
+
 rpnOperators.and = function(context) {
     const [b, a] = context.pop("number", "number");
     if (!b) return context;
@@ -1777,9 +1794,11 @@ rpnOperators.definefont = function(context) {
     const [d, n] = context.pop("dictionary", "name");
     if (!n) return context;
     // we should check here for the keys present
-    context.fontdict[n.value] = d;
+    rpnFonts[n.value] = d;
+    context.stack.push(d);
     return context;
 };
+
 
 rpnOperators.dict = function(context) {
     const [n] = context.pop("number");
@@ -1896,6 +1915,7 @@ rpnUnitTest("false","0");
 rpnOperators.findfont = function(context) {
     const [n] = context.pop("name");
     if (!n) return context;
+    console.log(rpnFonts);
     if (!rpnFonts[n.value]) {
 	    const url = rpnFontURLs[n.value];
 	    if (!url) return context.error("invalidfont");
@@ -2244,6 +2264,18 @@ rpnUnitTest("(a) 1 lineto","!typeerror");
 rpnUnitTest("1 lineto","1 !stackunderflow");
 rpnUnitTest("lineto","!stackunderflow");
 
+
+rpnOperators.load = function(context) {
+    const [a] = context.pop("name");
+    if (!a) return context;
+    const elem = context.dict[a.value];
+    if (elem) {
+        context.stack.push(elem);
+    } else {
+       return context.error("undefined");
+    }
+    return context;
+}; 
 
 rpnOperators.log = function(context) {
     const [n] = context.pop("number");
@@ -2830,6 +2862,12 @@ rpnOperators.setmatrix = function(context) {
 
 rpnUnitTest("[1 2 3 4 5 6] setmatrix currentmatrix","[1 2 3 4 5 6]");
 
+rpnOperators.setcachedevice = function(context) {
+   const [top,left,bottom,right,y,x] = context.pop("number","number","number","number","number","number");
+   context.stack.push(x);
+   return context;
+}
+
 rpnOperators.setpagedevice = function(context) {
     const [d] = context.pop("dictionary");
     if (!d) return context;
@@ -2878,6 +2916,7 @@ rpnOperators.setrgbcolor = function(context) {
 
 rpnOperators.show = function(context) {
     const [s] = context.pop("string");
+  //  postMessage(["status",context.id,"show",null])
     if (!s) return context;
     if (!context.graphics.current.length) {
        return context.error("nocurrentpoint");
@@ -2885,17 +2924,33 @@ rpnOperators.show = function(context) {
     if (!context.graphics.font.length) {
        return context.error("nocurrentfont");
     }
-    if (context.device.textmode) {
+    const font = rpnFonts[context.graphics.font];
+    if (context.device.textmode && (!font || !font.value)) {
         for (let n of context.nodes) {
            if (n.canshow) context = n.show(s.value, context);
         }
     }
-    const font = rpnFonts[context.graphics.font];
-    if (!font) {
+         if (!font) {
 	     return context.error("nocurrentfont");
     }
-    const scale = context.graphics.size / font.head.unitsPerEm;
-    var ps = " currentpoint currentpoint translate currentmatrix " + scale + " " + scale + " scale ";
+
+        var ps = "";
+    var type3mode = false;
+    if (font.value && font.value.FontType.value == 3) {
+        type3mode = true;
+//        postMessage(["status",context.id,"type 3",null]);
+        context.stack.push(font);
+        ps += " /currentfontdict exch def ";
+        ps += " currentpoint currentpoint translate ";
+        ps += " currentmatrix ";
+        ps += " currentfontdict /FontMatrix get 0 get currentfontdict /FontMatrix get 3 get  scale ";
+        ps +=  context.graphics.size + " " + context.graphics.size + " scale  ";
+        for (let i = 0; i < s.value.length; i++) {
+             ps += " currentfontdict " + s.value.charCodeAt(i) + " currentfontdict begin BuildChar end 0 translate";
+        }
+    } else {
+    let scale = context.graphics.size / font.head.unitsPerEm;
+    ps += " currentpoint currentpoint translate currentmatrix " + scale + " " + scale + " scale  ";
     for (let i = 0; i < s.value.length; i++) {
         const c = s.value.charCodeAt(i);
         const gi = font.glyphIndex(c);
@@ -2904,8 +2959,9 @@ rpnOperators.show = function(context) {
         ps += " fill ";
         ps += font.glyphWidth(gi) + " 0 translate ";
     }
+    }
     ps += " 0 0 moveto setmatrix neg exch neg exch translate ";
-    context.showmode = true;
+    context.showmode = !type3mode;
     context = rpn(ps, context);
     context.showmode = false;
     return context;
@@ -3111,7 +3167,9 @@ rpnLimitTextEnd = function (s) {
 
 readSyncURL = function(url){
    const xhr = new XMLHttpRequest();
-   xhr.open("GET", url, false);
+   console.log(rpnBaseURL);
+   const basedUrl = new URL(url, rpnBaseURL);
+   xhr.open("GET", basedUrl, false);
    xhr.overrideMimeType("text/plain; charset=x-user-defined"); //Override MIME Type to prevent UTF-8 related errors
    xhr.send();
    URL.revokeObjectURL(url);
@@ -4741,7 +4799,7 @@ class tinyPStag extends HTMLElement {
 		var node, node2, node3, node4;
 		var urlnode, urlnode2, urlnode2m, urlnode2z, urlnode3, urlnode3a, urlnode4;
 	    
-	    if (formats.indexOf("raw") > -1 || formats.indexOf("rawurl") > -1) {
+	    if (formats.indexOf("raw") > -1 || formats.indexOf("rawurl") > -1) {
 		    console.log("Adding rawnode");
 	        node = document.createElement("CANVAS");
 	        node.id = "raw" + this.id;
@@ -4773,8 +4831,11 @@ class tinyPStag extends HTMLElement {
 	        } else {
 		        this.nodes.raw = node;
 	        }
+	    } else {
+		    let test = divnode.querySelector(".jsraw");
+	        if (test) test.style.display = "none";
 	    }
-	    if (formats.indexOf("canvas") > -1 || formats.indexOf("canvasurl") > -1) {
+	    if (formats.indexOf("canvas") > -1 || formats.indexOf("canvasurl") > -1) {
 	        console.log("Adding canvasnode");
 	        
 	        let test = divnode.querySelector(".jscanvas");
@@ -4834,9 +4895,12 @@ class tinyPStag extends HTMLElement {
 	        } else {
 		        this.nodes.canvas = node2;
 	        }
+	    } else {
+		    let test = divnode.querySelector(".jscanvas");
+	        if (test) test.style.display = "none";
 	    }
 		        
-		if (formats.indexOf("svg") > -1 || formats.indexOf("svgurl") > -1) {        
+		if (formats.indexOf("svg") > -1 || formats.indexOf("svgurl") > -1) {        
 	        console.log("Adding svgnode");
 	        // let svgdivnode = document.createElement("DIV");
 	        
@@ -4879,9 +4943,12 @@ class tinyPStag extends HTMLElement {
 		    } else {
 			    this.nodes.svg = node3;
 		    }
-		}
+		} else {
+		    let test = divnode.querySelector(".jssvg");
+	        if (test) test.style.display = "none";
+	    }
 		
-		if (formats.indexOf("pdf") > -1 || formats.indexOf("pdfurl") > -1) {   
+		if (formats.indexOf("pdf") > -1 || formats.indexOf("pdfurl") > -1) {   
 	        console.log("Adding pdfnode");
 	        node4 = document.createElement("IMG");
 	        node4.id = "pdf" + this.id;
@@ -4911,11 +4978,14 @@ class tinyPStag extends HTMLElement {
 		    } else {
 			    this.nodes.pdf = node4;
 		    }
-		}
+		} else {
+		    let test = divnode.querySelector(".pdf");
+	        if (test) test.style.display = "none";
+	    }
 		
 		if (node) divnode.appendChild(node);
 		if (node2) divnode.appendChild(node2);
-		if (node3) { divsvgnode.appendChild(node3); divnode.appendChild(divsvgnode) }
+		if (node3) { divsvgnode.appendChild(node3); divnode.appendChild(divsvgnode) }
 		if (node4) divnode.appendChild(node4);
 		if (urlnode) divurlnode.appendChild(urlnode);
 		if (urlnode2) divurlnode.appendChild(urlnode2);
@@ -4937,7 +5007,7 @@ class tinyPStag extends HTMLElement {
     
     worker.onmessage = function (e) {
 	    const msg = e.data; 
-		if (msg.length != 4) { 
+		if (msg.length != 4) { 
 			console.log("worker: formaterror"); worker.terminate(); 
 			return; 
 		}
@@ -5173,7 +5243,7 @@ customElements.define("tiny-ps", tinyPStag);
 workeronmessage = function (e) {
     
     const msg = e.data; 
-	if (msg.length != 4) { console.log("formaterror"); worker.terminate(); return; }
+	if (msg.length != 4) { console.log("formaterror"); worker.terminate(); return; }
 
 	const action = msg[0];
 	const id = msg[1];
@@ -5184,7 +5254,7 @@ workeronmessage = function (e) {
 	if(context.device.raw || context.device.rawurl) {
 		context.nodes.push(new rpnRawDevice());
 	}
-	if(context.device.canvas || context.device.canvasurl) {
+	if(context.device.canvas || context.device.canvasurl) {
 		context.nodes.push(new rpnCanvasDevice());
 	}
 	if(context.device.svg || context.device.svgurl) {
@@ -5206,7 +5276,7 @@ workeronmessage = function (e) {
 	{
 		case "rpn": console.log("rpn " + data);
 		            if (data.slice(0,1)=="!") {
-			            data += " currentpointexists { 0 0 1 setrgbcolor 1 setalpha gsave currentpoint newpath 4 0 360 arc fill grestore stroke showpage } if ";
+			            data += " currentpointexists { 0 0 1 setrgbcolor 1 setalpha gsave currentpoint newpath 4 0 360 arc fill grestore stroke showpage } if ";
 			            
 		            }
 		            console.log("rpn " + data);
@@ -5222,7 +5292,10 @@ workeronmessage = function (e) {
 				    for (let k of Object.keys(context.graphics))
 				    	state.push(k + ": " +context.graphics[k]); 
 				    
-		            if (context.lasterror || context.livestatus) postMessage([action, context.id,  "<p>stack: " + currentstack + "<p>code executed: " + context.currentcode + "<p>dict: " + dictkeys + "<p>"+ state.join("<br>"), null]  );  //+ .join(" ")
+		            if (context.lasterror || context.livestatus) 
+		            	postMessage([action, context.id,  "<p>stack: " + currentstack + "<p>code executed: " + context.currentcode + "<p>dict: " + dictkeys + "<p>"+ state.join("<br>"), null]  ); 
+		            else 
+		            	postMessage([action, context.id,  "", null]  ); 
 					break;
 		default : handleMessageExtended(e);
 	}
@@ -5287,6 +5360,9 @@ rpnDocument = new xmlDoc();
 	{
 		workercode.push('rpnOperators.' + key + ' = ' + rpnOperators[key].toString());
 	}
+	const baseURL = location.origin + "/" + location.pathname.split("/").slice(0,-1).join("/")+"/";
+	console.log(baseURL)
+	workercode.push('rpnBaseURL = ' + '"' + baseURL + '"');
 	workercode.push('rpnFontURLs = {};');
 	for (key in rpnFontURLs)
 	{
