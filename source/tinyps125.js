@@ -43,6 +43,8 @@ Version 1.2.4 2026-02-01
 - fixed livestatus problems
 - fiexd missing baseURL for font paths.
 - added test files
+Version 1.2.5 2026-02-14
+- new operator currentpagedevice
 
 
 Renders as subset PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
@@ -1694,6 +1696,29 @@ rpnOperators.currentmatrix = function(context) {
     return context;
 };
 rpnUnitTest("currentmatrix","[1 0 0 1 0 0]");
+
+rpnOperators.currentpagedevice = function(context) {
+	const d = new rpnDictionary(10);
+	d.value.canvas = new rpnNumber(context.dict.canvas ? 1 : 0);
+	d.value.canvasurl = new rpnNumber(context.dict.canvasurl ? 1 : 0);
+	d.value.color = new rpnNumber(context.dict.color ? 1 : 0);
+	d.value.console = new rpnNumber(context.dict.console ? 1 : 0);
+    d.value.height = new rpnNumber(context.height);
+    d.value.interval = new rpnNumber(context.dict.interval ? context.dict.interval : 0);
+    d.value.oversampling = new rpnNumber(context.dict.oversampling ? context.dict.oversampling : 0);
+    d.value.pdf = new rpnNumber(context.dict.pdf ? 1 : 0);
+    d.value.pdfurl = new rpnNumber(context.dict.pdfurl ? 1 : 0);
+    d.value.raw = new rpnNumber(context.dict.raw ? 1 : 0);
+    d.value.rawurl = new rpnNumber(context.dict.rawurl ? 1 : 0);
+    d.value.svg = new rpnNumber(context.dict.svg ? 1 : 0);
+    d.value.svgurl = new rpnNumber(context.dict.svgurl ? 1 : 0);
+    d.value.textmode = new rpnNumber(context.dict.textmode ? 1 : 0);
+    d.value.transparent = new rpnNumber(context.dict.transparent ? 1 : 0);
+    d.value.width = new rpnNumber(context.width);
+    context.stack.push(d);
+    return context;
+};
+
 
 rpnOperators.currentpoint = function(context) {
     if (!context.graphics.current.length) {
@@ -4831,9 +4856,6 @@ class tinyPStag extends HTMLElement {
 	        } else {
 		        this.nodes.raw = node;
 	        }
-	    } else {
-		    let test = divnode.querySelector(".jsraw");
-	        if (test) test.style.display = "none";
 	    }
 	    if (formats.indexOf("canvas") > -1 || formats.indexOf("canvasurl") > -1) {
 	        console.log("Adding canvasnode");
@@ -4895,9 +4917,6 @@ class tinyPStag extends HTMLElement {
 	        } else {
 		        this.nodes.canvas = node2;
 	        }
-	    } else {
-		    let test = divnode.querySelector(".jscanvas");
-	        if (test) test.style.display = "none";
 	    }
 		        
 		if (formats.indexOf("svg") > -1 || formats.indexOf("svgurl") > -1) {        
@@ -4943,10 +4962,7 @@ class tinyPStag extends HTMLElement {
 		    } else {
 			    this.nodes.svg = node3;
 		    }
-		} else {
-		    let test = divnode.querySelector(".jssvg");
-	        if (test) test.style.display = "none";
-	    }
+		}
 		
 		if (formats.indexOf("pdf") > -1 || formats.indexOf("pdfurl") > -1) {   
 	        console.log("Adding pdfnode");
@@ -4978,10 +4994,7 @@ class tinyPStag extends HTMLElement {
 		    } else {
 			    this.nodes.pdf = node4;
 		    }
-		} else {
-		    let test = divnode.querySelector(".pdf");
-	        if (test) test.style.display = "none";
-	    }
+		}
 		
 		if (node) divnode.appendChild(node);
 		if (node2) divnode.appendChild(node2);
@@ -5292,7 +5305,7 @@ workeronmessage = function (e) {
 				    for (let k of Object.keys(context.graphics))
 				    	state.push(k + ": " +context.graphics[k]); 
 				    
-		            if (context.lasterror || context.livestatus) 
+		            if (context.lasterror || data.slice(0,1)=="!") 
 		            	postMessage([action, context.id,  "<p>stack: " + currentstack + "<p>code executed: " + context.currentcode + "<p>dict: " + dictkeys + "<p>"+ state.join("<br>"), null]  ); 
 		            else 
 		            	postMessage([action, context.id,  "", null]  ); 

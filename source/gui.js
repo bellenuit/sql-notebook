@@ -113,12 +113,11 @@ var tableCreate = function () {
 		    table.appendChild(tf);
 	    }
 	    
-	    
- 	    
- 	    if (values.length > 50 ) { 
-	 	    input.width = table.width;
-	 	    div.appendChild(input);
- 	    }
+	    input.width = table.width;
+	 	div.appendChild(input);
+	 	
+	 	 console.log(" values length "+values.length)
+ 	    input.style.display = values.length <= 50 ? 'none' : 'visible';
  	    div.appendChild(table);
  	    
 
@@ -194,6 +193,12 @@ function tablefilter(id) {
         	} 
       	}
      }
+     
+     console.log("tr.length "+tr.length)
+     
+     input.style.display = tr.length <= 50 ? 'none' : 'visible';
+     
+     
      const plus = document.getElementById('plus'+theid);
      if (plus) {
   	     if (allvisible) {
@@ -205,6 +210,8 @@ function tablefilter(id) {
   } catch {
 	return;
   }
+  
+  
   
 }
 
