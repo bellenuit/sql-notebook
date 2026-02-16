@@ -1634,7 +1634,8 @@ setPS = function (id) {
 	output.innerHTML = "";
 	setInterval( function() {
 		const source = document.getElementById('source'+id);
-		if (source.value.slice(0,1) == "!" && source.value.slice(-1) == " " && source.value != source.getAttribute("bak")) 
+		if (!source) console.log("missing source"+id);
+		if (source && source.value.slice(0,1) == "!" && source.value.slice(-1) == " " && source.value != source.getAttribute("bak")) 
 			cellRun(id);
 		source.setAttribute("bak", source.value);
 		} , 500)
