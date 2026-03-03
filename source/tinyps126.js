@@ -810,7 +810,10 @@ rpnSVGDevice = class {
         node.setAttribute("stroke","none");
 //         node.setAttribute("fill", "rgb(" + Math.round(context.graphics.color[0]) + ", " + Math.round(context.graphics.color[1]) + ", " + Math.round(context.graphics.color[2]) + ")");
 //         node.setAttribute("fill-opacity", context.graphics.color[3]/255.0);
-        node.setAttribute("fill", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
+if (context.device.transparent)
+            node.setAttribute("fill", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
+        else 
+            node.setAttribute("fill", this.rgbahex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));
         if (this.clippath) node.setAttribute("clip-path", "url(#"+this.clippath+")");
         if (zerowind) {
             node.setAttribute("fill-rule", "nonzero");
@@ -829,7 +832,10 @@ rpnSVGDevice = class {
         node.setAttribute("stroke-width",context.graphics.linewidth);
 //         node.setAttribute("stroke", "rgb(" + Math.round(context.graphics.color[0]) + ", " + Math.round(context.graphics.color[1]) + ", " + Math.round(context.graphics.color[2]) + ")");
 //         node.setAttribute("stroke-opacity", context.graphics.color[3]/255.0);
-        node.setAttribute("stroke", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
+        if (context.device.transparent)
+            node.setAttribute("stroke", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
+        else 
+            node.setAttribute("stroke", this.rgbahex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));
         if (this.clippath) node.setAttribute("clip-path", "url(#"+this.clippath+")");
         this.node.appendChild(node);
         return context;
@@ -847,7 +853,10 @@ rpnSVGDevice = class {
 //         node.setAttribute("fill", "rgb(" + Math.round(context.graphics.color[0]) + ", " + Math.round(context.graphics.color[1]) + ", " + Math.round(context.graphics.color[2]) + ")" );
 //         node.setAttribute("fill-opacity", context.graphics.color[3]/255.0);
         if (this.clippath) node.setAttribute("clip-path", "url(#"+this.clippath+")");
-        node.setAttribute("fill", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
+        if (context.device.transparent)
+            node.setAttribute("fill", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
+        else 
+            node.setAttribute("fill", this.rgbahex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));
         const matrix = context.graphics.matrix.slice();
         const decomposed = rpnDecompose2dMatrix(matrix);
         const x = context.graphics.current[0];
@@ -881,6 +890,12 @@ rpnSVGDevice = class {
     rgba2hex(r, g, b, a) {
     	
   		const hex =  "#" + (1 << 24 | r << 16 | g << 8 | b ).toString(16).slice(1) +(1 << 8 | a).toString(16).slice(1);
+
+  		return hex;
+    }
+    rgbahex(r, g, b) {
+    	
+  		const hex =  "#" + (1 << 24 | r << 16 | g << 8 | b ).toString(16).slice(1);
 
   		return hex;
     }

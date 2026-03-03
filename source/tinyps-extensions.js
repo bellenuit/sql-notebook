@@ -48,7 +48,6 @@ grestore end newpath
 
 rpnOperators.preparechart = function(context) {
     const code = `
-/TGL017 findfont 16 scalefont setfont
 /chartrect [ 0 0 640 640 16 div 9 mul ] def
 /chartmargins [ 100 80 5 60 ] def
 /xlimits [ 0 0.2 1 ] def
@@ -75,8 +74,8 @@ ystep 0 eq { /ystep 1 def } if
 /ymax ymax ystep div 0.5 add round ystep mul def
 ymax ymin div 2 gt { /ymin 0 def } if
 /ylimits [ ymin ystep ymax ] def 
-/xlimits [ 0 1 data length 1 sub ] def
-chartmargins 0 ymax numberformat stringwidth pop 10 add put } if
+/xlimits [ 0 1 data length 1 sub ] def } if
+
 /xlog 0 def
 /ylog 0 def
 
@@ -116,6 +115,11 @@ preparepatterns
 
 /legendstyle [ {} {} {} {} {} {} {} ] def
 
+/textsizes { /titlesize exch def /bodysize exch def 
+/TGL017 bodysize selectfont
+chartmargins 0 ymax numberformat stringwidth pop 10 add put } def
+16 20 textsizes
+
 /xaxis { 0 setgray 1 setlinewidth  
 xlimits 0 get xlog { 10 exch exp } if
 0 chartproj moveto 
@@ -143,14 +147,14 @@ xlimits 2 get ylimits 2 get chartproj lineto
 xlimits 0 get ylimits 2 get chartproj lineto closepath stroke
 } def
 
-/xticks { 0 setgray 0.5 setlinewidth
+/xticks { 0 setgray 0.5 setlinewidth /TGL017 bodysize selectfont
 xlimits 0 get xlimits 1 get xlimits 2 get { /x exch def
 xlog { /x x 10 exch exp def } if
 x { x 0 ylimits 0 get max chartproj moveto 0 -5 rlineto stroke
 x 0 ylimits 0 get max chartproj exch x numberformat stringwidth pop 2 div sub exch 20 sub moveto x numberformat show} if
 } for } def 
 
-/yticks { 0 setgray 0.5 setlinewidth
+/yticks { 0 setgray 0.5 setlinewidth /TGL017 bodysize selectfont
 ylimits 0 get ylimits 1 get ylimits 2 get {
 /y exch def
 ylog { /y y 10 exch exp def } if
@@ -160,7 +164,7 @@ numberformat show} if
 } for } def
 
 /ticks { xticks yticks } def
-/hyticks { 0 setgray 0.5 setlinewidth
+/hyticks { 0 setgray 0.5 setlinewidth /TGL017 bodysize selectfont
 ylimits 0 get ylimits 1 get ylimits 2 get { /y exch def
 y { xlimits 2 get y hchartproj moveto 0 -5 rlineto stroke
 xlimits 2 get y hchartproj exch y numberformat stringwidth pop 2 div sub exch 20 sub moveto y numberformat show} if
@@ -198,12 +202,15 @@ y { xlimits 0 get y hchartproj moveto xlimits 2 get y hchartproj lineto stroke
 /grid { xgrid ygrid } def
 /hgrid { hxgrid hygrid } def
 
-/description { 0 chartrect 3 get chartmargins 3 get sub 20 add moveto show } def
-/credits { chartrect 0 get chartrect 1 get chartmargins 1 get add 40 sub moveto show } def
-/xlabel { /s exch def xlimits 0 get xlimits 2 get add 2 div 0 chartproj 40 sub exch s stringwidth pop 2 div sub exch moveto s show } def
-/ylabel { /s exch def 20 chartrect 3 get chartmargins 1 get sub chartmargins 3 get sub 2 div chartrect 0 get add chartmargins 1 get add moveto 90 rotate s stringwidth pop 2 div neg 0 rmoveto s show -90 rotate } def
-/title { /s exch def gsave 
-/TGL017 findfont 20 scalefont setfont 
+/description { /TGL017 bodysize selectfont
+0 chartrect 3 get chartmargins 3 get sub 20 add moveto show } def
+/credits { /TGL017 bodysize selectfont
+chartrect 0 get chartrect 1 get chartmargins 1 get add 40 sub moveto show } def
+/xlabel { /s exch def /TGL017 bodysize selectfont
+xlimits 0 get xlimits 2 get add 2 div 0 chartproj 40 sub exch s stringwidth pop 2 div sub exch moveto s show } def
+/ylabel { /s exch def /TGL017 bodysize selectfont
+20 chartrect 3 get chartmargins 1 get sub chartmargins 3 get sub 2 div chartrect 0 get add chartmargins 1 get add moveto 90 rotate s stringwidth pop 2 div neg 0 rmoveto s show -90 rotate } def
+/title { /s exch def gsave /TGL017 titlesize selectfont
 0 chartrect 3 get chartmargins 3 get sub 40 add moveto s show grestore } def
 
 
@@ -263,7 +270,8 @@ patterns col get exec } put
 } for 
 } for 
 } def
-/hvotebar { /b exch def 
+
+/hvotebar { /b exch def /TGL017 bodysize selectfont
 /ylimits [ 0 20 100 ] def
 1 1 data length 1 sub { /row exch def 
 /tot 0 def
@@ -282,7 +290,8 @@ x 0.5 add  y hchartproj lineto
 x y hchartproj lineto 
 closepath patterns col get exec 0 setgray
 /s y y0 sub round cvs def
-x y0 y add 2 div hchartproj moveto y y0 s stringwidth pop 2 div neg -20 rmoveto s show
+x 0.25 add y0 y add 2 div hchartproj moveto y y0 s stringwidth pop 2 div neg -6 rmoveto
+1 setgray s show
 /y0 y def
 legendstyle col { 
 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath 
@@ -407,7 +416,9 @@ colors col get exec fill } put
 0 setgray
 } def
 
-/labelxydot { /b exch def /lcol b 0 get def /xcol b 1 get def /ycol b 2 get def
+/labelxydot { /b exch def 
+/TGL017 bodysize selectfont
+/lcol b 0 get def /xcol b 1 get def /ycol b 2 get def
 1 1 data length 1 sub {/row exch def
 /x data row get xcol get def
 /y data row get ycol get def
@@ -419,7 +430,9 @@ colors col get exec fill } put
 0 setgray
 } def
 
-/bubbledot { /sc exch def /b exch def /lcol b 0 get def /xcol b 1 get def /ycol b 2 get def /rcol b 3 get def
+/bubbledot { /sc exch def /b exch def 
+/TGL017 bodysize selectfont
+/lcol b 0 get def /xcol b 1 get def /ycol b 2 get def /rcol b 3 get def
 1 1 data length 1 sub { /row exch def
 /x data row get xcol get def
 /y data row get ycol get def
@@ -448,6 +461,7 @@ p1 pstep add pstep p2 { fn chartproj lineto } for
 } def
 
 /bottomlegend { /b exch def
+/TGL017 bodysize selectfont
 0 chartmargins 1 get 60 sub /y exch def /x exch def x y
 b { /col exch def
 gsave
@@ -461,6 +475,7 @@ grestore
 } def
 
 /toplegend { /b exch def /s exch def
+/TGL017 bodysize selectfont
 0 chartrect 3 get chartmargins 3 get sub 20 add /y exch def /x exch def x y
 x y moveto s show
 /x x s stringwidth pop add 12 add def 
@@ -476,12 +491,14 @@ grestore
 } def
 
 /category { 0 setgray
+/TGL017 bodysize selectfont
 1 1 data length 1 sub { /row exch def
 row 0.5 sub 0 chartproj 20 sub moveto data row get 0 get stringwidth pop 2 div neg 0 rmoveto data row get 0 get show
 } for 
 } def
 
 /hcategory { 0 setgray
+/TGL017 bodysize selectfont
 1 1 data length 1 sub { /row exch def
 row 0.5 sub 0 hchartproj 8 sub moveto data row get 0 get stringwidth pop neg 8 sub 0 rmoveto data row get 0 get show
 } for 
