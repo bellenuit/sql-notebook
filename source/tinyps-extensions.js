@@ -326,6 +326,7 @@ y y0 gt {
 x 0.25 add y0 y add 2 div hchartproj moveto y y0 s stringwidth pop 2 div neg -6 rmoveto
 1 setgray s show 
 } if
+0 setgray
 /y0 y def
 legendstyle col { 
 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath 
