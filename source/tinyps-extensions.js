@@ -57,6 +57,7 @@ rpnOperators.preparechart = function(context) {
 /round1 { log 0.5 sub round 10 exch exp } def
 
 % preparechart
+/ymax 0 def
 /alpha exch def /db exch def db length {
 /data db alpha table def 
 /ymin data 1 get alpha get def 
@@ -103,7 +104,11 @@ preparepatterns
 { 0.902 0.196 0.157 setrgbcolor fill }
 { 0.941 0.549 0.157 setrgbcolor fill }
 { 0.427 0.224 0.545 setrgbcolor fill }
-{ 0.941 0.784 0 setrgbcolor fill } ] def 
+{ 0.941 0.784 0 setrgbcolor fill } 
+{ 0.75 setgray fill } 
+{ 0.50 setgray fill } 
+{ 0.25 setgray fill } 
+{ 0.00 setgray fill } ] def 
 
 /colors [ {}
 { 0.078 0.431 0.667 setrgbcolor  }
@@ -111,9 +116,13 @@ preparepatterns
 { 0.902 0.196 0.157 setrgbcolor  }
 { 0.941 0.549 0.157 setrgbcolor  }
 { 0.427 0.224 0.545 setrgbcolor  }
-{ 0.941 0.784 0 setrgbcolor  } ] def 
+{ 0.941 0.784 0 setrgbcolor  } 
+{ 0.75 setgray } 
+{ 0.50 setgray } 
+{ 0.25 setgray } 
+{ 0.00 setgray } ] def 
 
-/legendstyle [ {} {} {} {} {} {} {} ] def
+/legendstyle [ {} {} {} {} {} {} {} {} {} {} {}] def
 
 /textsizes { /titlesize exch def /bodysize exch def 
 /TGL017 bodysize selectfont
@@ -234,6 +243,29 @@ patterns col get exec } put
 } for 
 } def
 
+/barvalues {  /b exch def 
+1 1 data length 1 sub { /row exch def
+0 1 b length 1 sub { /i exch def b i get /col exch def
+/y data row get col get def
+/d 1 b length 1 add div def
+/x row 1 sub i d mul add d 2 div add def
+x ylimits 0 get 0 max chartproj moveto
+x d add ylimits 0 get 0 max chartproj lineto 
+x d add y chartproj lineto 
+x y chartproj lineto 
+closepath patterns col get exec 
+y 0 gt { 
+1 setgray
+x d 2 div add y chartproj moveto 0 y round cvs dup stringwidth pop 2 div neg bodysize neg rmoveto show
+} if
+0 setgray
+legendstyle col { 
+0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath 
+patterns col get exec } put 
+} for 
+} for 
+} def
+
 /stackedbar { /b exch def 
 1 1 data length 1 sub { /row exch def
 0 1 b length 1 sub { /i exch def b i get /col exch def
@@ -289,9 +321,11 @@ x 0.5 add  y0 hchartproj lineto
 x 0.5 add  y hchartproj lineto 
 x y hchartproj lineto 
 closepath patterns col get exec 0 setgray
+y y0 gt {
 /s y y0 sub round cvs def
 x 0.25 add y0 y add 2 div hchartproj moveto y y0 s stringwidth pop 2 div neg -6 rmoveto
-1 setgray s show
+1 setgray s show 
+} if
 /y0 y def
 legendstyle col { 
 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath 

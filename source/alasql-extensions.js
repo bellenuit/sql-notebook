@@ -130,7 +130,7 @@ for (let i = 0; i <= constraint; i++ ) {
 return result;
 }
 
-fishertest = function(arr) { 
+fishertest = function(arr) { console.log(arr);
 if (arr.length % 2) throw "fishertest uneven array";
 const ppoint = gammageometric(arr);
 const variants = generateFisherVariants(arr);
@@ -148,16 +148,36 @@ alasql.into.FISHERTEST = function (filename, opts, data, columns, cb) {
     const newtable = cleanName(filename);
     alasql("DROP TABLE IF EXISTS " + filename);
     alasql("CREATE TABLE " + filename);
-    if (data.length != 2) throw "fishertest needs exactly 2 rows";
-    const arr = [];
-    for(let row of data) { 
-        let fields = Object.keys(row);
-        for(let i = 0; i < fields.length; i++) {
-           arr.push(row[fields[i]]);echo(".");
-        }
-    }
-    const f = fishertest(arr);
-    alasql("INSERT INTO " + newtable + " (fishertest) VALUES (" + f + ")");
+    if (data.length < 2) throw "fishertest needs at least exactly 2 rows";
+    
+    for(let i = 0; i < data.length; i++) {
+    for(let j = 0; j < data.length; j++) {
+	    
+	    if (i>=j) continue;
+    
+	    let arr = [];
+	    var row;
+	    
+	    row = data[i];	    
+	    var fields = Object.keys(row);
+	        for(let ii = 0; ii < fields.length; ii++) {
+	           arr.push(row[fields[ii]]);echo(".");
+	        }
+	    
+	    row = data[j];	    
+	    fields = Object.keys(row);
+	        for(let ii = 0; ii < fields.length; ii++) {
+	           arr.push(row[fields[ii]]);echo(".");
+	        }
+	    
+	    let item = {};
+	    item.a = i;
+	    item.b = j;
+	    item.f = fishertest(arr);
+	    
+	    alasql("INSERT INTO " + newtable + " VALUES ?", [item]);
+	}}    
+	 
 	if (cb) {
 		res = cb(res);
 	}
@@ -171,24 +191,29 @@ alasql.into.MOVINGAVERAGE = function (filename, opts = 12, data, columns, cb) {
 	const firstrow = data[0] ?? {};
     const columnnames = Object.keys(firstrow);
     if (columnnames.length < 2) {
-	    throw new Error('MOVINGAVERAGE expects  2 columns');
+	    throw new Error('MOVINGAVERAGE expects at least 2 columns');
     }
     firstfield = columnnames[0];
-    xcol = columnnames[1];
-    const arr = [];
+    let xcols = [];
+    let arrs = [];
+    for (let i = 1; i < columnnames.length; i++) xcols.push(columnnames[i]);
+    for (let i = 1; i < columnnames.length; i++) arrs.push([]);
     const n = opts;
 
     alasql("DROP TABLE IF EXISTS " + newtable);
-    alasql("CREATE TABLE " + newtable);
+    alasql("CREATE TABLE " + newtable); 
     
     for(let row of data) {
 	    
-        arr.push(row[xcol])
-        if (arr.length > n) arr.shift();
+        for (let i = 1; i < columnnames.length; i++) {
+	        arrs[i-1].push(row[xcols[i-1]])
+			if (arrs[i-1].length > n) arrs[i-1].shift();
+        }
         
         let item = {};
 		item[firstfield] = row[firstfield];
-		item[xcol] = arr.reduce((partialSum, a) => partialSum + a, 0) / arr.length;
+		for (let i = 1; i < columnnames.length; i++) 
+			item[xcols[i-1]] = arrs[i-1].reduce((partialSum, a) => partialSum + a, 0) / arrs[i-1].length;
 		
 		alasql("INSERT INTO " + newtable + " VALUES ?", [item]);
     }
@@ -206,35 +231,45 @@ alasql.into.REGRESSION = function (filename, opts, data, columns, cb) {
     const firstrow = data[0] ?? {};
     const columnnames = Object.keys(firstrow);
     if (columnnames.length < 2) {
-	    throw new Error('REGRESSION expects 2 columns');
+	    throw new Error('REGRESSION expects at least 2 columns');
     }
     console.log(columnnames);
-    xcol = columnnames[0];
-    ycol = columnnames[1];
     alasql("DROP TABLE IF EXISTS " + newtable);
     alasql("CREATE TABLE " + newtable);
-    var n = 0;
-    var sumx = 0;
-    var sumy = 0;
-    var sumx2 = 0;
-    var sumy2 = 0;
-    var sumxy = 0;
-    for(let row of data) {
-        n++;
-        sumx += row[xcol];
-        sumy += row[ycol];
-        sumx2 += row[xcol] * row[xcol];
-        sumy2 += row[ycol] * row[ycol];
-        sumxy += row[xcol] * row[ycol];
-    }
-    const item = {};
-    const vxx = (sumx2 - sumx * sumx / n) / n;
-    const vyy = (sumy2 - sumy * sumy / n) / n;
-    const vxy = (sumxy - sumx * sumy / n) / n;
-    item.a = (sumy * sumx2 - sumx * sumxy) / (n * sumx2 - sumx * sumx );
-    item.b = (n * sumxy - sumx * sumy) / (n * sumx2 - sumx * sumx);
-    item.r  = vxy / Math.sqrt(vxx * vyy);
-    alasql("INSERT INTO " + newtable + " VALUES ?", [item]);
+    
+    for(let i = 0; i < columnnames.length; i++) {
+    for(let j = 0; j < columnnames.length; j++) {
+	    
+	    if (i==j) continue;
+    
+	    xcol = columnnames[i];
+	    ycol = columnnames[j];
+	    var n = 0;
+	    var sumx = 0;
+	    var sumy = 0;
+	    var sumx2 = 0;
+	    var sumy2 = 0;
+	    var sumxy = 0;
+	    for(let row of data) {
+	        n++;
+	        sumx += row[xcol];
+	        sumy += row[ycol];
+	        sumx2 += row[xcol] * row[xcol];
+	        sumy2 += row[ycol] * row[ycol];
+	        sumxy += row[xcol] * row[ycol];
+	    }
+	    let item = {};
+	    let vxx = (sumx2 - sumx * sumx / n) / n;
+	    let vyy = (sumy2 - sumy * sumy / n) / n;
+	    let vxy = (sumxy - sumx * sumy / n) / n;
+	    item.x= columnnames[i];
+	    item.y= columnnames[j];	    
+	    item.a = (sumy * sumx2 - sumx * sumxy) / (n * sumx2 - sumx * sumx );
+	    item.b = (n * sumxy - sumx * sumy) / (n * sumx2 - sumx * sumx);
+	    item.r  = vxy / Math.sqrt(vxx * vyy);
+	    alasql("INSERT INTO " + newtable + " VALUES ?", [item]);
+	    
+	}}
 
 	if (cb) {
 		res = cb(res);
