@@ -5,7 +5,7 @@ html {
 body{
 	font-family: Times, "Times New Roman", serif; 
 	font-size: 16px;
-	line-height: 20px;
+	line-height: 24px;
 	text-align: justify;
 	color: black;
 	margin: 0px;
@@ -43,7 +43,7 @@ h2 {
 h3 {
 	font-weight: bold;
 	font-size: 20px;
-	line-height: 36px;
+	line-height: 30px;
 	margin-top: 20px;
 	margin-bottom: 0px;
 }
@@ -99,13 +99,15 @@ table {
  	border-collapse:collapse;
  	margin-bottom:10px;
  	width: max-content;
+ 	page-break-inside: avoid;
+ 	border:1px solid black;
 }
 
 th, td {
 	border:1px solid #777;
 	padding: 4px;
 	font-size: 16px;
-	line-height: 20px;
+	line-height: 24px;
 	word-break: break-all;
 	width: max-content;
 }
@@ -119,7 +121,7 @@ td {
 	border-bottom: none;
 }
 
-caption {
+capxion {
 	border:1px solid black;
 	border-bottom: none;
 }
@@ -128,9 +130,15 @@ tbody {
 	border:1px solid black;
 }
 
-table {
-	border:1px solid black;
+img {
+	page-break-inside: avoid;
+
 } 
+
+svg {
+	page-break-inside: avoid;
+
+}
 
 footer {
 	margin-top: 48px;
@@ -159,6 +167,7 @@ footer {
 .cellsource {
 	font-family: Courier, "Courier New", monospace;
 	font-size: 16px;
+	line-height: 24px;
 	border: none;
     background-color: transparent;
     /* resize: none; */
@@ -166,7 +175,6 @@ footer {
     width: 100%;
 	margin-bottom: 12px;
 	padding: 4px;
-	line-height: 20px;
 	display: none;
 	max-height: 50vh;
 }
@@ -516,7 +524,7 @@ div.canvasurl {
   position: absolute;
   top: 0px; left: 0px; bottom: 0px; right: 0px;
   font-size: 24px;
-  line-height: 30px;
+  line-height: 36px;
   text-align: left;
   background-color: white;
 }
@@ -570,13 +578,30 @@ p.link { display: none }
 ::part(canvasurl)  { display:none; }
 ::part(canvasurlz)  { display:none; }
 ::part(canvasurlm)  { display:none; }
+body { font-size: 12pt; line-height: 18pt; }
+.cellsource { font-size: 12pt; line-height: 18pt; }
+td, th { font-size: 12pt; line-height: 18pt; }
+h2 { string-set: doctitle content(); }
 
 @page {
-    counter-increment: page;
-    counter-reset: page 1;
+    size; A4 portrait;
+    margin-left: 0cm;
+    margin-right: 0cm; 
+    margin-top: 1.5cm; 
+    margin-bottom: 2cm; 
     @bottom-right {
-        content: "Page " counter(page) " of " counter(pages);
+        content: counter(page) " / " counter(pages);
+        font-size: 9pt;
+        padding-right: 2cm;
+        padding-top 0.5cm;
+    }
+    @bottom-left {
+        content: string(doctitle);
+        font-size: 9pt;
+        padding-left: 2cm;
+        padding-top: 0.5cm;
     }
 }
+
 
 }

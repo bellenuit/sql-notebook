@@ -54,7 +54,7 @@ rpnOperators.preparechart = function(context) {
 /ylimits [ 0 0.2 1 ] def
 /data [ [(k) (v) (x) (y)] [ (foo) 0.5 0.4 0.3 ] [ (bar) 0.7 0.8 0.9] ] def 
 
-/round1 { log 0.5 sub round 10 exch exp } def
+/round1 { 1.5 div log 2 mul round 2 div dup dup floor sub 0.1 exch gt { 2.5  } { 10 } ifelse exch 1 sub floor 10 exch exp mul } def
 
 % preparechart
 /ymax 0 def
@@ -126,7 +126,9 @@ preparepatterns
 
 /textsizes { /titlesize exch def /bodysize exch def 
 /TGL017 bodysize selectfont
-chartmargins 0 ymax numberformat stringwidth pop 10 add put } def
+chartmargins 0 ymax numberformat stringwidth pop 10 add put
+chartmargins 3 titlesize bodysize add 24 add put
+ } def
 16 20 textsizes
 
 /xaxis { 0 setgray 1 setlinewidth  
@@ -212,7 +214,7 @@ y { xlimits 0 get y hchartproj moveto xlimits 2 get y hchartproj lineto stroke
 /hgrid { hxgrid hygrid } def
 
 /description { /TGL017 bodysize selectfont
-0 chartrect 3 get chartmargins 3 get sub 20 add moveto show } def
+0 chartrect 3 get chartmargins 3 get sub bodysize 4 add add add moveto show } def
 /credits { /TGL017 bodysize selectfont
 chartrect 0 get chartrect 1 get chartmargins 1 get add 40 sub moveto show } def
 /xlabel { /s exch def /TGL017 bodysize selectfont
@@ -220,7 +222,7 @@ xlimits 0 get xlimits 2 get add 2 div 0 chartproj 40 sub exch s stringwidth pop 
 /ylabel { /s exch def /TGL017 bodysize selectfont
 20 chartrect 3 get chartmargins 1 get sub chartmargins 3 get sub 2 div chartrect 0 get add chartmargins 1 get add moveto 90 rotate s stringwidth pop 2 div neg 0 rmoveto s show -90 rotate } def
 /title { /s exch def gsave /TGL017 titlesize selectfont
-0 chartrect 3 get chartmargins 3 get sub 40 add moveto s show grestore } def
+0 chartrect 3 get chartmargins 3 get sub bodysize 2 mul 4 add add moveto s show grestore } def
 
 
 

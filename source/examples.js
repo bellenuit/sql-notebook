@@ -8,7 +8,7 @@ examples['home'] = `
     },
     {
         "type": "sql",
-        "source": "CREATE TABLE _cities;\\nINSERT INTO _cities (city, population, trees, cats) VALUES ('Zürich', 449000, 70000, 17839);\\nINSERT INTO _cities (city, population, trees, cats) VALUES ('Genève', 207000, 40000, 9773);\\nINSERT INTO _cities (city, population, trees, cats) VALUES ('Lausanne', 144000, 88000, 17339);\\nINSERT INTO _cities (city, population, trees, cats) VALUES ('St. Gallen', 82000, 80000, 4120);\\nSELECT * FROM _cities;"
+        "source": "CREATE TABLE _cities;\\nINSERT INTO _cities (city, population, trees, cats)\\nVALUES ('Zürich', 449000, 70000, 17839);\\nINSERT INTO _cities (city, population, trees, cats)\\nVALUES ('Genève', 207000, 40000, 9773);\\nINSERT INTO _cities (city, population, trees, cats)\\nVALUES ('Lausanne', 144000, 88000, 17339);\\nINSERT INTO _cities (city, population, trees, cats)\\nVALUES ('St. Gallen', 82000, 80000, 4120);\\nSELECT * FROM _cities;"
     },
     {
         "type": "ps",
