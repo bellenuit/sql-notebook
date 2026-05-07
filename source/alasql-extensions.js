@@ -5,6 +5,16 @@ alasql.fn.gaussian = function(mean = 0, stdev = 1) {
 	return z * stdev + mean;
 }
 
+alasql.fn.findinset = function() {
+	const val = arguments[0];
+	const list = [];
+	for (let i = 1; i < arguments.length; i++) list.push(arguments[i]);
+	const v = list.indexOf(val);
+	if (v == -1) return list.length;
+	return v;
+}
+
+
 alasql.fn.ln = function(x) { return Math.log(x); }
 
 alasql.fn.log2 = function(x) { return Math.log2(x); }
@@ -57,7 +67,7 @@ alasql.into.DESERIALIZE = function (filename, opts, data, columns, cb) {
         const ccol = columnnames[1];
         const vcol = columnnames[2];
         alasql("DROP TABLE IF EXISTS " + newtable);
-        alasql("CREATE TABLE " + newtable);
+       
         // collect a list of columns
         const cols = {};
         // collect all values
@@ -71,6 +81,12 @@ alasql.into.DESERIALIZE = function (filename, opts, data, columns, cb) {
             list[r][c] = v;
             cols[c] = 1;
         }
+        
+        const q = "CREATE TABLE " + newtable + "(" + rcol + ", " + Object.keys(cols).join(", ") + ")";
+        console.log(q);
+        alasql(q);
+        
+        /*
         // complete missing values
         for(let r of Object.keys(list)) {
             for(let c of Object.keys(cols)) {
@@ -78,6 +94,7 @@ alasql.into.DESERIALIZE = function (filename, opts, data, columns, cb) {
                    list[r][c] = "";
             }
         }
+        */
 
         for(let r of Object.keys(list)) {
            // echo(JSON.stringify(list[r]))
@@ -223,6 +240,56 @@ alasql.into.MOVINGAVERAGE = function (filename, opts = 12, data, columns, cb) {
 	return res;
 };
 
+alasql.into.PERCENTAGE = function(filename, opts, data, columns, cb) {
+    let res = 1; console.log("PERCENTAGE");
+    const newtable = cleanName(filename);
+    alasql("DROP TABLE IF EXISTS " + newtable);
+    alasql("CREATE TABLE " + newtable);
+    const temp = newtable + "_temp";
+    alasql("DROP TABLE IF EXISTS " + temp);
+    alasql("CREATE TABLE " + temp);
+    // read current data into temp table
+    for (let row of data) {
+        alasql("INSERT INTO " + temp + " VALUES ?", [row]);
+    }
+    // const columnlist = columns.map( x => x.columnid ) ;
+    const firstrow = data[0] ?? {};
+    columnlist = Object.keys(firstrow);
+    const firstcolumn = columnlist.shift();
+    console.log(columnlist);
+    for (column of columnlist) {
+    let columntable = newtable + "_" + column;
+    alasql("DROP TABLE IF EXISTS " + columntable);
+    alasql("CREATE TABLE " + columntable);
+    alasql(`with t as (
+select ${firstcolumn}, ${column}, t2.divider,
+floor(${column}/t2.divider) as fullseats,
+${column} / (floor(${column}/t2.divider)) as restseat,
+rownum() as rownumber
+from ${temp}
+join (select ceil(sum(${column}/101)+0.00001) as divider from ${temp}) t2
+order by restseat desc, ${column} desc, ${firstcolumn}
+)
+select ${firstcolumn}, ${column}, divider, fullseats, rest, restseat, fullseats + min(1,max(0,t2.rest+1-rownumber)) as ${column}_p into ${columntable} from t
+join (select 100-sum(fullseats) as rest from t) t2 `);
+    }
+    var sql =`select ${firstcolumn}, `;
+    sql += columnlist.join(', ');
+     sql += ", ";
+   sql += columnlist.map(x => x+"_p").join(', ');
+   
+    sql += ` into ${newtable} from ${temp}`;
+    for (column of columnlist) {
+        sql += ` join ${newtable}_${column} on ${newtable}_${column}.${firstcolumn} = ${temp}.${firstcolumn} `;
+    }
+    alasql(sql);
+ 
+    if (cb) {
+        res = cb(res);
+    }
+    return res;
+};
+
 
 
 alasql.into.REGRESSION = function (filename, opts, data, columns, cb) { 
@@ -298,4 +365,6 @@ alasql.into.SERIALIZE = function (filename, opts, data, columns, cb) {
 	}
 	return res;
 };
+
+
 

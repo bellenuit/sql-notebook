@@ -1054,7 +1054,7 @@ function cleanName(s) {
 	if (keywordlist.map( (x) => (x.toLowerCase()) ).includes(s)) return s + "_";
 	
 	
-	return s.replaceAll('"','').trim().replace(/^([0-9])/,"_$1").replace(/^[^a-zA-Z_]/,"_").replaceAll(/[^a-zA-Z0-9_]+/g,"_");
+	return s.replaceAll('"','').trim().replace(/^([0-9])/,"_$1").replace(/^[^a-zA-Z_]/,"_").replaceAll(/[^a-zA-Z0-9_ ]+/g,"_");
 }
 
 runner.data = function(id, down = false, diskdata = null) {

@@ -29,6 +29,35 @@ rpnOperators.numberformat = function(context) {
     return context;
 };
 
+rpnOperators.cshow = function(context) {
+    const code = `
+dup stringwidth pop 2 div neg 0 rmoveto show`;
+    context =  rpn(code, context);
+    return context;
+};
+
+rpnOperators.rshow = function(context) {
+    const code = `
+dup stringwidth pop 2 neg 0 rmoveto show`;
+    context =  rpn(code, context);
+    return context;
+};
+
+
+
+
+rpnOperators.concat = function(context) {
+    const code = `
+3 dict begin /b exch def /a exch def
+/c a length b length add string def
+c 0 a putinterval
+c a length b putinterval
+c end } def`;
+    context =  rpn(code, context);
+    return context;
+};
+
+
 rpnOperators.patternfill = function(context) {
     const code = `
 10 dict begin /p exch def
@@ -214,7 +243,7 @@ y { xlimits 0 get y hchartproj moveto xlimits 2 get y hchartproj lineto stroke
 /hgrid { hxgrid hygrid } def
 
 /description { /TGL017 bodysize selectfont
-0 chartrect 3 get chartmargins 3 get sub bodysize 4 add add add moveto show } def
+0 chartrect 3 get chartmargins 3 get sub bodysize 4 add add moveto show } def
 /credits { /TGL017 bodysize selectfont
 chartrect 0 get chartrect 1 get chartmargins 1 get add 40 sub moveto show } def
 /xlabel { /s exch def /TGL017 bodysize selectfont
@@ -541,6 +570,53 @@ row 0.5 sub 0 hchartproj 8 sub moveto data row get 0 get stringwidth pop neg 8 s
 } for 
 } def
 
+/treemap {  15 dict begin /col exch def gsave
+/flip 1 def
+chartrect 0 get chartmargins 0 get add
+chartrect 1 get chartmargins 1 get add translate
+/scx chartrect 2 get chartmargins 2 get sub chartmargins 0 get sub def
+/scy chartrect 3 get chartmargins 3 get sub chartmargins 1 get sub def
+/x1 0 def
+/x2 scx def
+/y1 scy def
+/y2 0 def
+/vsum 0 def
+1 1 data length 1 sub { /i exch def
+/vsum vsum data i get col get add def
+} for
+/vrest vsum def
+/TGL017 bodysize selectfont
+2 setlinewidth
+1 1 data length 1 sub { /i exch def
+  colors i get exec
+  /v data i get col get def
+  flip {
+  /x2 x1 v vrest div scx x1 sub mul add def
+  /y2 0 def
+  x1 y1 moveto x2 y1 lineto x2 y2 lineto x1 y2 lineto
+  gsave fill grestore 1 setgray stroke
+  y1 y2 sub bodysize 2.7 mul gt x2 x1 sub 5 sub data i get 0 get stringwidth pop gt and {
+  x1 y1 moveto 5 bodysize 1.3 mul neg rmoveto data i get 0 get show
+  x1 y1 moveto 5 bodysize 2.5 mul neg rmoveto data vsum 100 eq { v cvs show (%) show } { v numberformat show } ifelse
+   } if
+  /x1 x2 def
+  /x2 scx def
+  } {
+  /y2 y1 v vrest div y1 mul sub def
+  x1 y1 moveto x2 y1 lineto x2 y2 lineto x1 y2 lineto
+  gsave fill grestore 1 setgray stroke
+  y1 y2 sub bodysize 2.7 mul gt x2 x1 sub 5 sub data i get 0 get stringwidth pop gt and {
+  x1 y1 moveto 5 bodysize 1.3 mul neg rmoveto data i get 0 get show
+  x1 y1 moveto 5 bodysize 2.5 mul neg rmoveto data vsum 100 eq { v cvs show (%) show } { v numberformat show } ifelse
+  } if
+  /y1 y2 def
+  /y2 0 def
+  } ifelse 
+  /vrest vrest v sub def
+  /flip 1 flip sub def
+} for
+grestore end  } def
+
 `;
     context =  rpn(code, context);
     return context;
@@ -610,6 +686,8 @@ rpnOperators.table = function(context) {
 	function parseNumber(s) {
     if (typeof s == 'unefined') return 0;
 	if (s ==  '') return 0;
+	if (s ==  '.') return 0;
+	if (s == null) return 0;
 	s = s.toString().replaceAll(/[^0-9-.]/g,"");
 	return parseFloat(s);
 }
