@@ -4,17 +4,20 @@ html {
 
 body{
 	font-family: Times, "Times New Roman", serif; 
-	font-size: 16px;
-	line-height: 24px;
+	line-height: 1.5rem;
 	text-align: justify;
 	color: black;
 	margin: 0px;
-	max-width: 794px; /* A4 96 dpi */
-	padding-top: 48px;
-	padding-bottom: 48px;
-	padding-left: min(9%,72px);
-	padding-right: min(12%,96px);
+	max-width: 40rem; /* A4 96 dpi */
+	padding-top: 3rem;
+	padding-bottom: 3rem;
+	padding-left: min(9%,4rem);
+	padding-right: min(12%,4rem);
 	background-color: white;
+	
+	/* background-image: linear-gradient(rgba(0, 180, 255, .7) .1em, transparent .1em), linear-gradient(90deg, rgba(0, 180, 255) .1em, transparent .1em); 
+  background-size: 1.5rem 1.5rem; */
+	
 /*
 	background-size: 12px 12px;
     background-image:
@@ -25,7 +28,6 @@ body{
 
 header {
 	padding: 0px;
-	font-size: 16px;
 }
 
 .draghover { 
@@ -34,40 +36,35 @@ header {
 
 h2 {
 	font-weight: bold;
-	font-size: 24px;
-	line-height: 36px;
-	margin-top: 20px;
-	margin-bottom: 20px;
+	margin-top: 2rem;
+	margin-bottom: 1rem;
 }
 
 h3 {
 	font-weight: bold;
-	font-size: 20px;
-	line-height: 30px;
-	margin-top: 20px;
-	margin-bottom: 0px;
+	margin-top: 2rem;
+	margin-bottom: 1rem;
 }
 
 h4 {
 	font-weight: bold;
-	font-size: 16px;
-	line-height: 24px;
+	margin-top: 1rem;
 	margin-bottom: 0px;
 }
 
 button {
-    margin-left: 4px;
+    margin-left: 0.25rem;
     border: none;
 	background-color: transparent;
-	color: black;
+	color: gray;
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
-	font-size: 13px;
+	font-size: 0.8rem;
 	cursor: pointer;
 }
 
 button:hover {
-	background-color: black;
+	background-color: gray;
 	color: white;
 }
 
@@ -77,8 +74,9 @@ code {
 }
 
 textarea:focus {
-	outline: 3px solid -moz-mac-focusring;
-	outline: 3px solid -webkit-focus-ring-color;
+	outline: 0.25rem solid -moz-mac-focusring;
+	outline: 0.25rem solid -webkit-focus-ring-color;
+	background-color: transparent;
 }
 
 textarea:read-only {
@@ -88,26 +86,26 @@ textarea:read-only {
 .error {
 	color:red;
 	transition:.5s;
-	font-size: 16px;
+	font-size: 1rem;
 	overflow: auto;
-	margin: 15px;
+	margin: 1rem;
 }
 
 table {
 	margin:auto;
-	border:1px solid black;
+	border:0.1rem solid black;
  	border-collapse:collapse;
- 	margin-bottom:10px;
+ 	margin-bottom:0.5rem;
  	width: max-content;
  	page-break-inside: avoid;
- 	border:1px solid black;
+ 	border:0.1rem solid black;
 }
 
 th, td {
-	border:1px solid #777;
-	padding: 4px;
-	font-size: 16px;
-	line-height: 24px;
+	border:0.1rem solid #777;
+	padding: 0.25rem;
+	font-size: 1rem;
+	line-height: 1.5rem;
 	word-break: break-all;
 	width: max-content;
 }
@@ -122,12 +120,12 @@ td {
 }
 
 capxion {
-	border:1px solid black;
+	border:0.1rem solid black;
 	border-bottom: none;
 }
 
 tbody {
-	border:1px solid black;
+	border:0.1rem solid black;
 }
 
 img {
@@ -141,14 +139,14 @@ svg {
 }
 
 footer {
-	margin-top: 48px;
-	font-size: 13px;
+	margin-top: 3rem;
+	font-size: 0.8rem;
 	color: #222;
 }
 
 #header {
 	text-align: right;
-	margin-bottom: 12px;
+	margin-bottom: 0.8rem;
 }
 
 #header button {
@@ -166,15 +164,15 @@ footer {
 
 .cellsource {
 	font-family: Courier, "Courier New", monospace;
-	font-size: 16px;
-	line-height: 24px;
+	font-size: 1rem;
+	line-height: 1.5rem;
 	border: none;
-    background-color: transparent;
+    
     /* resize: none; */
     outline: none;
     width: 100%;
-	margin-bottom: 12px;
-	padding: 4px;
+	margin-bottom: 0.8rem;
+	padding: 0.25rem;
 	display: none;
 	max-height: 50vh;
 }
@@ -190,8 +188,6 @@ footer {
 }
 
 .celloutput {
-	margin-bottom: 12px;
-	margin-top: 12px;
 	width: 100%;
 }
 
@@ -211,14 +207,15 @@ div.cell.data li {
 
 div.cell.data label, input {
   display: table-cell;
-  margin-right: 12px;
-  margin-bottom: 12px;
+  margin-right: 0.8rem;
+  margin-bottom: 0.8rem;
 }
 
 span.radiovalue {
-	margin-right: 12px;
+	margin-right: 0.8rem;
 }
 
+button { color: gray }
 
 button.wiki { display : none; }
 button.sql { display : none; }
@@ -259,7 +256,7 @@ div.menu button.up { display: inline }
 div.menu button.down { display: inline }
 div.edit button.delete { display: inline }
 div.edit textarea.cellsource {
-	border: 1px solid black;
+	border: 0.1rem solid black;
 	color: black;
 	display: block;
 	height: auto;
@@ -269,8 +266,8 @@ div textarea.cellsource { display: none }
 div.sql textarea.cellsource { display: none }
 
 
-div.wiki button.wiki { background-color: black; color: white; }
-div.sql button.sql { background-color: black; color: white; }
+div.wiki button.wiki { background-color: gray; color: white; }
+div.sql button.sql { background-color: gray; color: white; }
 div.sql textarea.cellsource {
 	color: #004E8A;
 	display: block;
@@ -286,7 +283,7 @@ div.data div.celloutput {
     font-family: Courier, "Courier New", monospace;
 	color: #D05C08;
 	height: auto;
-	padding: 4px;
+	padding: 0.25rem;
 }
 
 div.js textarea.cellsource {
@@ -298,10 +295,10 @@ div.js textarea.cellsource {
 
 code.js {
 	font-family: Courier, "Courier New", monospace;
-	font-size: 16px;
+	font-size: 1rem;
 	color: #800;
 	height: auto;
-	padding: 4px;
+	padding: 0.25rem;
 	white-space: pre-wrap;       /* css-3 */
     white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
     white-space: -pre-wrap;      /* Opera 4-6 */
@@ -330,9 +327,9 @@ div.error {
 	color: red;
 }
 div.data.edit button.import { display: inline; }
-div.data button.data { background-color: black; color: white; }
-div.js button.js { background-color: black; color: white; }
-div.ps button.ps { background-color: black; color: white; }
+div.data button.data { background-color: gray; color: white; }
+div.js button.js { background-color: gray; color: white; }
+div.ps button.ps { background-color: gray; color: white; }
 
 div.cellconsole { 
 	background-color:  yellow; 
@@ -348,20 +345,22 @@ div.tablefilter {
 p.link {
 	text-align: right;
 	width: 100%;
+	margin-top: 0rem;
+	margin-bottom: 0rem;
 }
 
 p.link a { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
-	font-size: 13px;
+	font-size: 0.8rem;
 	cursor: pointer;
-	color:black;
-	padding: 4px;
+	color:gray;
+	padding: 0.25rem;
 	text-decoration: none;
 }
 
 p.link a:hover {
-	background-color: black;
+	background-color: gray;
 	color: white;
 }
 
@@ -376,15 +375,15 @@ input.sortable {
 .custom-file-upload {
     display: inline-block;
     cursor: pointer;
-    border: 1px solid #444;
-    font-size: 16px;
-    padding: 2px;
+    border: 0.1rem solid #444;
+    font-size: 1rem;
+    padding: 0.2rem;
 }
 
 
 tiny-ps {
 	max-width: 100%;
-	min-height: 360px;
+	min-height: 18rem;
 	display: block;
 }
 
@@ -404,7 +403,7 @@ div.canvasurl {
 
 ::part(divsvg)  { 
 	max-width: 100%;
-	min-height: 360px;
+	/* min-height: 24rem; */
 	display: block;
 	background-color: white;
 }
@@ -412,50 +411,50 @@ div.canvasurl {
 ::part(svgurl)  { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
-	font-size: 13px;
+	font-size: 0.8rem;
 	cursor: pointer;
-	color:black;
-	padding: 4px;
+	color:gray;
+	padding: 0.25rem;
 	text-decoration: none;
 }
 
 ::part(svgurla)  { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
-	font-size: 13px;
+	font-size: 0.8rem;
 	cursor: pointer;
-	color:black;
-	padding: 4px;
+	color:gray;
+	padding: 0.25rem;
 	text-decoration: none;
 }
 
 ::part(canvasurl)  { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
-	font-size: 13px;
+	font-size: 0.8rem;
 	cursor: pointer;
-	color: black;
-	padding: 4px;
+	color: gray;
+	padding: 0.25rem;
 	text-decoration: none;
 }
 
 ::part(canvasurlz)  { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
-	font-size: 13px;
+	font-size: 0.8rem;
 	cursor: pointer;
-	color: black;
-	padding: 4px;
+	color: gray;
+	padding: 0.25rem;
 	text-decoration: none;
 } 
 
 ::part(canvasurlm)  { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
-	font-size: 13px;
+	font-size: 0.8rem;
 	cursor: pointer;
-	color: black;
-	padding: 4px;
+	color: gray;
+	padding: 0.25rem;
 	text-decoration: none;
 } 
 
@@ -463,56 +462,56 @@ div.canvasurl {
 ::part(rawurl)  { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
-	font-size: 13px;
+	font-size: 0.8rem;
 	cursor: pointer;
 	color: black;
-	padding: 4px;
+	padding: 0.25rem;
 	text-decoration: none;
 }
 
 ::part(pdfurl)  { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
-	font-size: 13px;
+	font-size: 0.8rem;
 	cursor: pointer;
 	color: black;
-	padding: 4px;
+	padding: 0.25rem;
 	text-decoration: none;
 }
 
 ::part(svgurl):hover{
-	background-color: black;
+	background-color: gray;
 	color: white;
 }
 
 ::part(svgurla):hover{
-	background-color: black;
+	background-color: gray;
 	color: white;
 }
 
 ::part(canvasurl):hover{
-	background-color: black;
+	background-color: gray;
 	color: white;
 }
 
 ::part(canvasurlz):hover{
-	background-color: black;
+	background-color: gray;
 	color: white;
 }
 
 ::part(canvasurlm):hover{
-	background-color: black;
+	background-color: gray;
 	color: white;
 }
 
 
 ::part(rawurl):hover{
-	background-color: black;
+	background-color: gray;
 	color: white;
 }
 
 ::part(pdfurl):hover{
-	background-color: black;
+	background-color: gray;
 	color: white;
 }
 
@@ -523,23 +522,23 @@ div.canvasurl {
 .fullscreen { 
   position: absolute;
   top: 0px; left: 0px; bottom: 0px; right: 0px;
-  font-size: 24px;
-  line-height: 36px;
+  font-size: 1.5rem;
+  line-height: 2.4rem;
   text-align: left;
   background-color: white;
 }
 .fullscreen .cell { display: none; }
 .fullscreen .cell.fullscreen { display: block; }
-.fullscreen h2 { font-size: 36px; line-height: 48px; margin-bottom: 20px; }
-.fullscreen h3 { font-size: 30px; line-height: 36px; margin-bottom: 20px; }
-.fullscreen h4 { font-size: 24px; line-height: 30px; }
-.fullscreen th { font-size: 20px; line-height: 20px; }
-.fullscreen td { font-size: 20px; line-height: 20px; }
-.fullscreen .cellsource {  width: calc(100% - 100px); padding-left: 50px; padding-right: 50px; height: calc(100% - 100px); font-size: 20px; line-height: 24px; } 
+.fullscreen h2 { font-size: 2.4rem; line-height: 3rem; margin-bottom: 1.2rem; }
+.fullscreen h3 { font-size: 2rem; line-height: 2.4rem; margin-bottom: 1.2rem; }
+.fullscreen h4 { font-size: 1.6rem; line-height: 2rem; }
+.fullscreen th { font-size: 1.2rem; line-height: 1.2rem; }
+.fullscreen td { font-size: 1.2rem; line-height: 1.2rem; }
+.fullscreen .cellsource {  width: calc(100% - 100px); padding-left: 3rem; padding-right: 3rem height: calc(100% - 6rem); font-size: 1.2rem; line-height: 1.5rem; } 
 
-.fullscreen .celloutput {  width: calc(100% - 100px); padding-left: 50px; padding-right: 50px; height: calc(100% - 100px);} 
-div.data.fullscreen .celloutput {  width: calc(100% - 100px); padding-left: 50px; padding-right: 50px; height: calc(100% - 100px);} 
-.fullscreen .cellheader {  width: calc(100% - 100px); padding-right: 50px; padding-left: 50px; padding-bottom: 25px; } 
+.fullscreen .celloutput {  width: calc(100% - 100px); padding-left: 3rem; padding-right: 3rem; height: calc(100% - 6rem);} 
+div.data.fullscreen .celloutput {  width: calc(100% - 6rem); padding-left: 3rem; padding-right: 3rem; height: calc(100% - 6rem);} 
+.fullscreen .cellheader {  width: calc(100% - 6rem); padding-right: 3rem; padding-left: 3rem; padding-bottom: 1.5rem; } 
 /* .fullscreen .fulloutput {   display: block; padding: 50px; } */
 .fullscreen button.fullscreenclose { display : inline; }
 .fullscreen button.fullscreenprevious { display : inline; }
@@ -558,7 +557,7 @@ div.data.fullscreen .celloutput {  width: calc(100% - 100px); padding-left: 50px
 .fullscreen ::part(canvasurlz)  { display:none; }
 .fullscreen ::part(canvasurlm)  { display:none; }
 .fullscreen tiny-ps { width: 100%; height: 100%; }
-.fullscreen code.js { font-size: 20px; line-height: 24px; }
+.fullscreen code.js { font-size: 1.2rem; line-height: 1.5rem; }
 
 
 
@@ -578,28 +577,28 @@ p.link { display: none }
 ::part(canvasurl)  { display:none; }
 ::part(canvasurlz)  { display:none; }
 ::part(canvasurlm)  { display:none; }
-body { font-size: 12pt; line-height: 18pt; }
-.cellsource { font-size: 12pt; line-height: 18pt; }
-td, th { font-size: 12pt; line-height: 18pt; }
+body { font-size: 1rem; line-height: 1.5rem; }
+.cellsource { font-size: 1rem; line-height: 1.5rem; }
+td, th { font-size: 1rem; line-height: 1.5rem; }
 h2 { string-set: doctitle content(); }
 
 @page {
     size; A4 portrait;
-    margin-left: 0cm;
-    margin-right: 0cm; 
-    margin-top: 1.5cm; 
-    margin-bottom: 2cm; 
+    margin-left: 0rem;
+    margin-right: 0rem; 
+    margin-top: 3rem; 
+    margin-bottom: 4rem; 
     @bottom-right {
         content: counter(page) " / " counter(pages);
-        font-size: 9pt;
-        padding-right: 2cm;
-        padding-top 0.5cm;
+        font-size: 0.8rem;
+        padding-right: 4rem;
+        padding-top 1rem;
     }
     @bottom-left {
         content: string(doctitle);
-        font-size: 9pt;
-        padding-left: 2cm;
-        padding-top: 0.5cm;
+        font-size: 0.8rem;
+        padding-left: 4rem;
+        padding-top: 1rem;
     }
 }
 

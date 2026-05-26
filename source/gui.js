@@ -861,7 +861,7 @@ runner.wiki = function(id, down = false) {
     html = wikiText(source.value);	
     output.innerHTML = html;
 	const cell = document.getElementById('cell'+id);
-	cell.style.backgroundColor = 'white';
+	cell.style.backgroundColor = 'transparent';
     output.outerHTML = output.outerHTML; 
 	
 	if (down) {
@@ -930,7 +930,7 @@ runner.sql = function(id, down = false) {
 		
 		output.innerHTML = s;
 		const cell = document.getElementById('cell'+id);
-		cell.style.backgroundColor = 'white';
+		cell.style.backgroundColor = 'transparent';
 		output.outerHTML = output.outerHTML; // force
 		
 		console.log((Date.now() - timerstart) +" ms html");
@@ -953,7 +953,7 @@ runner.sql = function(id, down = false) {
 	}).catch(function(reason){
 		console.log(reason);
 		const cell = document.getElementById('cell'+id);
-		cell.style.backgroundColor = 'white';
+		cell.style.backgroundColor = 'transparent';
 		output.innerHTML = '<pre class="error">'+reason+'<pre>';
 		output.outerHTML = output.outerHTML; // force
 	});
@@ -1074,7 +1074,7 @@ runner.data = function(id, down = false, diskdata = null) {
 	{
 		const hash = "f"+generateHash(sourcevalue) % 1000000;
 		rpnFontURLs[hash] = sourcevalue;
-		cell.style.backgroundColor = 'white';
+		cell.style.backgroundColor = 'transparent';
 		output.innerHTML =  hidestats ? "" : "Font /"+hash;
 		
 		if (down) { 
@@ -1137,7 +1137,7 @@ runner.data = function(id, down = false, diskdata = null) {
 			console.log(alasql.tables[tablename]);
 			alasql.tables[tablename].data = tabledata;
 			if (!hidestats) output.innerHTML += "<p>" + tablename + "<br>cols x, y, r, g, b a<br>rows "+tabledata.length;
-			cell.style.backgroundColor = 'white';
+			cell.style.backgroundColor = 'transparent';
 			if (down) { 
 				let cell = document.getElementById("cell"+id);
 				let nextcell = cell.nextSibling;
@@ -1165,7 +1165,7 @@ runner.data = function(id, down = false, diskdata = null) {
 	
 	if (lines.length < 3) {
 		output.innerHTML = '<span class="error">Error: invalid or empty CSV</span>';
-		cell.style.backgroundColor = 'white';
+		cell.style.backgroundColor = 'transparent';
 		return;
 	}
 	
@@ -1173,7 +1173,7 @@ runner.data = function(id, down = false, diskdata = null) {
 	
 	if (!tablename) {
 		output.innerHTML = '<span class="error">Error: missing tablename</span>';
-		cell.style.backgroundColor = 'white';
+		cell.style.backgroundColor = 'transparent';
 		return;
 	}
 	
@@ -1181,7 +1181,7 @@ runner.data = function(id, down = false, diskdata = null) {
 	
 	if (!headerline) {
 		output.innerHTML = '<span class="error">Error: missing column names</span>';
-		cell.style.backgroundColor = 'white';
+		cell.style.backgroundColor = 'transparent';
 		return;
 	}
 		
@@ -1330,7 +1330,7 @@ runner.data = function(id, down = false, diskdata = null) {
 	catch(reason){
 		console.log(reason);
 		const cell = document.getElementById('cell'+id);
-		cell.style.backgroundColor = 'white';
+		cell.style.backgroundColor = 'transparent';
 		output.innerHTML = '<pre class="error">'+reason+'<pre>';
 		output.outerHTML = output.outerHTML; // force
 		return;
@@ -1354,7 +1354,7 @@ runner.data = function(id, down = false, diskdata = null) {
 			output.innerHTML = hidestats? "" : s;
 		}
 		const cell = document.getElementById('cell'+id);
-		cell.style.backgroundColor = 'white';
+		cell.style.backgroundColor = 'transparent';
 		output.outerHTML = output.outerHTML; // force 
 		
 		console.log((Date.now() - timerstart) +" ms");
@@ -1376,7 +1376,7 @@ runner.data = function(id, down = false, diskdata = null) {
 	}).catch(function(reason){
 		console.log(reason);
 		const cell = document.getElementById('cell'+id);
-		cell.style.backgroundColor = 'white';
+		cell.style.backgroundColor = 'transparent';
 		output.innerHTML = '<pre class="error">'+reason+'<pre>';
 		output.outerHTML = output.outerHTML; // force
 	});
@@ -1414,9 +1414,9 @@ runner.js = function(id, down = false) {
 	}
 	
 	const cell = document.getElementById('cell'+id);
-	cell.style.backgroundColor = 'white';
+	cell.style.backgroundColor = 'transparent';
 	const scriptnode = document.createElement("SCRIPT"); 
-    scriptnode.innerHTML = "try { " + code + " } catch(reason) { console.log(reason); const c = document.getElementById('output'+"+id+"); c.innerHTML = '<pre class=error>'+reason+'</pre>'; c.style.backgroundColor = 'white'; console.log(c.innerHTML);}";
+    scriptnode.innerHTML = "try { " + code + " } catch(reason) { console.log(reason); const c = document.getElementById('output'+"+id+"); c.innerHTML = '<pre class=error>'+reason+'</pre>'; c.style.backgroundColor = 'transparent'; console.log(c.innerHTML);}";
     
     /*
     window.onerror = function (a, b, c, d, e) {
@@ -1465,7 +1465,7 @@ readSyncDataURL = function(url, filetype = ""){
 
 rpnProlog = "";
 
-runner.ps = function(id, down = false) {
+runner.ps = function(id, down = false) { 
     const source = document.getElementById('source'+id);
     const output = document.getElementById('output'+id);
     const code = source.value;
@@ -1492,12 +1492,9 @@ runner.ps = function(id, down = false) {
 	const tabledump = []
 	tabledump.push("rpnTables = []");
     for (t in alasql.tables) {
-	    if (t.substr(0,1)=="_") {
-	    	let t2 = alasql("SELECT * FROM " + t);
-	    	// unescape undefined
-	    	let j = JSON.stringify(t2, (k, v) => v === undefined ? null : v)
+	    if (t.substr(0,1)=="_") { console.log(alasql.tables[t]);
+	    	let j = JSON.stringify(alasql.tables[t].data, (k, v) => v === undefined ? null : v);
 	        tabledump.push("rpnTables[\""+t+"\"] = " + j + " ;\n");
-	        // §console.log(j);
 	    }
     }
     
@@ -1506,7 +1503,7 @@ runner.ps = function(id, down = false) {
     rpnExtensions = tabledump.join("\n") + di ;
 	
 	const cell = document.getElementById('cell'+id);
-	cell.style.backgroundColor = 'white';
+	cell.style.backgroundColor = 'transparent';
 	if (!test) {  output.appendChild(scriptnode); console.log("psnode added"); }
 
 	console.log("runner.ps changes tag")
@@ -1632,9 +1629,9 @@ setPS = function (id) {
 	if (oldClass.indexOf("edit") > -1) cell.classList.add("edit");
     if (oldClass.indexOf("menu") > -1) cell.classList.add("menu");
 	output.innerHTML = "";
-	setInterval( function() {
+	var timer = setInterval( function() {
 		const source = document.getElementById('source'+id);
-		if (!source) console.log("missing source"+id);
+		if (!source) { console.log("missing source"+id); clearInterval(timer); return;  }
 		if (source && source.value.slice(0,1) == "!" && source.value.slice(-1) == " " && source.value != source.getAttribute("bak")) 
 			cellRun(id);
 		source.setAttribute("bak", source.value);

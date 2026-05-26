@@ -45,6 +45,11 @@ Version 1.2.4 2026-02-01
 - added test files
 Version 1.2.5 2026-02-14
 - new operator currentpagedevice
+Version 1.2.6
+- transparent text overlay in SVG
+Version 1.2.7
+- new operator cvn
+- improved precision path (1/1000pt)
 
 
 Renders as subset PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
@@ -767,12 +772,12 @@ rpnSVGDevice = class {
        if (!path.length) return "";
        for (let subpath of path) {
            if (!subpath.length) continue;
-           p.push("M " + (Math.round(subpath[0][1]*100)/100) + " " + (Math.round((this.height - subpath[0][2])*100)/100));
+           p.push("M " + (Math.round(subpath[0][1]*1000)/1000) + " " + (Math.round((this.height - subpath[0][2])*1000)/1000));
            for (let line of subpath) {
                if (line[0] == "C") {
-                   p.push("C " +(Math.round(line[3]*100)/100) + " " + (Math.round((this.height - line[4])*100)/100)+ " " + (Math.round(line[5]*100)/100) + " " + (Math.round((this.height - line[6])*100)/100) + " " + (Math.round((line[7])*100)/100) + " " + (Math.round((this.height - line[8])*100)/100));
+                   p.push("C " +(Math.round(line[3]*1000)/1000) + " " + (Math.round((this.height - line[4])*1000)/1000)+ " " + (Math.round(line[5]*1000)/1000) + " " + (Math.round((this.height - line[6])*1000)/1000) + " " + (Math.round((line[7])*1000)/1000) + " " + (Math.round((this.height - line[8])*1000)/1000));
                } else {
-                   p.push("L "+(Math.round(line[3]*100)/100) + " " + (Math.round((this.height - line[4])*100 )/100));
+                   p.push("L "+(Math.round(line[3]*1000)/1000) + " " + (Math.round((this.height - line[4])*1000 )/1000));
                    if (line[0] == "Z") p.push("Z"); 
                 }
            }
@@ -1810,6 +1815,15 @@ rpnOperators.curveto = function(context) {
 rpnUnitTest("100 90 50 90 50 50 curveto","!nocurrentpoint");
 rpnUnitTest("(a) 100 90 50 90 50 curveto","!typeerror");
 rpnUnitTest("100 90 50 90 50 curveto","100 90 50 90 50 !stackunderflow");
+
+
+rpnOperators.cvn = function(context) {
+    const [x] = context.pop("string");
+    if (!x) return context;
+    const result = x.value;
+    context.stack.push(new rpnName(result));
+    return context;
+};
 
 rpnOperators.cvr = function(context) {
     const [x] = context.pop("any");
