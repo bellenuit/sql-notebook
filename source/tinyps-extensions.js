@@ -1,3 +1,49 @@
+rpnOperators.combsort = function(context) {
+    const code = `10 dict begin /arr exch def
+/d arr length 1 sub def
+{ /sorted 1 def
+  /lastround d 1 eq def
+  0 1 arr length d sub 1 sub { /i exch def
+     /v1 arr i get def
+     /v2 arr i d add get def
+     v1 v2 compare not { /sorted 0 def
+        arr i v2 put
+        arr i d add v1 put
+     } if
+  } for
+  /d d 1.3 div floor 1 max def
+  lastround sorted mul { exit } if
+} loop
+end`;
+    context =  rpn(code, context);
+    return context;
+};
+
+
+rpnOperators.compare = function(context) {
+    const code = `lt`;
+    context =  rpn(code, context);
+    return context;
+};
+
+rpnOperators.concat = function(context) {
+    const code = `
+3 dict begin /b exch def /a exch def
+/c a length b length add string def
+c 0 a putinterval
+c a length b putinterval
+c end } def`;
+    context =  rpn(code, context);
+    return context;
+};
+
+
+rpnOperators.cshow = function(context) {
+    const code = `
+dup stringwidth pop 2 div neg 0 rmoveto show`;
+    context =  rpn(code, context);
+    return context;
+};
 
 rpnOperators.imagedata = function (context) {
 	const [id] = context.pop("string");	
@@ -26,34 +72,6 @@ rpnOperators.numberformat = function(context) {
     if (!r) return context;
     const x = new Intl.NumberFormat('en-US',{maximumFractionDigits: 2}).format(r.value).replaceAll(","," ");
     context.stack.push(new rpnString(x,context.heap));
-    return context;
-};
-
-rpnOperators.cshow = function(context) {
-    const code = `
-dup stringwidth pop 2 div neg 0 rmoveto show`;
-    context =  rpn(code, context);
-    return context;
-};
-
-rpnOperators.rshow = function(context) {
-    const code = `
-dup stringwidth pop 2 neg 0 rmoveto show`;
-    context =  rpn(code, context);
-    return context;
-};
-
-
-
-
-rpnOperators.concat = function(context) {
-    const code = `
-3 dict begin /b exch def /a exch def
-/c a length b length add string def
-c 0 a putinterval
-c a length b putinterval
-c end } def`;
-    context =  rpn(code, context);
     return context;
 };
 
@@ -678,9 +696,56 @@ rpnOperators.preparepatterns = function(context) {
     return context;
 };
 
+rpnOperators.quicksort = function(context) {
+    const code = `dup length 1 sub 0 exch quicksort0`;
+    context =  rpn(code, context);
+    return context;
+};
+
+rpnOperators.quicksort0 = function(context) {
+    const code = `10 dict begin /right exch def /left exch def /arr exch def
+/pivot arr left get def
+/i left def
+left 1 right 1 sub { /j exch def
+   /v arr j get def 
+   v pivot compare {  
+      i j ne { 
+      /v2 data i get def
+      data i v put
+      data j v2 put } if
+      /i i 1 add def
+   } if
+} for
+  /v2 data i get def
+  data i pivot put
+  data right v2 put
+  left i 1 sub lt { arr left i 1 sub quicksort0 } if
+  i 1 add right lt { arr i 1 add right quicksort0 } if
+end`;
+    context =  rpn(code, context);
+    return context;
+};
 
 
+rpnOperators.rshow = function(context) {
+    const code = `
+dup stringwidth pop 2 neg 0 rmoveto show`;
+    context =  rpn(code, context);
+    return context;
+};
 
+rpnOperators.sort = function(context) {
+    const code = `10 dict begin /arr exch def
+/c 0 def
+0 1 arr length 2 sub { /i exch def
+  /c c arr i get arr i 1 add get compare add def
+} for
+/c c arr length div
+c 0.25 gt c 0.75 lt and { arr quicksort } { arr combsort } ifelse
+end`;
+    context =  rpn(code, context);
+    return context;
+};
 
 
 rpnOperators.table = function(context) {

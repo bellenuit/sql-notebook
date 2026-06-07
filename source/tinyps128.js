@@ -45,20 +45,23 @@ Version 1.2.4 2026-02-01
 - added test files
 Version 1.2.5 2026-02-14
 - new operator currentpagedevice
-Version 1.2.6
-- transparent text overlay in SVG
-Version 1.2.7
+Version 1.2.6 2026-03-03
+- SVG uses RGB color for non transparent SVG (for compatibility with MS Word)
+- Transparent text is overlaid on SVG paths if textmode is off. This makes SVG searchable and selectable
+Version 1.2.7 2026-05-07
 - new operator cvn
-- improved precision path (1/1000pt)
+- improved path precision (1/1000 pt)
+Version 1.2.8 2026-06-07
+- error exits for and forall loops
 
 
-Renders as subset PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
+Renders a subset of PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
 The output can be displayed or proposed as downloadable link. It can be transparent.
 The code is in the innerHMTL of the tiny-ps tag. 
 The tag supports the attributes width, height, format, transparent, interval and oversampling.
 The display is block by default, biut can be set to inline-block witch CSS.
 
-The code is self contained and does not have dependencies. It is small (~ 150 KB).
+The code is self contained and does not have dependencies. It is small (~ 200 KB).
 Just add it at the end of the page. Everything is declarative.
 
 If you want to display text, you need to place TrueType fonts in the same folder as the script.
@@ -2041,7 +2044,9 @@ rpnOperators.for = function(context) {
                 context.lasterror = "";
                 context.stack.pop();
                 return context;
-            }
+            } else if (context.lasterror) {
+                return context;
+            } 
 
         }
     } else {
@@ -2051,6 +2056,8 @@ rpnOperators.for = function(context) {
             if (context.lasterror == "exit") {
                 context.lasterror = "";
                 context.stack.pop();
+                return context;
+            } else if (context.lasterror) {
                 return context;
             }
        }
@@ -2065,6 +2072,13 @@ rpnOperators.forall = function(context) {
         	if (elem.reference) elem.reference.inc();
             context.stack.push(elem);
             context = rpn(proc.value, context);
+            if (context.lasterror == "exit") {
+                context.lasterror = "";
+                context.stack.pop();
+                return context;
+            } else if (context.lasterror) {
+                return context;
+            }
         }
     return context;
 };
