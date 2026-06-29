@@ -451,6 +451,13 @@ rpnCanvasDevice = class {
         this.applyPath(context.graphics.path);
         this.ctx.strokeStyle = "rgb("+Math.round(context.graphics.color[0])+" "+Math.round(context.graphics.color[1])+" "+ Math.round(context.graphics.color[2])+")";
         this.ctx.globalAlpha = context.graphics.color[3]/255.0;
+        
+        const caps = ["butt","round","square"];
+        this.ctx.lineCap = caps[context.graphics.linecap];
+        const joins = ["miter", "round", "bevel"];
+        this.ctx.lineJoin = joins[context.graphics.linecap];
+        this.ctx.setLineDash(context.graphics.dashpattern);
+        
         this.ctx.lineWidth = context.graphics.linewidth * this.oversampling;
         this.ctx.stroke();
         this.ctx.restore();
@@ -838,8 +845,16 @@ if (context.device.transparent)
         node.setAttribute("id","stroke" + Math.round(Math.random()*1000000));
         node.setAttribute("d", this.getPath(context.graphics.path, false));
         node.setAttribute("fill","none");
+        
         node.setAttribute("stroke-width",context.graphics.linewidth);
-//         node.setAttribute("stroke", "rgb(" + Math.round(context.graphics.color[0]) + ", " + Math.round(context.graphics.color[1]) + ", " + Math.round(context.graphics.color[2]) + ")");
+        const caps = ["butt","round","square"];
+        const joins = ["miter", "round", "bevel"];
+        node.setAttribute("stroke-linecap",caps[context.graphics.linecap]);
+        node.setAttribute("stroke-linejoin",joins[context.graphics.linejoin]);
+        node.setAttribute("stroke-dashoffset",context.graphics.dashoffset);
+        node.setAttribute("stroke-dasharray",context.graphics.dashpattern.join(" "));
+        
+        //         node.setAttribute("stroke", "rgb(" + Math.round(context.graphics.color[0]) + ", " + Math.round(context.graphics.color[1]) + ", " + Math.round(context.graphics.color[2]) + ")");
 //         node.setAttribute("stroke-opacity", context.graphics.color[3]/255.0);
         if (context.device.transparent)
             node.setAttribute("stroke", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
@@ -847,6 +862,7 @@ if (context.device.transparent)
             node.setAttribute("stroke", this.rgbahex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));
         if (this.clippath) node.setAttribute("clip-path", "url(#"+this.clippath+")");
         this.node.appendChild(node);
+        console.log(node.innerHTML);
         return context;
     }
     show(s, context, targetwidth = 0) { 
@@ -953,7 +969,7 @@ rpnContext = class {
     }
     initgraphics () {
         this.graphicsstack = [];
-        this.graphicsstack.push({ path: [], clip: [], current: [], color: [0, 0, 0, 255], linewidth: 1, matrix : [1, 0, 0, 1, 0, 0] , font: "", size: 12, cachedevice : [0, 0, 0, 0, 0, 0] });
+        this.graphicsstack.push({ path: [], clip: [], current: [], color: [0, 0, 0, 255], dashpattern: [], dashoffset: 0, linecap: 0, linejoin: 0, linewidth: 1, matrix : [1, 0, 0, 1, 0, 0] , font: "", size: 12, cachedevice : [0, 0, 0, 0, 0, 0] });
     }
     itransform(x,y) {
        const m = this.graphics.matrix;
@@ -1730,6 +1746,16 @@ rpnOperators.currentgray = function(context) {
 };
 rpnUnitTest("currentgray","0");
 
+rpnOperators.currentlinecap = function(context) {                   
+    context.stack.push(new rpnNumber(context.graphics.linecap));
+    return context;
+};
+
+rpnOperators.currentlinejoin = function(context) {                   
+    context.stack.push(new rpnNumber(context.graphics.linejoin));
+    return context;
+};
+
 rpnOperators.currentlinewidth = function(context) {                   
     context.stack.push(new rpnNumber(context.graphics.linewidth));
     return context;
@@ -1997,7 +2023,6 @@ rpnUnitTest("false","0");
 rpnOperators.findfont = function(context) {
     const [n] = context.pop("name");
     if (!n) return context;
-    console.log(rpnFonts);
     if (!rpnFonts[n.value]) {
 	    const url = rpnFontURLs[n.value];
 	    if (!url) return context.error("invalidfont");
@@ -2931,8 +2956,10 @@ rpnOperators.setcachedevice = function(context) {
 };
 
 rpnOperators.setdash = function(context) {
-    const [offset, motif] = context.pop("number", "array");
-    // not implemented
+    const [offset, motif] = context.pop("number", "array")
+    context.graphics.dashpattern = [];
+    for (let elem of motif.value) context.graphics.dashpattern.push(elem.value);
+    context.graphics.dashoffset = offset.value;
     return context;
 };
 
@@ -2971,6 +2998,24 @@ rpnUnitTest("1 setgray currentgray","1");
 rpnUnitTest("-1 setgray currentgray","0");
 
 
+rpnOperators.setlinecap = function(context) {
+    const [w] = context.pop("number");
+    if (!w) return context;
+    const wlimited = Math.round(Math.min(Math.max(w.value,0),2));
+    context.graphics.linecap = wlimited ;
+    return context;
+};
+
+rpnOperators.setlinejoin = function(context) {
+    const [w] = context.pop("number");
+    if (!w) return context;
+    const wlimited = Math.round(Math.min(Math.max(w.value,0),2));
+    context.graphics.linejoin = wlimited ;
+    return context;
+};
+
+
+
 rpnOperators.setlinewidth = function(context) {
     const [w] = context.pop("number");
     if (!w) return context;
@@ -2986,6 +3031,7 @@ rpnUnitTest("setlinewidth","!stackunderflow");
 rpnUnitTest("0 setlinewidth currentlinewidth","0");
 rpnUnitTest("1 setlinewidth currentlinewidth","1");
 rpnUnitTest("-1 setlinewidth currentlinewidth","0");
+
 
 
 rpnOperators.setmatrix = function(context) {
@@ -5522,7 +5568,7 @@ rpnDocument = new xmlDoc();
 	{
 		workercode.push('rpnOperators.' + key + ' = ' + rpnOperators[key].toString());
 	}
-	const baseURL = location.origin + "/" + location.pathname.split("/").slice(0,-1).join("/")+"/";
+	const baseURL = location.origin + ((location.pathname.substr(0,1)=="/") ? "" : "/") + location.pathname.split("/").slice(0,-1).join("/")+"/";
 	console.log(baseURL)
 	workercode.push('rpnBaseURL = ' + '"' + baseURL + '"');
 	workercode.push('rpnFontURLs = {};');

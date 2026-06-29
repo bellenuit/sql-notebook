@@ -910,7 +910,7 @@ runner.sql = function(id, down = false) {
 			   let values = [];
 			   for(row of elem) {
 				   let fields = [];
-				   for(key in row) fields.push(row[key]);
+				   for(key of cols) fields.push(row[key]);
 				   values.push(fields);
 			   }
 			   //alert(JSON.stringify(values));
@@ -1415,19 +1415,20 @@ runner.js = function(id, down = false) {
 	
 	const cell = document.getElementById('cell'+id);
 	cell.style.backgroundColor = 'transparent';
+	
 	const scriptnode = document.createElement("SCRIPT"); 
-    scriptnode.innerHTML = "try { " + code + " } catch(reason) { console.log(reason); const c = document.getElementById('output'+"+id+"); c.innerHTML = '<pre class=error>'+reason+'</pre>'; c.style.backgroundColor = 'transparent'; console.log(c.innerHTML);}";
+    scriptnode.innerHTML = "try { " + code + " } catch(reason) { console.log(reason); const c = document.getElementById('output'+"+id+"); console.log(c); c.innerHTML = '<pre class=error>'+reason+'</pre>'; c.style.backgroundColor = 'transparent'; console.log(c.innerHTML);}";
     
-    /*
+    
     window.onerror = function (a, b, c, d, e) {
         const co = document.getElementById('output'+id); 
         if (co) {
-		co.innerHTML = '<pre class=error>' + a + '</pre>'; 
+		co.innerHTML = `<pre class=error>${a} Line ${c}</pre>`; 
 		co.style.backgroundColor = 'white'; 
 		}
 		console.error(a);
 	}
-	*/ 
+	 
 	document.body.appendChild(scriptnode);
 	console.log((Date.now() - timerstart) +" ms");
 	
@@ -1492,8 +1493,8 @@ runner.ps = function(id, down = false) {
 	const tabledump = []
 	tabledump.push("rpnTables = []");
     for (t in alasql.tables) {
-	    if (t.substr(0,1)=="_") { console.log(alasql.tables[t]);
-	    	let j = JSON.stringify(alasql.tables[t].data, (k, v) => v === undefined ? null : v);
+	    if (t.substr(0,1)=="_") { 
+	    	let j = JSON.stringify(  alasql.tables[t].data  , (k, v) => v === undefined ? null : v);
 	        tabledump.push("rpnTables[\""+t+"\"] = " + j + " ;\n");
 	    }
     }
