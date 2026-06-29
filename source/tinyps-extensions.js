@@ -4,7 +4,6 @@ rpnOperators.combsort = function(context) {
 d d mul %max executions in bubble mode
 { /sorted 1 def
   /lastround d 1 eq def
-  lastround { /t t 1 sub def } if
   0 1 arr length d sub 1 sub { /i exch def
      /v1 arr i get def
      /v2 arr i d add get def
@@ -15,7 +14,6 @@ d d mul %max executions in bubble mode
   } for
   /d d 1.3 div floor 1 max def
   lastround sorted mul { exit } if
-  t 0 eq { exit } if %timeout
 } repeat
 end`;
     context =  rpn(code, context);
@@ -35,7 +33,7 @@ rpnOperators.concat = function(context) {
 /c a length b length add string def
 c 0 a putinterval
 c a length b putinterval
-c end } def`;
+c end `;
     context =  rpn(code, context);
     return context;
 };
@@ -910,7 +908,7 @@ end`;
 
 rpnOperators.rshow = function(context) {
     const code = `
-dup stringwidth pop 2 neg 0 rmoveto show`;
+dup stringwidth pop neg 0 rmoveto show`;
     context =  rpn(code, context);
     return context;
 };
