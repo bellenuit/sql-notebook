@@ -1479,7 +1479,7 @@ runner.ps = function(id, down = false) {
 		scriptnode.setAttribute("width","640");
 		scriptnode.setAttribute("height","360");
 		scriptnode.setAttribute("format","svg,svgurl,canvasurl");
-		scriptnode.setAttribute("textmode","1");
+		scriptnode.setAttribute("textmode","2");
 		scriptnode.setAttribute("error","1");
 		scriptnode.setAttribute("interval","100");
 		scriptnode.setAttribute("movie","1");

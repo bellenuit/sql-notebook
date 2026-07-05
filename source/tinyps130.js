@@ -53,7 +53,12 @@ Version 1.2.7 2026-05-07
 - improved path precision (1/1000 pt)
 Version 1.2.8 2026-06-07
 - error exits for and forall loops
-
+Version 1.2.9 2026-06-30
+- new operator setdash (ignored in raw and pdf device)
+- new operator setlinecap
+- new operator setlinejoin
+Version 1.3.0 2026-07-05
+- textmode 2: create smaller SVG using defs for paths
 
 Renders a subset of PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
 The output can be displayed or proposed as downloadable link. It can be transparent.
@@ -687,6 +692,9 @@ rpnPDFDevice = class {
             this.elements.push("BT " + this.numberFormat(context.graphics.current[0]) + " " + this.numberFormat(context.graphics.current[1]) + " Td " + extraspace + " Tw (" + s2 + ") Tj ET");
         }
         if (context.graphics.clip.length) this.elements.push("Q");
+        
+        
+        
         return context;
     }
     showpage(context) {
@@ -746,6 +754,7 @@ rpnSVGDevice = class {
         this.canshow = true;
         this.cannofill = true;
         this.fonts = {};
+        this.glyphs = {};
         this.clear( 640, 360, 1, 0);
     }
     clear(width, height, oversampling, transparent) {
@@ -780,15 +789,25 @@ rpnSVGDevice = class {
     getPath(path, close = true) {
        const p = [];
        if (!path.length) return "";
+       
        for (let subpath of path) {
            if (!subpath.length) continue;
-           p.push("M " + (Math.round(subpath[0][1]*1000)/1000) + " " + (Math.round((this.height - subpath[0][2])*1000)/1000));
+           const precision = 100;
+           p.push("M " + (Math.round(subpath[0][1]*precision)/precision) + " " + (Math.round((this.height - subpath[0][2])*precision)/precision));
+           var current = [subpath[0][1], subpath[0][2]];
            for (let line of subpath) {
                if (line[0] == "C") {
-                   p.push("C " +(Math.round(line[3]*1000)/1000) + " " + (Math.round((this.height - line[4])*1000)/1000)+ " " + (Math.round(line[5]*1000)/1000) + " " + (Math.round((this.height - line[6])*1000)/1000) + " " + (Math.round((line[7])*1000)/1000) + " " + (Math.round((this.height - line[8])*1000)/1000));
+                   p.push("C " + (Math.round(line[3]*precision)/precision) + " " + (Math.round((this.height - line[4])*precision)/precision)+ " " + (Math.round(line[5]*precision)/precision) + " " + (Math.round((this.height - line[6])*precision)/precision) + " " + (Math.round((line[7])*precision)/precision) + " " + (Math.round((this.height - line[8])*precision)/precision));
                } else {
-                   p.push("L "+(Math.round(line[3]*1000)/1000) + " " + (Math.round((this.height - line[4])*1000 )/1000));
-                   if (line[0] == "Z") p.push("Z"); 
+                   if (line[3] == current[0]) {
+	                    p.push("V " + (Math.round((this.height - line[4])*precision)/precision));
+                   } else if (line[3] == current[0]) {
+	                    p.push("H " + (Math.round(line[3]*precision)/precision));
+                   } else {
+                        p.push("L "+ (Math.round(line[3]*precision)/precision) + " " + (Math.round((this.height - line[4])*precision)/precision));
+				   		if (line[0] == "Z") p.push("Z"); 
+				   }
+                   current = [line[3],line[4]];
                 }
            }
         } 
@@ -824,12 +843,10 @@ rpnSVGDevice = class {
         node.setAttribute("id","fill"+Math.round(Math.random()*1000000));
         node.setAttribute("d", this.getPath(context.graphics.path));
         node.setAttribute("stroke","none");
-//         node.setAttribute("fill", "rgb(" + Math.round(context.graphics.color[0]) + ", " + Math.round(context.graphics.color[1]) + ", " + Math.round(context.graphics.color[2]) + ")");
-//         node.setAttribute("fill-opacity", context.graphics.color[3]/255.0);
-if (context.device.transparent)
+		if (context.device.transparent == 1)
             node.setAttribute("fill", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
         else 
-            node.setAttribute("fill", this.rgbahex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));
+            node.setAttribute("fill", this.rgb2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));            
         if (this.clippath) node.setAttribute("clip-path", "url(#"+this.clippath+")");
         if (zerowind) {
             node.setAttribute("fill-rule", "nonzero");
@@ -853,19 +870,17 @@ if (context.device.transparent)
         node.setAttribute("stroke-linejoin",joins[context.graphics.linejoin]);
         node.setAttribute("stroke-dashoffset",context.graphics.dashoffset);
         node.setAttribute("stroke-dasharray",context.graphics.dashpattern.join(" "));
-        
-        //         node.setAttribute("stroke", "rgb(" + Math.round(context.graphics.color[0]) + ", " + Math.round(context.graphics.color[1]) + ", " + Math.round(context.graphics.color[2]) + ")");
-//         node.setAttribute("stroke-opacity", context.graphics.color[3]/255.0);
-        if (context.device.transparent)
+        if (context.device.transparent == 1)
             node.setAttribute("stroke", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
         else 
-            node.setAttribute("stroke", this.rgbahex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));
+            node.setAttribute("stroke", this.rgb2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));
         if (this.clippath) node.setAttribute("clip-path", "url(#"+this.clippath+")");
         this.node.appendChild(node);
         console.log(node.innerHTML);
         return context;
     }
-    show(s, context, targetwidth = 0) { 
+    show(s, context, targetwidth = 0, cx=0, ch = 32) { 
+	    
         if (!Object.prototype.hasOwnProperty(this.fonts, context.graphics.font)) {
             this.fonts[context.graphics.font] = context.graphics.font;
         }
@@ -875,43 +890,111 @@ if (context.device.transparent)
         node.setAttribute("y", "0");
         node.setAttribute("font-family", context.graphics.font);
         node.setAttribute("font-size", context.graphics.size);
-//         node.setAttribute("fill", "rgb(" + Math.round(context.graphics.color[0]) + ", " + Math.round(context.graphics.color[1]) + ", " + Math.round(context.graphics.color[2]) + ")" );
-//         node.setAttribute("fill-opacity", context.graphics.color[3]/255.0);
         if (this.clippath) node.setAttribute("clip-path", "url(#"+this.clippath+")");
-        if (context.device.transparent)
+        if (context.device.transparent == 1)
             node.setAttribute("fill", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
         else 
-            node.setAttribute("fill", this.rgbahex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));
+            node.setAttribute("fill", this.rgb2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));
         if (context.nofill) {
         	node.setAttribute("fill","none");
         	node.setAttribute("z","50");
         }
+        if (context.device.textmode >= 2) {
+	        node.setAttribute("fill","none");
+	        node.setAttribute("z","50");
+        }
+        
         const matrix = context.graphics.matrix.slice();
         const decomposed = rpnDecompose2dMatrix(matrix);
         const x = context.graphics.current[0];
         const y = this.height - context.graphics.current[1];
         node.setAttribute("text-anchor","start");
-        // node.setAttribute("dominant-baseline","baseline");
-        node.setAttribute("transform", "translate(" + x + " " + y  +") scale(" + decomposed.scale[0] + " " +  decomposed.scale[1]  + ") rotate(" +  -decomposed.rotation*180/Math.PI + ")" );
+        node.setAttribute("transform", "translate(" + (Math.round(x*1000)/1000) + " " + (Math.round(y*1000)/1000)  +") scale(" + decomposed.scale[0] + " " +  decomposed.scale[1]  + ") rotate(" +  -decomposed.rotation*180/Math.PI + ")" );
         if (targetwidth) {
             node.setAttribute("textLength", targetwidth);
             node.setAttribute("lengthAdjust", "spacing");
         }
         node.innerHTML = rpnHtmlSpecialChars(s); // clean XML
-        this.node.appendChild(node);
+        
+ 		// append only after paths
+
+        
+        if (context.device.textmode >= 2) {
+	        
+	        const font = rpnFonts[context.graphics.font];
+	        const fontid = Object.keys(rpnFonts).indexOf(context.graphics.font);
+	        let scale = context.graphics.size / font.head.unitsPerEm;
+	        let descent = font.hhea.descent / 2 * scale;  // vertical correction do not know why it's half descent
+
+	        const glyphtextnode = rpnDocument.createElement("g");
+	        glyphtextnode.setAttribute("text",s);
+            glyphtextnode.setAttribute("transform", "translate(" + (Math.round(x*1000)/1000) + " " + (Math.round((y+descent)*1000)/1000) +") scale(" + decomposed.scale[0]*scale + " " +  decomposed.scale[1]*scale  + ") rotate(" +  -decomposed.rotation*180/Math.PI + ")" );
+            if (context.device.transparent == 1)
+            glyphtextnode.setAttribute("fill", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
+        else 
+            glyphtextnode.setAttribute("fill", this.rgb2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2]));
+        
+	        let dx = 0;
+	        for (let i = 0; i < s.length; i++) {
+		        const c = s.charCodeAt(i);
+		        const gi = font.glyphIndex(c);
+		        const id = fontid+"_"+c.toString(16) ;
+		        const glyph = rpnDocument.createElement("path");
+		        glyph.setAttribute("id",id);
+		        glyph.setAttribute("gw",font.glyphWidth(gi));
+		        
+		        if (!this.glyphs[id]) {			        
+			        const ctx = rpn(font.glyphPath(gi));
+					const path = this.getPath(ctx.graphics.path);
+					glyph.setAttribute("d",path);
+		            this.glyphs[id] = glyph;
+		        }
+		        
+		        const glyphnode = rpnDocument.createElement("use");
+		        glyphnode.setAttribute("href","#"+id);
+		        glyphnode.setAttribute("x",dx);
+		        glyphtextnode.appendChild(glyphnode);
+		        dx += font.glyphWidth(gi);
+		        if (c == ch) dx+= cx/scale;
+
+		        		        
+	        }
+
+	        if (context.device.textmode == 2)
+	        this.node.appendChild(glyphtextnode);
+	        
+        }
+        
+        if (context.device.textmode > 0)       
+        	this.node.appendChild(node);
+                
         return context;
     }
     showpage(context) {
         const node = rpnDocument.createElement("defs");
         this.node.insertBefore(node, this.node.firstChild());
-        for (const font in this.fonts) {
-            const style = rpnDocument.createElement("style");
-            const url = rpnFontURLs[font];
-            const src = readSyncDataURL(url, "font/truetype");
-            style.innerHTML = "@font-face { font-family: '" + font + "'; font-weight: normal; src:  url('" + src + "') format('truetype')} }";
-            node.appendChild(style);
+        
+        if (context.device.textmode == 1) {
+	        for (const font in this.fonts) {
+	            const style = rpnDocument.createElement("style");
+	            const url = rpnFontURLs[font];
+	            const src = readSyncDataURL(url, "font/truetype");
+	            style.innerHTML = "@font-face { font-family: '" + font + "'; font-weight: normal; src:  url('" + src + "') format('truetype')} }";
+	            node.appendChild(style);
+	        }
+        }
+        
+        
+        for (const g in this.glyphs) {
+//         	node.appendChild(rpnDocument.createElement("path"));
+        	node.appendChild(this.glyphs[g]);
         }
         // console.log(this.node)
+        
+       
+        
+        
+        
         postMessage(["svg", context.id, this.node.outerHTML(), null])
         this.clear(this.width, this.height, this.oversampling, this.transparent);
         return context;
@@ -922,7 +1005,7 @@ if (context.device.transparent)
 
   		return hex;
     }
-    rgbahex(r, g, b) {
+    rgb2hex(r, g, b) {
     	
   		const hex =  "#" + (1 << 24 | r << 16 | g << 8 | b ).toString(16).slice(1);
 
@@ -949,7 +1032,7 @@ rpnContext = class {
         this.dictstack.push({});
         this.nodes = [];
         this.fontdict = {};
-        this.device = { canvas: 0, canvasurl: 0, console: 1, interval: 0, zip: 0, movie: 0, svgmovie: 0, oversampling: 1, pdf: 0, pdfurl: 0, raw: 0, rawurl : 0, svg: 0, svgurl: 0, textmode: 0,  transparent: 0, width: 640, height: 360 };
+        this.device = { canvas: 0, canvasurl: 0, console: 1, interval: 0, zip: 0, movie: 0, svgmovie: 0, oversampling: 1, pdf: 0, pdfurl: 0, raw: 0, rawurl : 0, svg: 0, svgurl: 0, textmode: 2,  transparent: 0, width: 640, height: 360 };
         this.async = false;
         this.initgraphics();
     }
@@ -1786,8 +1869,8 @@ rpnOperators.currentpagedevice = function(context) {
     d.value.rawurl = new rpnNumber(context.dict.rawurl ? 1 : 0);
     d.value.svg = new rpnNumber(context.dict.svg ? 1 : 0);
     d.value.svgurl = new rpnNumber(context.dict.svgurl ? 1 : 0);
-    d.value.textmode = new rpnNumber(context.dict.textmode ? 1 : 0);
-    d.value.transparent = new rpnNumber(context.dict.transparent ? 1 : 0);
+    d.value.textmode = new rpnNumber(context.dict.textmode ?? 0);
+    d.value.transparent = new rpnNumber(context.dict.transparent ?? 0);
     d.value.width = new rpnNumber(context.width);
     context.stack.push(d);
     return context;
@@ -3102,7 +3185,7 @@ rpnOperators.setrgbcolor = function(context) {
 
 rpnOperators.show = function(context) {
     const [s] = context.pop("string");
-  //  postMessage(["status",context.id,"show",null])
+    // postMessage(["log",context.id,"show : "+s.value,null])
     if (!s) return context;
     if (!context.graphics.current.length) {
        return context.error("nocurrentpoint");
@@ -3111,17 +3194,16 @@ rpnOperators.show = function(context) {
        return context.error("nocurrentfont");
     }
     const font = rpnFonts[context.graphics.font];
-    if (context.device.textmode && (!font || !font.value)) {
-        for (let n of context.nodes) {
+    if (context.device.textmode && (!font || !font.value)) { // postMessage(["log",context.id,"show textmode : "+s.value,null])
+        for (let n of context.nodes) { 
            if (n.canshow) context = n.show(s.value, context);
         }
-    }
-         if (!font) {
+    } else  if (!font) {
 	     return context.error("nocurrentfont");
     }
-    else {
+    else { // postMessage(["log",context.id,"show else : "+s.value,null])
 	    for (let n of context.nodes) {
-           if (n.cannofill) {
+           if (n.cannofill) { 
 	           context.nofill = true;
 	           context = n.show(s.value, context);
 	           context.nofill = false;
@@ -3346,8 +3428,8 @@ rpnOperators.widthshow = function(context) {
     if (context.device.textmode) {
         targetwidth *= scale;
         context.graphics.current = [currentx0, currenty0];
-        for (let n of context.nodes) {
-           if (n.canshow) context = n.show(s.value, context, targetwidth, cx.value);
+        for (let n of context.nodes) { 
+           if (n.canshow) context = n.show(s.value, context, targetwidth, cx.value, ch.value);
         }
     }
     return context;
@@ -4280,7 +4362,7 @@ rpnZip = class {
 				lastMod=new Date(zip[name].modTime);
 				hour=this.dec2bin(lastMod.getHours(),5);
 				minutes=this.dec2bin(lastMod.getMinutes(),6);
-				seconds=this.dec2bin(Math.round(lastMod.getSeconds()/2),5);
+				seconds=this.dec2bin(Math.round(lastMod.getSeconds()/2*1000)/1000);
 				year=this.dec2bin(lastMod.getFullYear()-1980,7);
 				month=this.dec2bin(lastMod.getMonth()+1,4);
 				day=this.dec2bin(lastMod.getDate(),5);						
@@ -4937,11 +5019,18 @@ xmlNode = class {
 			list.push(key + ' = "' + this.attributes[key] + '"');
 		}
 		
-		return "<" + this.type + " " + list.join(" ") + ">" + this.innerHTML.replace("<","&lt;") + this.children.map(node => node.outerHTML()).join("") + "</" + this.type +">";  
+		if (this.innerHTML || this.children.length)
+			return "<" + this.type + " " + list.join(" ") + ">" + this.innerHTML.replace("<","&lt;") + this.children.map(node => node.outerHTML()).join("") + "</" + this.type +">"; 
+		else
+			return "<" + this.type + " " + list.join(" ") + "/>";  
 	}
 	
 	setAttribute(key, value) {
 		this.attributes[key] = value;
+	}
+	
+	getAttribute(key) {
+		return this.attributes[key];
 	}
 }
 
@@ -5223,7 +5312,7 @@ class tinyPStag extends HTMLElement {
 		
 		var node, shadow, canvasnode, svgnode, pdfnode, urlnode, urlnodea, ctx, url, errornode;
 		
-		console.log("worker out: " + action + " " + id);
+		// console.log("worker out: " + action + " " + id);
 		switch (action)
 		{
 			case "raw":  node = document.getElementById(id);
@@ -5413,7 +5502,6 @@ class tinyPStag extends HTMLElement {
 			                errornode.width = context.width;
 			                errornode.height = context.height;
                             errornode.innerHTML = data;
-                            
                             break;
                             
             case "log":     console.log(data);
