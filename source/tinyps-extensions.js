@@ -477,7 +477,7 @@ x y chartproj moveto
 /x row 0.5 sub def
 x y chartproj lineto 
 legendstyle col { boldlinewidth setlinewidth
-0 5 moveto 8 5 lineto  
+0 bodysize 3 div moveto bodysize 2 div bodysize 3 div lineto  
 colors col get exec stroke } put 
 } for 
 colors col get exec stroke
@@ -504,7 +504,7 @@ x 0.33 sub y y2 y0 sub 6 div sub chartproj
 x y chartproj curveto 
 x 0.33 add y y2 y0 sub 6 div add chartproj
 legendstyle col { boldlinewidth setlinewidth
-0 5 moveto 8 5 lineto  
+0 bodysize 3 div moveto bodysize 2 div bodysize 3 div lineto  
 colors col get exec stroke } put 
 } for 
 /y data data length 1 sub get col get def
@@ -643,8 +643,8 @@ gsave
 1 1 data length 1 sub { /row exch def
 /y data row get col get def
 /x row 0.5 sub def
-x y chartproj 4 0 360 arc colors col get exec fill
-legendstyle col { 4 5 dotsize 0 360 arc 
+newpath x y chartproj dotsize 0 360 arc colors col get exec fill
+legendstyle col { newpath bodysize 3 div bodysize 3 div dotsize 0 360 arc 
 colors col get exec fill } put 
 } for 
 } forall
@@ -656,8 +656,8 @@ gsave
 1 1 data length 1 sub {/row exch def
 /x data row get xcol get def
 /y data row get ycol get def
-x y chartproj dotsize 0 360 arc colors xcol get exec fill
-legendstyle xcol { 4 5 dotsize 0 360 arc 
+newpath x y chartproj dotsize 0 360 arc colors xcol get exec fill
+legendstyle xcol { newpath bodysize 3 div bodysize 3 div dotsize 0 360 arc 
 colors col get exec fill } put 
 } for  
 grestore
@@ -670,9 +670,9 @@ textfont cvn bodysize selectfont
 1 1 data length 1 sub {/row exch def
 /x data row get xcol get def
 /y data row get ycol get def
-x y chartproj 4 0 360 arc colors xcol get exec fill
+newpath x y chartproj 4 0 360 arc colors xcol get exec fill
 x y chartproj exch 6 add exch 5 sub moveto data row get lcol get show
-legendstyle xcol { 4 5 dotsize 0 360 arc 
+legendstyle xcol { newpath bodysize 3 div bodysize 3 div dotsize 0 360 arc 
 colors col get exec fill } put 
 } for  
 grestore
@@ -685,10 +685,10 @@ textfont cvn bodysize selectfont
 1 1 data length 1 sub { /row exch def
 /x data row get xcol get def
 /y data row get ycol get def
-x y chartproj data row get rcol get sqrt sc mul 0 360 arc colors xcol get 
+newpath x y chartproj data row get rcol get sqrt sc mul 0 360 arc colors xcol get 
 exec fill
 x y chartproj exch data row get rcol get sqrt sc mul add 2 add exch 5 sub moveto data row get lcol get show
-legendstyle xcol { 4 5 dotsize 0 360 arc 
+legendstyle xcol { newpath bodysize 3 div bodysize 3 div dotsize 0 360 arc 
 colors col get exec fill } put 
 } for  
 grestore
@@ -739,7 +739,7 @@ b { /col exch def
 gsave
 x y translate
 legendstyle col get exec
-12 0 moveto
+bodysize 4 div 3 mul 0 moveto
 labelcolor data 0 get col get show
 grestore
 /x x data 0 get col get stringwidth pop add 24 add def 
@@ -788,6 +788,7 @@ boldlinewidth setlinewidth
 1 1 data length 1 sub { /i exch def
   colors i get exec
   /v data i get col get def
+  /vlabel vsum 100 eq { v cvs (%) concat } { v labelformat } ifelse def
   flip {
   /x2 x1 v vrest div scx x1 sub mul add def
   /y2 0 def
@@ -795,7 +796,7 @@ boldlinewidth setlinewidth
   gsave fill grestore invertedlabelcolor stroke
   y1 y2 sub bodysize 2.7 mul gt x2 x1 sub 5 sub data i get 0 get stringwidth pop gt and {
   x1 y1 moveto 5 bodysize 1.3 mul neg rmoveto data i get 0 get show
-  x1 y1 moveto 5 bodysize 2.5 mul neg rmoveto data vsum 100 eq { v cvs show (%) show } { v labelformat show } ifelse
+  x1 y1 moveto 5 bodysize 2.5 mul neg rmoveto vlabel show
    } if
   /x1 x2 def
   /x2 scx def
@@ -805,7 +806,7 @@ boldlinewidth setlinewidth
   gsave fill grestore invertedlabelcolor stroke
   y1 y2 sub bodysize 2.7 mul gt x2 x1 sub 5 sub data i get 0 get stringwidth pop gt and {
   x1 y1 moveto 5 bodysize 1.3 mul neg rmoveto data i get 0 get show
-  x1 y1 moveto 5 bodysize 2.5 mul neg rmoveto data vsum 100 eq { v cvs show (%) show } { v labelformat show } ifelse
+  x1 y1 moveto 5 bodysize 2.5 mul neg rmoveto vlabel show
   } if
   /y1 y2 def
   /y2 0 def
