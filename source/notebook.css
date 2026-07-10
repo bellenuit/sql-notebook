@@ -71,6 +71,13 @@ button:hover {
 code {
 	display: block;
 	text-align: left;
+	background-color: #eee;
+	padding: 1rem;
+	white-space: pre-wrap;  
+	white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word; 
 }
 
 textarea:focus {
@@ -295,7 +302,7 @@ div.js textarea.cellsource {
 
 
 
-code.js {
+/* code.js {
 	font-family: Courier, "Courier New", monospace;
 	font-size: 1rem;
 	color: #800;
@@ -306,7 +313,7 @@ code.js {
     white-space: -pre-wrap;      /* Opera 4-6 */
     white-space: -o-pre-wrap;    /* Opera 7 */
     word-wrap: break-word; 
-}
+}*/
 
 pre.error {
 	white-space: pre-wrap;       /* css-3 */

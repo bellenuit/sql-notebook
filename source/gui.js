@@ -748,7 +748,13 @@ function wikiText(s) {
         return '<ol><li>' + contents.trim() + '</li></ol>';
     });
     // clean-up
-    html = html.replaceAll('</ol>\n<ol>','');	
+    html = html.replaceAll('</ol>\n<ol>','');
+    html = html.replaceAll(/^ (.*)/gm, function (match, contents) {
+        return '<code>' + contents + '</code>';
+    });	
+    html = html.replaceAll('</code>\n<code>','\r');
+    //html = html.replaceAll('\n<code>','<code>');
+    // html = html.replaceAll('<code/>\n','<code>');
     
     //table
     html = html.replaceAll(/\n\{\|(.*?)(\n(\s|\S)*?)\|\}/g, function (match, parameters, contents) {
@@ -846,6 +852,7 @@ function wikiText(s) {
     html = html.replace(/\n$/g, "");
     html = html.replaceAll(/\n\n/g, "<p>");
 	html = html.replaceAll(/\n/g, "<br>");
+	html = html.replaceAll(/\r/g, "\n");
 	html = html.replaceAll("<p><ul>", "<ul>");
 	html = html.replaceAll("<p><uol>", "<ol>");
 	html = html.replaceAll(/<(h1|h2|h3|h4|ul|ol|li|p|br|table|caption|tr|th|td)/g, function (match, contents) { 
@@ -1769,6 +1776,10 @@ var timerstart = Date.now();
 var autorun = false;
 
 
+function base64_decode(s) {      
+    return decodeURIComponent(escape(atob(s)));
+}
+
 handleParameters = function() {
 
 	if (urlParams.get("autorun") == 1) autorun = true;
@@ -1781,7 +1792,15 @@ handleParameters = function() {
 	} else if (urlParams.get('example')) {
 		readProject(examples[urlParams.get('example')]);
 	} else if (urlParams.get('url')) {
-		fetch(urlParams.get('url')).then(response => response.text()).then(body => readProject(body));
+		let s = urlParams.get('url');
+/*
+		if (s.substring(0, 1) == "[") {
+			
+			alert(s);
+		
+		} else { */
+			fetch(urlParams.get('url')).then(response => response.text()).then(body => readProject(body));
+		// }
 	} else {
 		autorun = true;
 	    readProject(examples["home"]);
