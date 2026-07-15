@@ -402,6 +402,10 @@ div.svgurl {
 		text-align: right;
 }
 
+div.gcodeurl {
+		text-align: right;
+}
+
 div.canvasurl {
 		text-align: right;
 }
@@ -418,6 +422,16 @@ div.canvasurl {
 }
 
 ::part(svgurl)  { 
+	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
+	font-weight: bold;
+	font-size: 0.8rem;
+	cursor: pointer;
+	color:gray;
+	padding: 0.25rem;
+	text-decoration: none;
+}
+
+::part(gcodeurl)  { 
 	font-family: Tahoma, Helvetica, Arial, Sans-Serif;
 	font-weight: bold;
 	font-size: 0.8rem;
