@@ -1433,7 +1433,7 @@ runner.js = function(id, down = false) {
 		co.innerHTML = `<pre class=error>${a} Line ${c}</pre>`; 
 		co.style.backgroundColor = 'white'; 
 		}
-		console.error(a);
+		// console.error(a);
 	}
 	 
 	document.body.appendChild(scriptnode);
@@ -1665,6 +1665,7 @@ function openProject() {
     input.onclick = () => {
 	    console.log("click");
     };
+    // onchange does not work
 	input.onchange = () => {
 		console.log("change");
         const files = Array.from(input.files);
@@ -1683,8 +1684,8 @@ function openProject() {
 	    let console = document.getElementById('console');
 	        console.innerHTML = '<span class="error">' + reader.error + '</span>';
     };
-
-    input.click();
+    setTimeout(function() { input.click(); }, 5); //race condition for onchange
+    // input.click();
 // sinput.remove();    
   };
   

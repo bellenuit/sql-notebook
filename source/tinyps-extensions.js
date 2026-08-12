@@ -1,49 +1,248 @@
+rpnOperators.autokern = function(context) {
+
+	const code = `kernvalue neg 0 translate`;
+	context =  rpn(code, context);
+	return context;
+};
+
+rpnOperators.charpath = function(context) {
+    const [s] = context.pop("string");
+    if (!context.graphics.current.length) {
+       return context.error("nocurrentpoint");
+    }
+    if (!context.graphics.font) {
+       return context.error("nocurrentfont");
+    }
+    if (!s) return context;
+    const font = rpnFonts[context.graphics.font];
+    if (!font) {
+       return context.error("nocurrentfont");
+    }
+    const scale = context.graphics.size / font.head.unitsPerEm;
+    var ps = " currentpoint currentpoint translate currentmatrix " + scale + " " + scale + " scale ";
+    for (let i = 0; i < s.value.length; i++) {
+        const c = s.value.charCodeAt(i);
+        const gi = font.glyphIndex(c); 
+        ps += font.glyphPath(gi);
+        ps += font.glyphWidth(gi) + " 0 translate ";
+    }
+    ps += " setmatrix neg exch neg exch translate ";
+    context = rpn(ps, context);
+    return context;
+};
+
+rpnOperators.charprofile = function(context) {
+    const [c] = context.pop("number");
+    if (!context.graphics.font) {
+       return context.error("nocurrentfont");
+    }
+    const fontres = rpnFonts[context.graphics.font];
+    if (!fontres) {
+       return context.error("nocurrentfont");
+    }
+    
+    if (c < 65 || c > 122 ){
+    context.stack.push(new rpnNumber(0));
+    context.stack.push(new rpnNumber(0));
+    context.stack.push(new rpnNumber(0));
+    context.stack.push(new rpnNumber(0));
+    context.stack.push(new rpnNumber(0));
+    context.stack.push(new rpnNumber(0));    
+    return context;
+    }
+    
+    context2 = new rpnContext;
+    context2.graphics.font = context.graphics.font;
+    context2.graphics.size = context.graphics.size;   
+    
+    var ps = "";
+    var gw = 0; 
+    
+    const type3mode = fontres.value && fontres.value.FontType.value == 3;
+
+    
+    const scale = type3mode ? 1 : fontres.head.unitsPerEm / 1000 ;
+    if (type3mode) {
+    	// context2.stack.push(fontres);
+        // ps += " /currentfontdict exch def ";
+/*         ps += " currentfontdict /FontMatrix get 0 get currentfontdict /FontMatrix get 3 get  scale "; */
+/*         ps +=  context.graphics.size + " " + context.graphics.size + " scale  "; */
+        ps += " 5 dict begin ";
+        // ps += " /blabla { } def ";
+        ps += " /fill {  } def ";
+    	ps += " /stroke { } def ";
+    	// BuildChar does not seem to work
+        ps += " currentfontdict " + c.value + " currentfontdict begin "; 
+        ps += " BuildChar " //  CharacterDefs charname get exec ";
+
+        //ps += " /charname Encoding "+c.value+" get def ";
+    	// ps += " CharacterDefs charname get exec";
+    	ps += " end end";
+    	let gn = fontres.value.Encoding.value[c.value].value;
+
+        gw = fontres.value.Metrics.value[gn].value;
+    } else {
+        let gi = fontres.glyphIndex(c.value);
+        ps += fontres.glyphPath(gi);
+        gw = fontres.glyphWidth(gi);
+    }
+    context2.showmode = false;
+    context2 = rpn(ps, context2);
+//         postMessage(["status",context.id,"ps " + ps,null]);
+    //postMessage(["status",context.id,"path " + JSON.stringify(context2.graphics.path),null]);
+    // postMessage(["status",context.id,"stack " + JSON.stringify(context2.stack),null]); 
+    //postMessage(["status",context.id,"dict " + JSON.stringify(context2.dict),null]); 
+    var minx0 = gw/2;
+    var maxx0 = gw/2;
+    var minx1 = gw/2;
+    var minx2 = gw/2;
+    var maxx1 = gw/2;
+    var maxx2 = gw/2;
+    for (let subpath of context2.graphics.path)
+    for (let seg of subpath) {
+        if (seg.length) {
+
+               let [x, y] = [seg[seg.length-2], Math.round(seg[seg.length-1]/scale/100)*100];
+               if (y == 0 || y == 100 || y == 200) {
+               		minx0 = Math.min(minx0, x);
+                    maxx0 = Math.max(maxx0, x);
+               }
+               if (y == 300 || y == 400 || y == 500) {
+               		minx1 = Math.min(minx1, x);
+                    maxx1 = Math.max(maxx1, x);
+               }
+               if (y == 500 || y == 600 || y == 700) {
+               		minx2 = Math.min(minx2, x);
+                    maxx2 = Math.max(maxx2, x);
+               }
+           // if segment long, we add middle point 
+              
+              if (Math.abs(seg[seg.length-1]-seg[2])/scale > 500) {
+              let [x, y] = [(seg[1]+seg[seg.length-2])/2, Math.round((seg[2]+seg[seg.length-1])/2/scale/100)*100];
+               if (y == 0 || y == 100 || y == 200) {
+               		minx0 = Math.min(minx0, x);
+                    maxx0 = Math.max(maxx0, x);
+               }
+               if (y == 300 || y == 400 || y == 500) {
+               		minx1 = Math.min(minx1, x);
+                    maxx1 = Math.max(maxx1, x);
+               }
+               if (y == 500 || y == 600 || y == 700) {
+               		minx2 = Math.min(minx2, x);
+                    maxx2 = Math.max(maxx2, x);
+               }
+               }
+           
+           
+        }
+    }
+
+    context.stack.push(new rpnNumber(Math.round(minx0)));
+    context.stack.push(new rpnNumber(Math.round(minx1)));
+    context.stack.push(new rpnNumber(Math.round(minx2)));
+    context.stack.push(new rpnNumber(Math.round(gw - maxx0)));
+    context.stack.push(new rpnNumber(Math.round(gw - maxx1)));
+    context.stack.push(new rpnNumber(Math.round(gw - maxx2)));
+    //context.stack.push(new rpnNumber(Math.round(gw/2)));
+    
+    return context;
+};
+
+
+
 rpnOperators.combsort = function(context) {
-    const code = `10 dict begin /arr exch def
+	const code = `10 dict begin /arr exch def
 /d arr length 1 sub def
 d d mul %max executions in bubble mode
 { /sorted 1 def
   /lastround d 1 eq def
   0 1 arr length d sub 1 sub { /i exch def
-     /v1 arr i get def
-     /v2 arr i d add get def
-     v1 v2 compare not { /sorted 0 def
-        arr i v2 put
-        arr i d add v1 put
-     } if
+	 /v1 arr i get def
+	 /v2 arr i d add get def
+	 v1 v2 compare not { /sorted 0 def
+		arr i v2 put
+		arr i d add v1 put
+	 } if
   } for
   /d d 1.3 div floor 1 max def
   lastround sorted mul { exit } if
 } repeat
 end`;
-    context =  rpn(code, context);
-    return context;
+	context =  rpn(code, context);
+	return context;
 };
 
 
 rpnOperators.compare = function(context) {
-    const code = `le`;
-    context =  rpn(code, context);
-    return context;
+	const code = `le`;
+	context =  rpn(code, context);
+	return context;
 };
 
 rpnOperators.concat = function(context) {
 
-    const code = `
+	const code = `
 3 dict begin /b exch def /a exch def
 /c a length b length add string def
 c 0 a putinterval
 c a length b putinterval
 c end `;
-    context =  rpn(code, context);
-    return context;
+	context =  rpn(code, context);
+	return context;
 };
 
 
 rpnOperators.cshow = function(context) {
-    const code = `
+	const code = `
 dup stringwidth pop 2 div neg 0 rmoveto show`;
-    context =  rpn(code, context);
+	context =  rpn(code, context);
+	return context;
+};
+
+rpnOperators.countblanks = function(context) {
+	const code = ` 10 dict begin /c 0 def { ( ) search { /c c 1 add def pop pop } { pop c end exit } ifelse } loop `;
+	context =  rpn(code, context);
+	return context;
+};
+
+rpnOperators.currentfontdict = function(context) {
+    const fontres = rpnFonts[context.graphics.font];
+    const type3mode = fontres.value && fontres.value.FontType.value == 3;
+    if (! type3mode) {
+    	context.stack.push(new rpnError("wrongfonttype"));
+    	return context;
+    }
+    context.stack.push(fontres);
+    return context;
+};
+
+rpnOperators.currentpath = function(context) {
+	if (!context.graphics.current.length) {
+	   context.stack.push(new rpnError("nocurrentpoint"));
+       return context;
+    }
+    const p = new rpnArray([], context.heap);
+    for (let subpath of context.graphics.path)
+    for (let seg of subpath) {
+    	let sp = new rpnArray([], context.heap);
+        if (seg.length) {
+        	sp.value.push(new rpnString(seg[0], context.heap));
+        	for (i = 1; i < seg.length; i++)
+        	   sp.value.push(new rpnNumber(seg[i]));        	
+        }
+        p.value.push(sp)
+    }
+    context.stack.push(p)
+    return context;
+}
+
+rpnOperators.findfontdict = function(context) {
+    const [n] = context.pop("name");
+    if (!n) return context;
+    if (!rpnFonts[n.value]) {
+        return context.error("notyp3font" );
+    }
+    context.stack.push(rpnFonts[n.value]);
     return context;
 };
 
@@ -54,32 +253,62 @@ rpnOperators.imagedata = function (context) {
 	context.stack.push(new rpnNumber(imagedata.width));
 	context.stack.push(new rpnNumber(imagedata.height));
 	
-    const binary = imagedata.data;
-    const arr = new Array(binary.length);
-    for (var i = 0; i < binary.length; i++) {
-        arr[i] = String.fromCharCode(binary[i])
-    }
+	const binary = imagedata.data;
+	const arr = new Array(binary.length);
+	for (var i = 0; i < binary.length; i++) {
+		arr[i] = String.fromCharCode(binary[i])
+	}
 
-    const ar = new rpnString(arr.join(''),context.heap)
-    ar.reference.inc();
-    context.stack.push(ar);	
+	const ar = new rpnString(arr.join(''),context.heap)
+	ar.reference.inc();
+	context.stack.push(ar);	
 
 	
 	return context;
 }
 
 
+rpnOperators.jshow = function(context) {
+	const code = `10 dict begin /s exch def
+s stringwidth pop sub s countblanks div 0 32 s widthshow end`;
+	context =  rpn(code, context);
+	return context;
+};
+
+rpnOperators.jspace = function(context) {
+	const code = `10 dict begin
+/countblanks { 10 dict begin /c 0 def { ( ) search { /c c 1 add def pop pop } { pop c end exit } ifelse } loop } def
+/s exch def s stringwidth pop sub s countblanks div end`;
+	context =  rpn(code, context);
+	return context;
+};
+
+rpnOperators.kernvalue = function(context) {
+	const font = rpnFonts[context.graphics.font];
+	const type3mode = font.value && font.value.FontType.value == 3;
+	const mindistance = (type3mode) ? 150 : font.head.unitsPerEm * 0.15;
+	const code = `10 dict begin /c2 exch def /c1 exch def 
+c1 charprofile /r3 exch def /r2 exch def /r1 exch def pop pop pop
+c2 charprofile pop pop pop /l3 exch def /l2 exch def /l1 exch def
+ r3 l3 add r2 l2 add min r1 l1 add min ${mindistance} sub 0 max end`;
+	context =  rpn(code, context);
+	return context;
+};
+
+
+
+
 rpnOperators.numberformat = function(context) {
-    const [r] = context.pop("number");
-    if (!r) return context;
-    const x = new Intl.NumberFormat('en-US',{maximumFractionDigits: 2}).format(r.value).replaceAll(","," ").replace(/^-0$/,"0");
-    context.stack.push(new rpnString(x,context.heap));
-    return context;
+	const [r] = context.pop("number");
+	if (!r) return context;
+	const x = new Intl.NumberFormat('en-US',{maximumFractionDigits: 2}).format(r.value).replaceAll(","," ").replace(/^-0$/,"0");
+	context.stack.push(new rpnString(x,context.heap));
+	return context;
 };
 
 
 rpnOperators.patternfill = function(context) {
-    const code = `
+	const code = `
 10 dict begin /p exch def
 gsave
 [ 1 0 0 1 0 0 ] setmatrix
@@ -90,13 +319,13 @@ clip
 r l sub t b sub p
 grestore end newpath
 `;
-    context =  rpn(code, context);
-    return context;
+	context =  rpn(code, context);
+	return context;
 };
 
 
 rpnOperators.preparechart = function(context) {
-    const code = `
+	const code = `
 /chartrect [ 0 0 640 640 16 div 9 mul ] def
 /chartmargins [ 100 30 5 60 ] def
 /xlimits [ 0 0.2 1 ] def
@@ -522,10 +751,10 @@ textfont cvn labelsize selectfont
 dup length /cols exch def /collist cols array def 
 /i 0 def
 { /col exch def
-        collist i [ col 
-             data data length 1 sub get col get
-             data 0 get col get ] put
-        /i i 1 add def
+		collist i [ col 
+			 data data length 1 sub get col get
+			 data 0 get col get ] put
+		/i i 1 add def
 } forall
 /compare { 1 get exch 1 get gt } def
 collist quicksort
@@ -545,10 +774,10 @@ textfont cvn labelsize selectfont
 dup length /cols exch def /collist cols array def 
 /i 0 def
 { /col exch def
-        collist i [ col 
-             data data length 1 sub get col get
-             data 0 get col get ] put
-        /i i 1 add def
+		collist i [ col 
+			 data data length 1 sub get col get
+			 data 0 get col get ] put
+		/i i 1 add def
 } forall
 /compare { 1 get exch 1 get gt } def
 collist quicksort
@@ -568,10 +797,10 @@ textfont cvn labelsize selectfont
 dup length /cols exch def /collist cols array def 
 /i 0 def
 { /col exch def
-        collist i [ col 
-             data data length 1 sub get col get
-             data 0 get col get ] put
-        /i i 1 add def
+		collist i [ col 
+			 data data length 1 sub get col get
+			 data 0 get col get ] put
+		/i i 1 add def
 } forall
 /compare { 1 get exch 1 get gt } def
 collist quicksort
@@ -822,13 +1051,13 @@ boldlinewidth setlinewidth
 grestore end  } def
 
 `;
-    context =  rpn(code, context);
-    return context;
+	context =  rpn(code, context);
+	return context;
 };
 
 
 rpnOperators.preparepatterns = function(context) {
-    const code = `
+	const code = `
 /hpat { /h exch def /w exch def
 0 6 h { newpath 0 exch moveto w 0 rlineto stroke } for 
 } def
@@ -877,28 +1106,28 @@ rpnOperators.preparepatterns = function(context) {
 0 6 h { /hi exch def 0 6 w { /wi exch def newpath wi hi r 0 360 arc fill } for } for 
 } def
 `;
-    context =  rpn(code, context);
-    return context;
+	context =  rpn(code, context);
+	return context;
 };
 
 rpnOperators.quicksort = function(context) {
-    const code = `dup length 1 sub 0 exch quicksort0`;
-    context =  rpn(code, context);
-    return context;
+	const code = `dup length 1 sub 0 exch quicksort0`;
+	context =  rpn(code, context);
+	return context;
 };
 
 rpnOperators.quicksort0 = function(context) {
-    const code = `10 dict begin /right exch def /left exch def /arr exch def
+	const code = `10 dict begin /right exch def /left exch def /arr exch def
 /pivot arr right get def
 /i left def
 left 1 right 1 sub { /j exch def
    /v arr j get def 
    v pivot compare {  
-      i j ne { 
-      /v2 arr i get def
-      arr i v put
-      arr j v2 put } if
-      /i i 1 add def
+	  i j ne { 
+	  /v2 arr i get def
+	  arr i v put
+	  arr j v2 put } if
+	  /i i 1 add def
    } if
 } for
   /v2 arr i get def
@@ -907,20 +1136,20 @@ left 1 right 1 sub { /j exch def
   left i 1 sub lt { arr left i 1 sub quicksort0 } if
   i 1 add right lt { arr i 1 add right quicksort0 } if
 end`;
-    context =  rpn(code, context);
-    return context;
+	context =  rpn(code, context);
+	return context;
 };
 
 
 rpnOperators.rshow = function(context) {
-    const code = `
+	const code = `
 dup stringwidth pop neg 0 rmoveto show`;
-    context =  rpn(code, context);
-    return context;
+	context =  rpn(code, context);
+	return context;
 };
 
 rpnOperators.sort = function(context) {
-    const code = `10 dict begin /arr exch def
+	const code = `10 dict begin /arr exch def
 /c 0 def
 0 1 arr length 2 sub { /i exch def
   /c c arr i get arr i 1 add get compare add def
@@ -928,14 +1157,14 @@ rpnOperators.sort = function(context) {
 /c c arr length div def
 c 0.25 gt c 0.75 lt and { arr quicksort } { arr combsort } ifelse
 end`;
-    context =  rpn(code, context);
-    return context;
+	context =  rpn(code, context);
+	return context;
 };
 
 
 rpnOperators.table = function(context) {
 	function parseNumber(s) {
-    if (typeof s == 'unefined') return 0;
+	if (typeof s == 'unefined') return 0;
 	if (s ==  '') return 0;
 	if (s ==  '.') return 0;
 	if (s == null) return 0;
@@ -943,8 +1172,8 @@ rpnOperators.table = function(context) {
 	return parseFloat(s);
 }
 	
-    const [haslabel, tablename] = context.pop("number", "string");
-    if (!tablename) return context; 
+	const [haslabel, tablename] = context.pop("number", "string");
+	if (!tablename) return context; 
 	data = rpnTables[tablename.value];	
 	list = [];
 	list.push('[');
@@ -972,8 +1201,8 @@ rpnOperators.table = function(context) {
 					   else {
 						   list.push(parseNumber(v).toString());
 					   }
-					       
-			           k++;
+						   
+					   k++;
 				   }
 				   list.push(']');
 				   
@@ -988,5 +1217,5 @@ rpnOperators.table = function(context) {
 	const s = list.join(" ");
 	console.log(s.slice(0,140));
 	context = rpn(s, context);
-    return context;
+	return context;
 };
