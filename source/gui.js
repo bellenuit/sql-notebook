@@ -1665,15 +1665,21 @@ function dropfile(file, id) {
 
 function openProject() {
 	console.log("openProject");
-    const input = document.createElement('input');
+    const input = document.getElementById('openProjectFileSelector');
     input.type = 'file';
     input.value = null;
     input.onclick = () => {
 	    console.log("click");
     };
+    input.oninput = () => {
+	    this.value = null;
+	    console.log("input");
+    };
     // onchange does not work
 	input.onchange = () => {
 		console.log("change");
+		const zone = document.getElementById('cellzone');
+		zone.innerHTML = "";
         const files = Array.from(input.files);
         const reader = new FileReader();
         reader.onload = function(){ 
@@ -1690,7 +1696,8 @@ function openProject() {
 	    let console = document.getElementById('console');
 	        console.innerHTML = '<span class="error">' + reader.error + '</span>';
     };
-    setTimeout(function() { input.click(); }, 5); //race condition for onchange
+    setTimeout(function() {
+	    input.click(); }, 5); //race condition for onchange
     // input.click();
 // sinput.remove();    
 };
