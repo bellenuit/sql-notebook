@@ -1476,7 +1476,7 @@ rpnProlog = "";
 runner.ps = function(id, down = false) { 
     const source = document.getElementById('source'+id);
     const output = document.getElementById('output'+id);
-    const code = source.value;
+    var code = source.value;
 	
 	var test = output.querySelector('.ps');	
 	
@@ -1485,7 +1485,7 @@ runner.ps = function(id, down = false) {
 		scriptnode.id = "tinyps"+id;
 		scriptnode.setAttribute("width","640");
 		scriptnode.setAttribute("height","360");
-		scriptnode.setAttribute("format","svg,svgurl,canvasurl");
+		scriptnode.setAttribute("format","svg,svgurl,canvasurl,gcodeurl,pdfurl");
 		scriptnode.setAttribute("textmode","2");
 		scriptnode.setAttribute("error","1");
 		scriptnode.setAttribute("interval","100");
@@ -1494,6 +1494,12 @@ runner.ps = function(id, down = false) {
 		scriptnode.setAttribute("oversampling","4");
 		scriptnode.setAttribute("transparent","0");
 		scriptnode.className = "ps";
+	}
+	let prefix = " /pdfurl 0 def /pdf 0 def /gcodeurl 0 def /gcode 0 def currentdict setpagedevice ";
+	if (code.substr(0,1) == "!") {
+		code = "!" + prefix + code.substr(1);
+	} else {
+		code = prefix + code;
 	}
 	scriptnode.innerHTML = code;
 	
@@ -1687,7 +1693,12 @@ function openProject() {
     setTimeout(function() { input.click(); }, 5); //race condition for onchange
     // input.click();
 // sinput.remove();    
-  };
+};
+  
+function openLastProject() { console.log("openLastProject");
+	readProject(localStorage.getItem("lastNotebook"));
+};
+
   
   
 function readProject(json) {
@@ -1767,6 +1778,27 @@ function saveProject()
 
 }
 
+function backupProject()
+{
+	const result = [];
+	var suggestedTitle = 'notebook';
+	var first = true;;
+	if (zone.hasChildNodes()) {
+		const children = zone.childNodes;
+		for (const cell of children) {
+			const cellid = cell.id.replace("cell","");
+			const source = document.getElementById('source' + cellid);
+			result.push({"type": cell.getAttribute("type"), "id": cellid, "hash": source.getAttribute("hash"), "source": source.value });
+			if (first) {
+				suggestedTitle = source.value.split('\n').shift().replace(/^==+(.*)==+$/,"$1").replaceAll(' ','-').toLowerCase();
+			}
+			
+			first = false;
+		}
+	}
+	localStorage.setItem("lastNotebook", JSON.stringify(result));
+}
+
 syncProject = function() {}
 
 const zone = document.getElementById('cellzone');
@@ -1811,7 +1843,11 @@ handleParameters = function() {
 projectTouched = false;
 currentCell = undefined;
 window.onbeforeunload = askConfirm;
-function askConfirm(){ if (projectTouched) return false; }
+function askConfirm(){
+  backupProject();
+  if (projectTouched) 
+return false;
+}
 
 console.log("Secure context " + window.isSecureContext);
 
@@ -1851,4 +1887,15 @@ function dropHandler(ev) {
     }
   });
 }
+
+// resize parent window if in iframe
+function resizeParent() {
+	if (window.parent) {
+	    let frameheight = document.getElementById("body").offsetHeight;
+		window.parent.postMessage(frameheight,document.URL);
+		setTimeout(resizeParent,3000);
+	}
+}
+setTimeout(resizeParent,2000);
+
 

@@ -73,11 +73,7 @@ code {
 	text-align: left;
 	background-color: #eee;
 	padding: 1rem;
-	white-space: pre-wrap;  
-	white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
-    white-space: -pre-wrap;      /* Opera 4-6 */
-    white-space: -o-pre-wrap;    /* Opera 7 */
-    word-wrap: break-word; 
+  word-wrap: break-word; 
 }
 
 textarea:focus {
@@ -497,7 +493,7 @@ div.canvasurl {
 	font-weight: bold;
 	font-size: 0.8rem;
 	cursor: pointer;
-	color: black;
+	color: gray;
 	padding: 0.25rem;
 	text-decoration: none;
 }
