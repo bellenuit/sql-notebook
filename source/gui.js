@@ -1503,12 +1503,18 @@ runner.ps = function(id, down = false) {
 	}
 	scriptnode.innerHTML = code;
 	
+	console.log("tabledump");
 	const tabledump = []
 	tabledump.push("rpnTables = []");
     for (t in alasql.tables) {
 	    if (t.substr(0,1)=="_") { 
+		    console.log("rpnTables");
 	    	let j = JSON.stringify(  alasql.tables[t].data  , (k, v) => v === undefined ? null : v);
-	        tabledump.push("rpnTables[\""+t+"\"] = " + j + " ;\n");
+	    	console.log(j);
+	    	let j2 = j.replaceAll('\\"',"&quote;");  // quotes don't survive messaging
+	    	console.log(j2);
+	    	tabledump.push(`rpnTables["${t}"] = ${j2} ;\n`);
+	        
 	    }
     }
     

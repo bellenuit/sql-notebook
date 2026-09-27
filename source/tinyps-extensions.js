@@ -205,6 +205,16 @@ rpnOperators.countblanks = function(context) {
 	return context;
 };
 
+
+rpnOperators.currencyformat = function(context) {
+	const [r] = context.pop("number");
+	if (!r) return context;
+	const x = new Intl.NumberFormat('en-US',{maximumFractionDigits: 2, minimumFractionDigits: 2}).format(r.value).replaceAll(","," ").replace(/^-0$/,"0");
+	context.stack.push(new rpnString(x,context.heap));
+	return context;
+};
+
+
 rpnOperators.currentfontdict = function(context) {
     const fontres = rpnFonts[context.graphics.font];
     const type3mode = fontres.value && fontres.value.FontType.value == 3;
@@ -235,6 +245,22 @@ rpnOperators.currentpath = function(context) {
     context.stack.push(p)
     return context;
 }
+
+rpnOperators.doughnutarc = function(context) {
+	const code = ` 10 dict begin /a2 exch  def /a1 exch def /r2 exch def /r1 exch def /y exch def /x exch def
+x a1 cos r1 mul add
+y a1 sin r1 mul add moveto
+x a1 cos r2 mul add
+y a1 sin r2 mul add lineto
+x y r2 a1 a2 arc
+x a2 cos r1 mul add
+y a2 sin r1 mul add lineto
+x y r1 a2 a1 arc closepath
+end `;
+	context =  rpn(code, context);
+	return context;
+};
+
 
 rpnOperators.findfontdict = function(context) {
     const [n] = context.pop("name");
@@ -301,10 +327,11 @@ c2 charprofile pop pop pop /l3 exch def /l2 exch def /l1 exch def
 rpnOperators.numberformat = function(context) {
 	const [r] = context.pop("number");
 	if (!r) return context;
-	const x = new Intl.NumberFormat('en-US',{maximumFractionDigits: 2}).format(r.value).replaceAll(","," ").replace(/^-0$/,"0");
+	const x = new Intl.NumberFormat('en-US',{maximumFractionDigits: 2, minimumFractionDigits: 0}).format(r.value).replaceAll(","," ").replace(/^-0$/,"0");
 	context.stack.push(new rpnString(x,context.heap));
 	return context;
 };
+
 
 
 rpnOperators.patternfill = function(context) {
@@ -354,6 +381,7 @@ ystep 0 eq { /ystep 1 def } if
 ymax ymin div 2 gt { /ymin 0 def } if
 /ylimits [ ymin ystep ymax ] def 
 /xlimits [ 0 1 data length 1 sub ] def } if
+/labellimit ylimits 1 get def
 
 /xlog 0 def
 /ylog 0 def
@@ -403,7 +431,7 @@ preparepatterns
 /legendstyle [ {} {} {} {} {} {} {} {} {} {} {}] def
 
 /textsizes { /titlesize exch def /bodysize exch def /labelsize exch def
-/textfont (TGL017) def
+/textfont (KugiRegular) def
 textfont cvn bodysize selectfont
 chartmargins 0 ymax numberformat stringwidth pop bodysize add put
 chartmargins 1 bodysize 4 mul put 
@@ -416,7 +444,9 @@ chartmargins 3 titlesize 1.2 mul bodysize 2.2 mul add bodysize 2 mul add put
 /gridlinewidth 1.5 def
 /axislinewidth 1.5 def
 /borderlinewidth 1.5 def
+/segmentborderlinewidth 1.5 def
 /boldlinewidth 3 def
+
 /gridcolor { 0.7 setgray } def
 /axiscolor { 0 setgray } def
 /bordercolor { 0 setgray } def
@@ -557,7 +587,8 @@ x ylimits 0 get 0 max chartproj moveto
 x d add ylimits 0 get 0 max chartproj lineto 
 x d add y chartproj lineto 
 x y chartproj lineto 
-closepath patterns col get exec 0 setgray
+closepath
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke 0 setgray
 legendstyle col { 
 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath 
 patterns col get exec } put 
@@ -578,7 +609,8 @@ x ylimits 0 get 0 max chartproj moveto
 x d add ylimits 0 get 0 max chartproj lineto 
 x d add y chartproj lineto 
 x y chartproj lineto 
-closepath patterns col get exec 
+closepath
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke  0 setgray
 y 0 gt { 
 labelcolor
 x d 2 div add y chartproj moveto 0 y round labelformat dup stringwidth pop 2 div neg 4 rmoveto show
@@ -603,7 +635,8 @@ x y0 chartproj moveto
 x d add y0 chartproj lineto 
 x d add y chartproj lineto 
 x y chartproj lineto 
-closepath patterns col get exec
+closepath
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke  0 setgray
 legendstyle col { 
 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath 
 patterns col get exec } put 
@@ -623,7 +656,8 @@ x ylimits 0 get 0 max hchartproj moveto
 x d add ylimits 0 get 0 max hchartproj lineto 
 x d add y hchartproj lineto 
 x y hchartproj lineto 
-closepath patterns col get exec 
+closepath 
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke   0 setgray
 legendstyle col { 
 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath 
 patterns col get exec } put 
@@ -644,7 +678,8 @@ x ylimits 0 get 0 max hchartproj moveto
 x d add ylimits 0 get 0 max hchartproj lineto 
 x d add y hchartproj lineto 
 x y hchartproj lineto 
-closepath patterns col get exec 
+closepath 
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke  0 setgray
 y 0 gt { 
 labelcolor
 x d add y hchartproj moveto
@@ -664,6 +699,7 @@ grestore
 /hvotebar { /b exch def textfont cvn bodysize selectfont
 gsave
 /ylimits [ 0 20 100 ] def
+/labellimit 9 def
 1 1 data length 1 sub { /row exch def 
 /tot 0 def
 0 1 b length 1 sub { /i exch def b i get /col exch def
@@ -676,14 +712,16 @@ gsave
 /d 1 def
 /x row 0.75 sub def
 x y0 hchartproj moveto
-x 0.5 add  y0 hchartproj lineto 
-x 0.5 add  y hchartproj lineto 
+x 0.5 add y0 hchartproj lineto 
+x 0.5 add y hchartproj lineto 
 x y hchartproj lineto 
-closepath patterns col get exec 0 setgray
-y y0 gt {
+closepath 
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke  0 setgray
+
+y y0 sub labellimit gt  {
 invertedlabelcolor
 /s y y0 sub round cvs def
-x 0.25 add y0 y add 2 div hchartproj moveto y y0 s stringwidth pop 2 div neg -6 rmoveto
+x 0.25 add y0 y add 2 div hchartproj moveto s stringwidth pop 2 div neg bodysize 2.4 div neg rmoveto
 s show 
 } if
 /y0 y def
@@ -694,6 +732,147 @@ patterns col get exec } put
 } for 
 grestore
 } def
+
+
+
+/doughnut { 20 dict begin
+/b exch def textfont cvn labelsize selectfont
+gsave
+/ylimits [ 0 20 360 ] def
+
+% margins not used
+/xcenter chartrect 0 get chartrect 2 get 2 div add def
+/ycenter chartrect 1 get chartrect 3 get 2 div add def
+/d 1 data length 1 max div def
+
+1 1 data length 1 sub { /row exch def 
+/tot 0 def
+0 1 b length 1 sub { /i exch def b i get /col exch def
+/tot tot data row get col get add def
+} for
+/tot tot 360 div def
+/y0 0 def
+
+/r0 chartrect 2 get chartmargins 0 get sub chartmargins 2 get sub 
+chartrect 3 get chartmargins 1 get sub chartmargins 3 get sub min 2 div def
+/r2 r0 d mul row 1 add mul def
+/r1 r0 d mul row  mul def
+
+0 1 b length 1 sub { /i exch def b i get /col exch def
+/y data row get col get tot div y0 add def
+
+xcenter ycenter r1 r2 y y0 doughnutarc 
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke  0 setgray
+
+y y0 sub labellimit gt  {
+invertedlabelcolor 
+/s y y0 sub round cvs def
+
+xcenter y y0 add 2 div cos r1 r2 add 2 div mul add 
+ycenter y y0 add 2 div sin r1 r2 add 2 div mul add moveto
+0 bodysize 2.4 div neg rmoveto
+s cshow
+
+
+} if
+/y0 y def
+legendstyle col { 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath patterns col get exec } put 
+} for 
+} for 
+grestore
+end } def
+
+
+/halfdoughnut { 20 dict begin
+/b exch def textfont cvn bodysize selectfont
+gsave
+/ylimits [ 0 20 360 ] def
+
+% margins not used
+/xcenter chartrect 0 get chartrect 2 get 2 div add def
+/ycenter chartrect 1 get chartmargins 1 get add def
+/d 1 data length 1 max div def
+
+1 1 data length 1 sub { /row exch def 
+/tot 0 def
+0 1 b length 1 sub { /i exch def b i get /col exch def
+/tot tot data row get col get add def
+} for
+/tot tot 180 div def
+/y0 0 def
+
+/r0 chartrect 2 get chartmargins 0 get sub chartmargins 2 get sub 
+chartrect 3 get chartmargins 1 get sub chartmargins 3 get sub min  def
+/r2 r0 d mul row 1 add mul def
+/r1 r0 d mul row  mul def
+
+0 1 b length 1 sub { /i exch def b i get /col exch def
+/y data row get col get tot div y0 add def
+
+xcenter ycenter r1 r2 y y0 doughnutarc 
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke  0 setgray
+
+0 setgray
+
+y y0 sub labellimit gt {
+invertedlabelcolor 
+/s y y0 sub round cvs def
+
+xcenter y y0 add 2 div cos r1 r2 add 2 div mul add 
+ycenter y y0 add 2 div sin r1 r2 add 2 div mul add moveto
+0 bodysize 2.4 div neg rmoveto
+s cshow
+
+
+} if
+
+
+/y0 y def
+legendstyle col { 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath patterns col get exec } put 
+} for 
+
+0 setgray
+xcenter r1 add  ycenter bodysize sub  moveto data row get 0 get  show
+
+
+} for 
+grestore
+end } def
+
+
+
+
+/hstackedbar { /b exch def textfont cvn bodysize selectfont
+gsave
+1 1 data length 1 sub { /row exch def 
+/y0 0 def
+0 1 b length 1 sub { /i exch def b i get /col exch def
+/y data row get col get y0 add def
+/d 1 def
+/x row 0.75 sub def
+x y0 hchartproj moveto
+x 0.5 add  y0 hchartproj lineto 
+x 0.5 add  y hchartproj lineto 
+x y hchartproj lineto 
+closepath
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke  0 setgray
+/s y y0 sub round cvs def
+y y0 sub labellimit gt {
+invertedlabelcolor
+x 0.25 add y0 y add 2 div hchartproj moveto s stringwidth pop 2 div neg bodysize 2.4 div neg rmoveto
+s show 
+} if
+/y0 y def
+legendstyle col { 
+0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath 
+patterns col get exec } put 
+} for 
+} for 
+grestore
+} def
+
+
+
 
 /line { 
 { /col exch def
@@ -830,7 +1009,8 @@ x y chartproj moveto
 x y chartproj lineto 
 legendstyle col { boldlinewidth setlinewidth
 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath
-patterns col get exec stroke } put 
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke  0 setgray
+ } put 
 } for 
 /y 0 def
 /x xlimits 2 get def 
@@ -852,7 +1032,7 @@ xlimits 0 get 0 max ylimits 0 get 0 max chartproj moveto
 x y0 chartproj lineto
 legendstyle col { boldlinewidth setlinewidth
 0 0 moveto 8 0 lineto 8 8 lineto 0 8 lineto closepath
-patterns col get exec stroke } put 
+} put 
 } for 
 xlimits 2 get ylimits 0 get 0 max chartproj lineto 
 1 1 data length 1 sub  { /row exch data length sub neg def
@@ -862,7 +1042,7 @@ xlimits 2 get ylimits 0 get 0 max chartproj lineto
 x y chartproj lineto
 } for 
 closepath
-patterns col get exec stroke
+gsave patterns col get exec grestore segmentborderlinewidth setlinewidth 1 setgray stroke  0 setgray
 } for
 grestore
 } def
@@ -1172,6 +1352,8 @@ rpnOperators.table = function(context) {
 	return parseFloat(s);
 }
 	
+	postMessage(["log",context.id,"table",null]);
+	
 	const [haslabel, tablename] = context.pop("number", "string");
 	if (!tablename) return context; 
 	data = rpnTables[tablename.value];	
@@ -1196,8 +1378,15 @@ rpnOperators.table = function(context) {
 				   var k = 0;
 				   for(key of columns) {
 				   	   let v = row[key] ?? '.';
-					   if (k < haslabel.value)
+					   if (k < haslabel.value) {
+						   v = String(v);
+						   v = v.replaceAll('&quote;','"'); // recover encoded quote
+						   v = v.replaceAll(')',"\)"); // PostScript string delimiter
+						   v = v.replaceAll('(',"\("); // PostScript string delimiter
 						   list.push('(' + v + ')');
+						   
+					   }
+						   
 					   else {
 						   list.push(parseNumber(v).toString());
 					   }

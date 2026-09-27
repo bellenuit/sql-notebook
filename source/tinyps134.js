@@ -61,6 +61,14 @@ Version 1.3.0 2026-07-05
 - textmode 2: create smaller SVG using defs for paths
 Version 1.3.1 2026-07-16
 - GCODE device
+Version 1.3.2 2026-08-12
+- kshow, kwidthshow, print operator
+- moved non standard charpath operator to extensions
+- refactored show operator for type3mode
+- implemented type3mode in stringwidth and widthshow
+Version 1.3.3 2026-09-12
+- refactored GCODE (set pen up only when moveto is actually different from current point
+- component creates URL nodes for all devices, but keeps then not displayed (allows setpagedevice to add a device on the fly).
 
 Renders a subset of PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
 The output can be displayed or proposed as downloadable link. It can be transparent.
@@ -113,6 +121,8 @@ if (typeof rpnExtensions  === 'undefined') {
 rpnFonts = {};
 rpnFiles = {};
 rpnFrames = {};
+rpnPDFs = {};
+rpnPDFfilename = {};
 rpnImageData = {};
 rpnSVGData = {};
 
@@ -225,7 +235,7 @@ rpnName = class {
 
 
 rpnNumber = class {
-   constructor(x) { this.value = x; 
+   constructor(x) { this.value = x; if (Math.abs(this.value) < 0.0000000001) this.value = 0;
    }
    get type() { return "number"; }
    get dump() {
@@ -257,9 +267,11 @@ rpnString = class {
 rpnRawDevice = class {
     constructor() {
         this.clear(640, 360, 2, 0);
+        this.canfiles = false;
 
     }
     finalize(context) {
+       if (context.device.raw || context.device.rawurl)  postMessage(["rawzip", context.id, null, null]);
         postMessage(["rawzip", context.id, null, null]);
     }
 
@@ -370,7 +382,7 @@ rpnRawDevice = class {
     }
     showpage(context) {
         const data = new ImageData(this.data, context.width * context.device.oversampling);
-        postMessage(["raw", context.id, data, null]);       
+        if (context.device.raw || context.device.rawurl)  postMessage(["raw", context.id, data, null]);       
         this.clear(this.width, this.height, this.oversampling, this.transparent);
         return context;
     }
@@ -385,10 +397,11 @@ rpnCanvasDevice = class {
         this.frames = [];
         this.clear(640,360,1,0);
         this.canshow = false;
+        this.canfiles = false;
 
     }
     finalize(context) {
-        postMessage(["canvaszip", context.id, null, null]);
+        if (context.device.canvas || context.device.canvasurl) postMessage(["canvaszip", context.id, null, null]);
     }
     clear(width, height, oversampling, transparent) {
 	    this.width = width;
@@ -475,7 +488,7 @@ rpnCanvasDevice = class {
     showpage(context) {
 	    const data = this.ctx.getImageData(0, 0, this.node.width, this.node.height);
 	    
-	    postMessage(["canvas", context.id, data, null]);  		
+	    if (context.device.canvas || context.device.canvasurl) postMessage(["canvas", context.id, data, null]);  		
 	         
         this.ctx = null;
         return context;
@@ -489,14 +502,15 @@ rpnPDFDevice = class {
     constructor() {
         
         this.canshow = true;
+        this.canfiles = true;
         this.catalog = {};
         this.pageslist = {};
         this.pages = [];
         this.streams = [];
         this.alphas = [];
         this.elements = [];
-        this.usedfonts = {};
-        this.currentfont = {};
+        this.usedfonts = [];
+        this.currentfont = '';
         this.imagestack = [];
         this.timer = null;
         this.finalround = false;
@@ -507,7 +521,9 @@ rpnPDFDevice = class {
         if (Number.isFinite(width*1)) this.width = width;
         if (Number.isFinite(height*1)) this.height = height;
     }
-    finalize(context) {
+    finalize(context, intern = false) {
+	    if (!(context.device.pdf || context.device.pdfurl)) return context;
+	    
         const objects = [];
         this.catalog.Type = "/Catalog";
         this.catalog.Pages = "2 0 R ";
@@ -572,12 +588,18 @@ rpnPDFDevice = class {
         file += 'startxref'+ rpnEOL;
         file += startxref + rpnEOL;
         file +='%%EOF' + rpnEOL;
+        
         const url = "data:application/pdf;base64," + btoa(file);
-        postMessage(["pdf", context.id, url, null]);
+        
+        if (intern)  postMessage(["pdffile", context.id, url + "," + intern, null]);
+        else postMessage(["pdf", context.id, url, null]);
+        
+        return context;
 
     } 
+    
     numberFormat(z) {
-        return Intl.NumberFormat('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(z);
+        return Intl.NumberFormat('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(z).replace(",","");
     }
     asciiHexEncode(buffer) {
        const data = new Array(buffer.length);
@@ -616,6 +638,8 @@ rpnPDFDevice = class {
         return p.join(" ");
     }
     clip(context) {
+	    if (!(context.device.pdf || context.device.pdfurl)) return context;
+
         this.elements.push("q");
         for (let clip of context.graphics.clip) {
             this.elements.push(this.getPath(clip));
@@ -624,10 +648,14 @@ rpnPDFDevice = class {
         return context;
     }
     eofill (context) {
+	    if (!(context.device.pdf || context.device.pdfurl)) return context;
+
         return this.fill(context, false);
     }
     fill(context, zerowind = true) {
-	    if (context.showmode) return context;
+	    if (!(context.device.pdf || context.device.pdfurl)) return context;
+
+	    if (context.showmode && context.device.textmode > 0) return context;
         if (context.graphics.clip.length) context = this.clip(context);
         this.elements.push(this.getPath(context.graphics.path));
         this.setcolor(context);
@@ -656,28 +684,39 @@ rpnPDFDevice = class {
         this.elements.push("/GS"+gs+" gs");
     }
     setfont(context) {
+	    if (!(context.device.pdf || context.device.pdfurl)) return context;
+
         const f = {};
         f.Type = "/Font";
         f.Subtype = "/Type1";
-        f.Encoding = "/rpnMacRomanEncoding";
+        f.Encoding = "/MacRomanEncoding";
         f.BaseFont = "/" + context.graphics.font;
- 
- const key = f.BaseFont;
- var k;
-  
- if (Object.prototype.hasOwnProperty(this.usedfonts, key)) {
-     k = this.usedfonts[key].key;
-        } else {
-     k = Object.keys(this.usedfonts).length + 1;
-     f.key = k;
-     this.usedfonts[key] = f;
+        
+        const substitute = rpnFontSubstitution(f.BaseFont);
+        postMessage(["log", context.id, "font "+ f.BaseFont + "  " +substitute , null])
+        f.BaseFont = substitute;
+
+        
+        var k = 0;
+        for (let i = 0; i < this.usedfonts.length; i++) {
+	        let uf = this.usedfonts[i];
+	        if (uf.BaseFont == f.BaseFont) {
+		        k = i;
+	        }
         }
- if (f != this.currentfont) {
-     this.currentfont = f;
-     this.elements.push("BT /F" + k + "  " + this.numberFormat(context.graphics.size) + " Tf ET"); }
+        if (!k) {
+	        this.usedfonts.push(f);
+	        k = this.usedfonts.length-1;
+        }
+ 
+        if (context.graphics.font != this.currentfont) {
+        this.currentfont = context.graphics.font;
+        this.elements.push("BT /F" + (k+1) + "  " + this.numberFormat(context.graphics.size) + " Tf ET"); }
 
     }
     show(s, context, targetwidth = 0, extraspace = 0) {
+	    if (!(context.device.pdf || context.device.pdfurl)) return context;
+
         if (context.graphics.clip.length) context = this.clip(context);
         this.setfont(context);
         this.setcolor(context);
@@ -701,18 +740,41 @@ rpnPDFDevice = class {
         
         return context;
     }
+    showfile(context, filename) {
+	    if (!(context.device.pdf || context.device.pdfurl)) return context;
+	    
+	    context = this.finalize(context, filename) ;
+	    
+	    this.catalog = {};
+        this.pageslist = {};
+        this.pages = [];
+        this.streams = [];
+        this.alphas = [];
+        this.elements = [];
+        this.usedfonts = [];
+        this.currentfont = '';
+        this.imagestack = [];
+        this.timer = null;
+        this.finalround = false;
+        
+	    return context;
+	    
+    }
     showpage(context) {
+	    if (!(context.device.pdf || context.device.pdfurl)) return context;
          const dict = {};
         dict.Type = "/Page";
         dict.Parent = "2 0 R";
         const ressourcesdict = {};
         const fontdict= {};
+        // postMessage(["log", context.id, "usedfonts "+ JSON.stringify(this.usedfonts) , null])
         for (let k in this.usedfonts) {    
-     const f = this.usedfonts[k];
-            const substitute = rpnFontSubstitution(f.BaseFont);
-            f.BaseFont = substitute;
-            fontdict["F" + f.key] = f;
+            const f = this.usedfonts[k];
+            let key = k * 1 + 1.0;
+            fontdict["F" + key] = f;
         }
+        this.usedfonts = [];
+        this.currentfont = '';
         ressourcesdict.Font = fontdict;
         const alphadict = {};
         ressourcesdict.ExtGState = alphadict;
@@ -740,6 +802,7 @@ rpnPDFDevice = class {
         return context;
     }
     stroke(context) {
+	    if (!(context.device.pdf || context.device.pdfurl)) return context;
         if (context.graphics.clip.length) context = this.clip(context);
         this.elements.push(this.getPath(context.graphics.path, false));
         this.setcolor(context);
@@ -757,6 +820,7 @@ rpnSVGDevice = class {
     constructor() {
         this.canshow = true;
         this.cannofill = true;
+        this.canfiles = false;
         this.fonts = {};
         this.glyphs = {};
         this.clear( 640, 360, 1, 0);
@@ -788,7 +852,7 @@ rpnSVGDevice = class {
 
     }
     finalize(context) {
-    	postMessage(["svgfinal", context.id, null, null])
+    	if (context.device.svg || context.device.svgurl) postMessage(["svgfinal", context.id, null, null])
     }
     getPath(path, close = true) {
        const p = [];
@@ -802,14 +866,17 @@ rpnSVGDevice = class {
            for (let line of subpath) {
                if (line[0] == "C") {
                    p.push("C " + (Math.round(line[3]*precision)/precision) + " " + (Math.round((this.height - line[4])*precision)/precision)+ " " + (Math.round(line[5]*precision)/precision) + " " + (Math.round((this.height - line[6])*precision)/precision) + " " + (Math.round((line[7])*precision)/precision) + " " + (Math.round((this.height - line[8])*precision)/precision));
-               } else {
+               } else if (line[0] == "Z") {
+               	    p.push("Z"); 
+                }
+                 else
+                {
                    if (line[3] == current[0]) {
 	                    p.push("V " + (Math.round((this.height - line[4])*precision)/precision));
                    } else if (line[3] == current[0]) {
 	                    p.push("H " + (Math.round(line[3]*precision)/precision));
                    } else {
                         p.push("L "+ (Math.round(line[3]*precision)/precision) + " " + (Math.round((this.height - line[4])*precision)/precision));
-				   		if (line[0] == "Z") p.push("Z"); 
 				   }
                    current = [line[3],line[4]];
                 }
@@ -929,12 +996,13 @@ rpnSVGDevice = class {
 	        const font = rpnFonts[context.graphics.font];
 	        const fontid = Object.keys(rpnFonts).indexOf(context.graphics.font);
 	        let scale = context.graphics.size / font.head.unitsPerEm;
+	        let korr = 2048 / font.head.unitsPerEm ;
 	        const glyphtextnode = rpnDocument.createElement("g");
 	        glyphtextnode.setAttribute("text",s);
 	        let m = context.graphics.matrix; 
 	        // experimental baseline correction magic
 	        //postMessage(["status",context.id,"descent "+font.hhea.descent,null])
-            glyphtextnode.setAttribute("transform", "translate(" + (Math.round(x*1000)/1000) + " " + (Math.round((y-decomposed.scale[1]*context.graphics.size/6)*1000)/1000) +") scale(" + Math.round(decomposed.scale[0]*scale*100000)/100000 + " " +  Math.round(decomposed.scale[1]*scale*100000)/100000  + ") rotate(" + decomposed.rotation*180/Math.PI + ") " );
+            glyphtextnode.setAttribute("transform", "translate(" + (Math.round(x*1000)/1000) + " " + (Math.round((y-decomposed.scale[1]*context.graphics.size/6 * korr)*1000)/1000) +") scale(" + Math.round(decomposed.scale[0]*scale*100000)/100000 + " " +  Math.round(decomposed.scale[1]*scale*100000)/100000  + ") rotate(" + decomposed.rotation*180/Math.PI + ") " );
             if (context.device.transparent == 1)
             glyphtextnode.setAttribute("fill", this.rgba2hex(context.graphics.color[0], context.graphics.color[1], context.graphics.color[2], context.graphics.color[3]));
         else 
@@ -1001,7 +1069,7 @@ rpnSVGDevice = class {
         
         
         
-        postMessage(["svg", context.id, this.node.outerHTML(), null])
+        if (context.device.svg || context.device.svgurl) postMessage(["svg", context.id, this.node.outerHTML(), null])
         this.clear(this.width, this.height, this.oversampling, this.transparent);
         return context;
     }
@@ -1023,6 +1091,7 @@ rpnSVGDevice = class {
     constructor() {
         this.canshow = false;
         this.cannofill = false;
+        this.canfiles = false;
         this.clear( 640, 360, 1, 0);
         this.currentcolor = {};
     }
@@ -1046,6 +1115,7 @@ rpnSVGDevice = class {
 
     }
     finalize(context) {
+    	if (!(context.device.gcode || context.device.gcodeurl)) return context;
     	postMessage(["gcodefinal", context.id, null, null])
     }
     getPath(path, context, close = true) {
@@ -1072,6 +1142,8 @@ rpnSVGDevice = class {
            return [xscaled,yscaled];       
        }
        
+       var [lastx, lasty] = [-1,-1];
+       
        for (let subpath of path) {
            if (!subpath.length) continue;
 
@@ -1081,9 +1153,12 @@ rpnSVGDevice = class {
            [x, y] = tf(["M",context.width/2,context.height/2,subpath[0][1],subpath[0][2]],context);
 
            p.push(";");
-           p.push(`G0 X${ x } Y${ y  }`)
-           p.push("G0 Z8"); // pen down 
-
+           
+           if (lastx != x || lasty != y) {
+               p.push("G0 Z0"); // pen up 
+               p.push(`G0 X${ x } Y${ y  }`)
+               p.push("G0 Z8"); // pen down 
+           }
 
            for (let line of subpath) {
                if (line[0] == "C") {
@@ -1091,16 +1166,21 @@ rpnSVGDevice = class {
 
                    for (let bline of bezierpath) {
                         [x, y] = tf(bline,context);
-                        p.push(`G1 X${ x } Y${ y  }`)
+                        p.push(`G1 X${ x } Y${ y  }`);
+                        [lastx, lasty] = [x, y];
                    }
 
                 } else {
                         [x, y] = tf(line,context);
-                        p.push(`G1 X${ x } Y${ y  }`)
+                        p.push(`G1 X${ x } Y${ y  }`);
+                        [lastx, lasty] = [x, y];
                 }
            }
-          p.push("G0 Z0"); // pen up 
+          
         } 
+        
+        p.push("G0 Z0"); // pen up 
+        
         return p;
     }
     clip(context) {
@@ -1111,13 +1191,15 @@ rpnSVGDevice = class {
     }
     eofill (context) {
         // not supported
+        if (!(context.device.gcode || context.device.gcodeurl)) return context;
         return context;
     }
     fill(context, zerowind = true) {
-	    // not supported
+        // not supported
         return context;
     }
     stroke(context) {
+	    if (!(context.device.gcode || context.device.gcodeurl)) return context;
         context = this.clip(context);
         if (this.color.length && this.color.toString() !== context.graphics.color.toString()) {
             this.lines.push(`; color changes from ${ this.color.toString()} to ${ context.graphics.color.toString()}`); 
@@ -1133,10 +1215,11 @@ rpnSVGDevice = class {
         return context;
     }
     showpage(context) {
+        if (!(context.device.gcode || context.device.gcodeurl)) return context;
         this.lines.push("; clean up");
         this.lines.push("G0 X0 Y0"); // go to origin       
         this.lines.push("M2"); // end
-        postMessage(["gcode", context.id, this.lines, null])
+        if (context.device.gcode || context.device.gcodeurl) postMessage(["gcode", context.id, this.lines, null])
         this.clear(this.width, this.height, this.oversampling, this.transparent);
         return context;
     }
@@ -1429,7 +1512,7 @@ rpn = function(s, context = null, outerContext = false, silent = false ) {
                    current += elem;
                }
                break;
-           case "string":
+           case "string": // console.log(elem); console.log(elem.charCodeAt(0));
                if (elem == ")") {
                    if (depth) {
                       depth--;
@@ -1444,10 +1527,17 @@ rpn = function(s, context = null, outerContext = false, silent = false ) {
                } else if (elem == "(") {
                   depth++;
                   current += elem;
+               } else if (elem.charCodeAt(0) == 92)  {
+	               postMessage(["print",context.id,"stringescape",null]);
+	               state = "stringescape";
                } else {
                    current += elem;
                }
                break;
+           case "stringescape":
+               current += elem;
+               state = "string";
+               break; 
            case "comment":
              if (elem == rpnEOL ) {
                 state = "start";
@@ -1712,35 +1802,67 @@ rpnOperators.arc = function(context) {
     if (!centerx) return context;
 
     // assure angle2 > angle1!
-    while (angle2.value <= angle1.value) angle2.value += 360;
+//    while (angle2.value <= angle1.value) angle2.value += 360;
     
     // approximation works for 90 dregrees max, we split
     var first = true;
-    var target = angle1.value;
     const subpath = [];
+    var a1 = angle1.value;
+    var a2 = angle2.value;
+    const reverse = (a2 < a1);
+    const existingpath = context.graphics.current.length;
+    var subpath0;
+    if (existingpath) {
+        subpath0 = context.graphics.path.pop();
+    } else {
+    	subpath0 = [];
+    }
     
-    while(angle1.value < angle2.value) {
+    const [existingx, existingy] = [context.graphics.current[0],context.graphics.current[1]];
+    if (reverse) [a1, a2] = [a2, a1];
+    var target = a1;
+    
+    const r = radius.value;
+    const cx = centerx.value;
+    const cy = centery.value;
+    
+    while(a1 < a2) {
          
-        target = angle1.value + Math.min(90, angle2.value - target);   // starting point
-        let [x1, y1] = [centerx.value + radius.value * Math.cos(angle1.value * Math.PI/180), centery.value + radius.value * Math.sin(angle1.value * Math.PI/180)];
+        target = a1 + Math.min(90, a2 - target);   // starting point 
+        console.log(target);
+        let [x1, y1] = [cx + r * Math.cos(a1 * Math.PI/180), cy + r * Math.sin(a1 * Math.PI/180)];
         // end point
-        let [x4, y4] = [centerx.value + radius.value * Math.cos(target * Math.PI/180), centery.value + radius.value * Math.sin(target * Math.PI/180)];
+        let [x4, y4] = [cx + r * Math.cos(target * Math.PI/180), cy + r * Math.sin(target * Math.PI/180)];
+        // if (reverse) [x1, y1, x4, y4] = [x4, y4, x1, y1];       
         // control points
-        let lt = radius.value * (target-angle1.value)/90 * 4 /3 * (Math.sqrt(2)-1) ;
-        let [x2, y2] = [x1 + lt * Math.cos((angle1.value + 90)*Math.PI/180), y1 + lt * Math.sin((angle1.value + 90)*Math.PI/180)];
+        let lt = r * (target-a1)/90 * 4 /3 * (Math.sqrt(2)-1) ;
+        let [x2, y2] = [x1 + lt * Math.cos((a1 + 90)*Math.PI/180), y1 + lt * Math.sin((a1 + 90)*Math.PI/180)];
         let [x3, y3] = [x4 + lt * Math.cos((target - 90)*Math.PI/180), y4 + lt * Math.sin((target - 90)*Math.PI/180)];
         let [x1t, y1t] = context.transform(x1, y1);
         let [x2t, y2t] = context.transform(x2, y2);
         let [x3t, y3t] = context.transform(x3, y3);
         let [x4t, y4t] = context.transform(x4, y4);
-        if (context.graphics.current.length) {
-            subpath.push(["L", context.graphics.current[0], context.graphics.current[1], x1t, y1t]);
-        }
-        subpath.push(["C", x1t, y1t, x2t, y2t, x3t, y3t, x4t, y4t]);
-        angle1.value += 90;
-        context.graphics.current = [ x4t, y4t ];
+        if (reverse)
+            subpath.push(["C", x4t, y4t, x3t, y3t, x2t, y2t, x1t, y1t]);
+        else 
+			subpath.push(["C", x1t, y1t, x2t, y2t, x3t, y3t, x4t, y4t]);
+        a1 += 90;
+        if (reverse)
+            context.graphics.current = [ x1t, y1t ];
+        else 
+        	context.graphics.current = [ x4t, y4t ];
     }
-    context.graphics.path.push(subpath);
+    if (reverse) subpath.reverse();
+    if (existingpath && subpath.length) {
+    	let [firstx,firsty] = [subpath[0][1],subpath[0][2]];
+    	subpath.unshift(["L",existingx,existingy,firstx,firsty])
+    };
+    
+    for(let p of subpath) {
+    	subpath0.push(p);
+    }
+    
+    context.graphics.path.push(subpath0);
     return context;
 };
 
@@ -3369,7 +3491,7 @@ rpnOperators.setdash = function(context) {
 rpnOperators.setfont = function(context) {
     const [font] = context.pop("dictionary");
     context.graphics.font =  font.value.FontName.value;
-    postMessage(["log",context.id,"setfont " + context.graphics.font,null]);
+    // postMessage(["log",context.id,"setfont " + context.graphics.font,null]);
     return context;
 };
 
@@ -3595,12 +3717,16 @@ rpnOperators.show = function(context) {
     return context;
 };
 
+rpnOperators.showfile = function(context) {
+	const [filename] = context.pop("string");
+    for (let n of context.nodes) 
+    if (n.canfiles) context = n.showfile(context, filename.value);
+    return context;
+};
+
 rpnOperators.showpage = function(context) {
     for (let n of context.nodes) context = n.showpage(context);
-    // context.refresh();
     context.initgraphics();
-//   console.log("SHOWPAGE")
-// context.error("refreshpage");
     return context;
 };
 
@@ -4600,7 +4726,8 @@ for (let line of rpnRomanMapping.split(rpnEOL)) {
 // console.log(JSON.stringify(rpnRomanDict))
 
 rpnMacRomanChar = function(s,i) {
-	const u = s.codePointAt(i);
+	let u = s.codePointAt(i);
+	   if (u == 8209) u = 45; // nonbreaking hyphen
        var r = rpnRomanDict[u];
        if (!r) r = 32;
        return r;
@@ -4609,11 +4736,13 @@ rpnMacRomanChar = function(s,i) {
 rpnMacRomanEncoding = function(s) {
    const chars = [];
    for (let i = 0; i < s.length; i++) {
-       const u = s.codePointAt(i);
+	   let ch = s.substr(i, 1);
+       let u = s.codePointAt(i);
        var r = rpnRomanDict[u];
        if (!r) r = 32;
+       if (u == 8209) { r=45; ch = '-'; } // nonbreaking hyphen
        if (r < 128) {
-          chars.push(s.substr(i, 1));
+          chars.push(ch);
        } else {
           chars.push(rpnBackSlash + r.toString(8));
        }
@@ -4650,6 +4779,19 @@ rpnSubstitutionDict["/Nimbus-Mono-Regular"] = "/Courier";
 rpnSubstitutionDict["/Nimbus-Mono-Oblique"] = "/Courier-Oblique";
 rpnSubstitutionDict["/Nimbus-Mono-Bold"] = "/Courier-Bold";
 rpnSubstitutionDict["/Nimbus-Mono-BoldOblique"] = "/Courier-BoldOblique";
+rpnSubstitutionDict["/NimbusRoman"] = "/Times-Roman";
+rpnSubstitutionDict["/NimbusRomanItalic"] = "/Times-Italic";
+rpnSubstitutionDict["/NimbusRomanBold"] = "/Times-Bold";
+rpnSubstitutionDict["/NimbusRomanBoldItalic"] = "/Times-BoldItalic";
+rpnSubstitutionDict["/NimbusSans"] = "/Helvetica";
+rpnSubstitutionDict["/NimbusSansRegular"] = "/Helvetica";
+rpnSubstitutionDict["/NimbusSansItalic"] = "/Helvetica-Oblique";
+rpnSubstitutionDict["/NimbusSansBold"] = "/Helvetica-Bold";
+rpnSubstitutionDict["/NimbusSansBoldItalic"] = "/Helvetica-BoldOblique";
+rpnSubstitutionDict["/NimbusMonoRegular"] = "/Courier";
+rpnSubstitutionDict["/NimbusMonoOblique"] = "/Courier-Oblique";
+rpnSubstitutionDict["/NimbusMonoBold"] = "/Courier-Bold";
+rpnSubstitutionDict["/NimbusMonoBoldOblique"] = "/Courier-BoldOblique";
 
 
 
@@ -5678,7 +5820,7 @@ class tinyPStag extends HTMLElement {
 	            urlnode4.part = "pdfurl";
 	            urlnode4.className = "pdfurl";
 	            urlnode4.innerHTML = "PDF";
-	            urlnode4.style.display = "inline";
+	            urlnode4.style.display = "none";
 	            this.nodes.pdf = node4;
 	            this.nodes.pdfurl = urlnode4;
 	            context.device.pdfurl = 1;
@@ -5714,14 +5856,14 @@ class tinyPStag extends HTMLElement {
                 urlnode5.part = "gcodeurl";
                 urlnode5.className = "gcodeurl";
                 urlnode5.innerHTML = "GCODE";
-                urlnode5.style.display = "inline";
+                urlnode5.style.display = "none";
                 this.nodes.gcode = node5;
                 this.nodes.gcodeurl = urlnode5;
                 context.device.gcodeurl = 1;
             } else {
                 this.nodes.gcode = node5;
             }
-        }
+        } 
 
 
 		if (node) divnode.appendChild(node);
@@ -5747,7 +5889,7 @@ class tinyPStag extends HTMLElement {
 	   }
 	   
     this.shadowRoot.querySelector('.error').innerHTML = "";
-    
+        
     const worker = rpnWorker(this.innerHTML, context);
     
     worker.onmessage = function (e) {
@@ -5920,6 +6062,7 @@ class tinyPStag extends HTMLElement {
                                     let d = new Date();
                                     let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13)+".gcode";
                                     urlnode.setAttribute("download", fn);
+                                    urlnode.style.display = "inline";
                                 }
                             }
                             break;
@@ -5930,9 +6073,7 @@ class tinyPStag extends HTMLElement {
                             gcodenode = shadow.querySelector('.jsgcode');
                             if (gcodenode)
                                 gcodenode.outerHTML = gcodenode.outerHTML + " ";
-                           
-                                               
-                             break;
+                            break;
 
 			
 			case "pdf":     node = document.getElementById(id);
@@ -5940,9 +6081,33 @@ class tinyPStag extends HTMLElement {
 							pdfnode = shadow.querySelector('.pdf');
 			                pdfnode.src = data;
 							urlnode = shadow.querySelector('.pdfurl');
-							urlnode.href = data;
-			                urlnode.setAttribute("download", "PS.pdf");
+							
+							if (rpnPDFs[id]) {
+								console.log("zip");
+								rpnPDFs[id].makeZip(urlnode);
+								urlnode.setAttribute("download", "PS-PDF.zip");
+								rpnPDFs[id] = null;
+
+							} else {
+								urlnode.href = data;
+								urlnode.setAttribute("download", "PS.pdf");
+							}
+			                
+			                urlnode.style.display = "inline";
 			                break;
+			
+			case "pdffile":  let blist = data.split(",");
+				            let b = atob(blist[1]);
+				            let filename = blist[2].replaceAll(/[^A-Za-z0-9]/g,"-").toLowerCase();
+				            
+				            
+				            if (!rpnPDFs[id]) {
+				            	let z = new rpnZip("PDF.zip");
+								rpnPDFs[id] = z;
+				            }
+				            rpnPDFs[id].binary2zip(filename+".pdf",b);
+							break;
+							
 			                
 			case "device":  node = document.getElementById(id);
 			                node.setAttribute("width", data.width);
@@ -5987,8 +6152,12 @@ class tinyPStag extends HTMLElement {
     
     };
 
+
+let rpnMessage = this.innerHTML.replaceAll("&amp;","&").replaceAll("&gt;",">").replaceAll("&lt;","<");
     
-    worker.postMessage(["rpn",this.id, this.innerHTML.replaceAll("&amp;","&").replaceAll("&gt;",">").replaceAll("&lt;","<"),JSON.stringify(context)])
+worker.postMessage(["rpn",this.id,rpnMessage,JSON.stringify(context) ]);
+    
+
     
     /*
     context = rpn(this.innerHTML, context, true);
@@ -6046,10 +6215,10 @@ workeronmessage = function (e) {
 	}
 	
 	console.log("worker in: " + action + " " + id)
-	
+		
 	switch (action)
 	{
-		case "rpn": console.log("rpn " + data);
+		case "rpn": 
 		            // postMessage(["log", context.id,data,null])
 		            if (data.slice(0,1)=="!") {
 			            data += " currentpointexists { 0 0 1 setrgbcolor 1 setalpha gsave currentpoint newpath 4 0 360 arc fill grestore stroke showpage } if ";

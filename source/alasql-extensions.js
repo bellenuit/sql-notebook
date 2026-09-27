@@ -29,7 +29,7 @@ alasql.fn.numberformat = function(r, d = 0, s=" ", p="") {
 	    d = 0;
     }
     const x = new Intl.NumberFormat('en-US',{minimumFractionDigits: d, maximumFractionDigits: d}).format(r).replaceAll(",",s)+p;
-    return x;
+    return String(x);
 };
 
 alasql.aggr.stdev = function(value, accumulator, stage) {
