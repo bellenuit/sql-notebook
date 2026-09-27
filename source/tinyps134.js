@@ -69,6 +69,17 @@ Version 1.3.2 2026-08-12
 Version 1.3.3 2026-09-12
 - refactored GCODE (set pen up only when moveto is actually different from current point
 - component creates URL nodes for all devices, but keeps then not displayed (allows setpagedevice to add a device on the fly).
+Version 1.3.4 2026-09-12
+- new operator showfile can export multiple named PDFs
+- fixed numberFormat bug in rpnPDFdevice
+- fixed bugs in PDF font substitution
+- arc path segmnents now play nicely within mixed paths
+- arc angles can now go downwards.
+- fixed positioning of TrueType fonts with 1000 geometry instead of 2024
+- PostScript strings can properly escape ) and ( with backslash
+- fixed nonbreaking hyphen bug in macRoman encoding
+
+
 
 Renders a subset of PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
 The output can be displayed or proposed as downloadable link. It can be transparent.
