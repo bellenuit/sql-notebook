@@ -12,7 +12,7 @@ examples['home'] = `
     },
     {
         "type": "ps",
-        "source": "(_cities) 1 preparechart \\ncategory xaxis yticks ygrid\\n[1 2 3] bar \\n(Population by city) [1 2 3] toplegend\\n(Credits) credits\\n(Bar chart) title\\nshowpage "
+        "source": "(_cities) 1 preparechart \\ncategory yticks ygrid\\n[1 2 3] bar xaxis \\n(Population by city) [1 2 3] toplegend\\n(Credits) credits\\n(Bar chart) title\\nshowpage "
     },
     {
         "type": "wiki",

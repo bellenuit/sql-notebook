@@ -1203,7 +1203,7 @@ boldlinewidth setlinewidth
   /x2 x1 v vrest div scx x1 sub mul add def
   /y2 0 def
   x1 y1 moveto x2 y1 lineto x2 y2 lineto x1 y2 lineto
-  gsave fill grestore invertedlabelcolor stroke
+  gsave fill grestore invertedlabelcolor segmentborderlinewidth setlinewidth  stroke
   y1 y2 sub bodysize 2.7 mul gt x2 x1 sub 5 sub
   data i get 0 get stringwidth pop 
   vlabel stringwidth pop max gt and {
@@ -1215,7 +1215,7 @@ boldlinewidth setlinewidth
   } {
   /y2 y1 v vrest div y1 mul sub def
   x1 y1 moveto x2 y1 lineto x2 y2 lineto x1 y2 lineto
-  gsave fill grestore invertedlabelcolor stroke
+  gsave fill grestore invertedlabelcolor segmentborderlinewidth setlinewidth  stroke
   y1 y2 sub bodysize 2.7 mul gt x2 x1 sub 5 sub data i get 0 get stringwidth pop
   vlabel stringwidth pop max 
    gt and {

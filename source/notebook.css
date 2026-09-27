@@ -73,6 +73,7 @@ code {
 	text-align: left;
 	background-color: #eee;
 	padding: 1rem;
+	white-space: pre ;
   word-wrap: break-word; 
 }
 
