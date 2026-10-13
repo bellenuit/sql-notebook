@@ -334,6 +334,110 @@ alasql.into.FISHERTEST = function (filename="", opts, data, columns, cb) {
 	return res;
 };
 
+alasql.into.HISTOGRAM = function (filename="", opts = [], data, columns, cb) { 
+    let res = 1;
+	const newtable = cleanName(filename);
+	if (newtable) {
+        alasql(`drop table if exists ${newtable}`);
+        alasql(`create table ${newtable}`);
+    }
+    if(!data.length) return data;
+    const keys = Object.keys(data[0]); 
+
+    
+    const sum = {};
+    const sum2 = {};
+    const n = {};
+    for (let i = 0; i < keys.length; i++) {
+	    sum[keys[i]] = 0;
+	    sum2[keys[i]] = 0;
+        n[keys[i]] = 0;
+    }
+    
+    for(let row of data) {
+	    for (let i = 0; i < keys.length; i++) {
+		    if (row[keys[i]] != '.') {
+		    	sum[keys[i]] += row[keys[i]];
+				sum2[keys[i]] += row[keys[i]] * row[keys[i]];
+				n[keys[i]] += 1;
+			}
+	    }
+    }
+    
+    // console.log(sum);
+    // console.log(sum2);
+    // console.log(n);
+    
+    const avg = {};
+    const stdev = {};
+    for (let i = 0; i < keys.length; i++) {
+	    if (n[keys[i]]) {
+		    avg[keys[i]] =  sum[keys[i]]/n[keys[i]];
+		    stdev[keys[i]] = Math.sqrt( sum2[keys[i]]/n[keys[i]]  - avg[keys[i]] * avg[keys[i]]);
+		    if (!stdev[keys[i]]) stdev[keys[i]] = 1;
+		    
+	    } else {
+		    avg[keys[i]] = 0;
+		    stdev[keys[i]] = 0;
+	    }
+    }
+    
+    // console.log(avg);
+    // console.log(stdev);
+    
+    // opts: [ minv, interval, maxv]
+    
+    slots = [];
+    minv = {};
+    step = {};
+    maxv = {};
+    
+    for (let i = 0; i < keys.length; i++) {
+	    minv[i] = avg[keys[i]] - 2.5 * stdev[keys[i]] ;
+	    maxv[i] = avg[keys[i]] + 2.5 * stdev[keys[i]] ;
+	    step[i] = stdev[keys[i]]/2;
+	    
+	    // if (opts.length) [minv[i], step[i], maxv[i]] = opts;
+	    
+	    slots[i] = [];
+	    for (let j = minv[i]; j < (maxv[i]+step[i]/2); j+= step[i]) {
+		    slots[i].push(0);
+	    }	    
+	}
+        
+    
+ 
+    for(let row of data) {
+	    for (let i = 0; i < keys.length; i++) {
+		     let v = Math.round(( row[keys[i]] - minv[i] ) / step[i]) ;
+		     if (v >= 0 && v < slots[i].length) slots[i][v]++;
+		}
+	}    
+	
+	console.log(slots); 
+	console.log(slots[0].length);    
+        
+
+    list = [];
+    for (let r = 0; r < slots[0].length; r++) {
+	     item = {};
+	     item.label = (r - slots[0].length / 2 + 0.5 ) / 2;
+	     // if (opts.length) item.label = opts[0] + r * opts[1];
+	     for (let i = 0; i < keys.length; i++) {
+		     item[keys[i]] = slots[i][r];
+		 }
+		list.push(item);
+        if (newtable) alasql(`insert into ${newtable} values ?`, [item]);
+    }
+
+    if (!newtable) res = list;
+	if (cb) {
+		res = cb(res);
+	}
+	return res;
+};
+
+
 
 alasql.fn.levenshtein = (str10 = '', str20 = '') => {
    // Create a 2D array to store distances
@@ -417,6 +521,320 @@ alasql.into.MOVINGAVERAGE = function (filename="", opts = 12, data, columns, cb)
 	return res;
 };
 
+
+alasql.into.MULTIPLEREGRESSION = function (filename="", opts, data, columns, cb) { 
+    let res = 1;
+	const newtable = cleanName(filename);
+    const firstrow = data[0] ?? {};
+    const columnnames = Object.keys(firstrow);
+    if (columnnames.length < 2) {
+	    throw new Error('MULTIPLEREGRESSION expects at least 2 columns');
+    }
+    console.log(columnnames);
+    if (newtable) {
+        alasql("DROP TABLE IF EXISTS " + newtable);
+        alasql("CREATE TABLE " + newtable);
+    }
+    
+    const ycol = columnnames[0];
+    const xcols = [];
+    for(let i = 1; i < columnnames.length; i++) { 
+	    xcols.push(columnnames[i]);
+	}
+	
+	const table = [];
+	for(let i = 0; i < data.length; i++) {
+		let datarow = data[i];
+		let row = [];
+		row.push(datarow[columnnames[0]]);
+		for(let j = 1; j < columnnames.length; j++) { 
+			row.push(datarow[columnnames[j]]);
+	    }
+	    table.push(row);
+	}
+	
+  // Claude prompt for multiple regression
+  function regressionMultiple(table) {
+  const n = table.length;
+  const k = table[0].length - 1;
+  const p = k + 1;
+  const df = n - p;
+  if (df <= 0) throw new Error("Pas assez de données (n doit être > k+1)");
+
+  // X'X et X'y
+  const A = Array.from({ length: p }, () => new Array(p).fill(0));
+  const Xy = new Array(p).fill(0);
+  for (const row of table) {
+    const x = [1, ...row.slice(1)];
+    for (let i = 0; i < p; i++) {
+      for (let j = 0; j < p; j++) A[i][j] += x[i] * x[j];
+      Xy[i] += x[i] * row[0];
+    }
+  }
+
+  // Inversion de X'X par Gauss-Jordan [A | I]
+  const M = A.map((row, i) => [...row, ...Array.from({ length: p }, (_, j) => (i === j ? 1 : 0))]);
+  for (let c = 0; c < p; c++) {
+    let piv = c;
+    for (let r = c + 1; r < p; r++)
+      if (Math.abs(M[r][c]) > Math.abs(M[piv][c])) piv = r;
+    if (Math.abs(M[piv][c]) < 1e-12)
+      throw new Error("Matrice singulière : colonnes colinéaires ou données insuffisantes");
+    [M[c], M[piv]] = [M[piv], M[c]];
+    const d = M[c][c];
+    for (let j = 0; j < 2 * p; j++) M[c][j] /= d;
+    for (let r = 0; r < p; r++) {
+      if (r === c) continue;
+      const f = M[r][c];
+      if (f !== 0) for (let j = 0; j < 2 * p; j++) M[r][j] -= f * M[c][j];
+    }
+  }
+  const inv = M.map(row => row.slice(p));
+  const beta = inv.map(row => row.reduce((s, v, j) => s + v * Xy[j], 0));
+
+  // Résidus, R²
+  const y = table.map(r => r[0]);
+  const mean = a => a.reduce((s, v) => s + v, 0) / a.length;
+  const my = mean(y);
+  let ssRes = 0, ssTot = 0;
+  for (const row of table) {
+    let pred = beta[0];
+    for (let j = 1; j <= k; j++) pred += beta[j] * row[j];
+    ssRes += (row[0] - pred) ** 2;
+    ssTot += (row[0] - my) ** 2;
+  }
+  const sigma2 = ssRes / df;
+
+  // Fonctions de Student (bêta incomplète régularisée)
+  const lgamma = z => {
+    const c = [76.18009172947146, -86.50532032941677, 24.01409824083091,
+      -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+    let x = z, t = x + 5.5;
+    t -= (x + 0.5) * Math.log(t);
+    let s = 1.000000000190015;
+    for (let j = 0; j < 6; j++) s += c[j] / ++x;
+    return -t + Math.log(2.5066282746310005 * s / z);
+  };
+  const betacf = (x, a, b) => {
+    const TINY = 1e-30;
+    let c = 1, d = 1 - (a + b) * x / (a + 1);
+    if (Math.abs(d) < TINY) d = TINY;
+    d = 1 / d;
+    let h = d;
+    for (let m = 1; m <= 300; m++) {
+      const m2 = 2 * m;
+      let aa = m * (b - m) * x / ((a + m2 - 1) * (a + m2));
+      d = 1 + aa * d; if (Math.abs(d) < TINY) d = TINY;
+      c = 1 + aa / c; if (Math.abs(c) < TINY) c = TINY;
+      d = 1 / d; h *= d * c;
+      aa = -(a + m) * (a + b + m) * x / ((a + m2) * (a + m2 + 1));
+      d = 1 + aa * d; if (Math.abs(d) < TINY) d = TINY;
+      c = 1 + aa / c; if (Math.abs(c) < TINY) c = TINY;
+      d = 1 / d;
+      const del = d * c;
+      h *= del;
+      if (Math.abs(del - 1) < 1e-14) break;
+    }
+    return h;
+  };
+  const betai = (x, a, b) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    const bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+    return x < (a + 1) / (a + b + 2)
+      ? bt * betacf(x, a, b) / a
+      : 1 - bt * betacf(1 - x, b, a) / b;
+  };
+  // p-value bilatérale
+  const pTwoSided = (t, v) => betai(v / (v + t * t), v / 2, 0.5);
+  // quantile t pour 1 - alpha/2 par bissection
+  const tQuantile = (alpha, v) => {
+    let lo = 0, hi = 1e6;
+    for (let i = 0; i < 200; i++) {
+      const mid = (lo + hi) / 2;
+      pTwoSided(mid, v) > alpha ? (lo = mid) : (hi = mid);
+    }
+    return (lo + hi) / 2;
+  };
+  const tcrit = tQuantile(0.05, df);
+  
+   // Test t et IC 95 % pour le coefficient j (j = 0 : ordonnée à l'origine)
+  const stats = j => {
+    const se = Math.sqrt(sigma2 * inv[j][j]);
+    return {
+      p: se === 0 ? 0 : pTwoSided(beta[j] / se, df),
+      lo: beta[j] - tcrit * se,
+      hi: beta[j] + tcrit * se,
+    };
+  };
+
+  const sa = stats(0);
+
+  // Par variable : r, p, IC 95 %
+  const r = [], pv = [], ciLow = [], ciHigh = [];
+  for (let j = 1; j <= k; j++) {
+    const xj = table.map(row => row[j]);
+    const mx = mean(xj);
+    let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < n; i++) {
+      sxy += (xj[i] - mx) * (y[i] - my);
+      sxx += (xj[i] - mx) ** 2;
+      syy += (y[i] - my) ** 2;
+    }
+    r.push(sxy / Math.sqrt(sxx * syy));
+
+    const s = stats(j);
+    pv.push(s.p);
+    ciLow.push(s.lo);
+    ciHigh.push(s.hi);
+  }
+
+  return {
+    a: beta[0], aP: sa.p, aCiLow: sa.lo, aCiHigh: sa.hi,
+    b: beta.slice(1), r, p: pv, ciLow, ciHigh,
+    R2: 1 - ssRes / ssTot,
+  };
+}
+/*
+  // Par variable : r, p, IC 95 %
+  const r = [], pv = [], ciLow = [], ciHigh = [];
+  for (let j = 1; j <= k; j++) {
+    const xj = table.map(row => row[j]);
+    const mx = mean(xj);
+    let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < n; i++) {
+      sxy += (xj[i] - mx) * (y[i] - my);
+      sxx += (xj[i] - mx) ** 2;
+      syy += (y[i] - my) ** 2;
+    }
+    r.push(sxy / Math.sqrt(sxx * syy));
+
+    const se = Math.sqrt(sigma2 * inv[j][j]);
+    pv.push(se === 0 ? 0 : pTwoSided(beta[j] / se, df));
+    ciLow.push(beta[j] - tcrit * se);
+    ciHigh.push(beta[j] + tcrit * se);
+  }
+
+  return { a: beta[0], b: beta.slice(1), r, p: pv, ciLow, ciHigh, R2: 1 - ssRes / ssTot };
+  }	*/
+  
+  const result = regressionMultiple(table);
+  
+  // console.log(table);
+  // console.log(result);
+  
+  const list = [];
+  let item = {};
+  item.label = "intercept";
+  item.b = result.a;
+  item.r = 0;
+  item.p = result.aP;
+  item.ciLow = result.aCiLow;
+  item.ciHigh = result.aCiHigh;
+  item.R2 = result.R2;
+  
+  list.push(item);
+
+  if (newtable)
+	        alasql("INSERT INTO " + newtable + " VALUES ?", [item]);
+  
+  for (let i = 1; i < columnnames.length; i++) {
+	  let item = {};
+      item.label = columnnames[i];
+      item.b = result.b[i-1];
+      item.r = result.r[i-1];
+      item.p = result.p[i-1];
+      item.ciLow = result.ciLow[i-1];
+      item.ciHigh = result.ciHigh[i-1];
+      item.R2 = result.R2;
+      
+       if (newtable)
+	        alasql("INSERT INTO " + newtable + " VALUES ?", [item]);
+
+       list.push(item);
+  }
+    
+    	
+	if (!newtable) res = list;
+
+	if (cb) {
+		res = cb(res);
+	}
+	return res;
+};
+
+alasql.into.NORMALIZE = function (filename="", opts, data, columns, cb) { 
+    let res = 1;
+	const newtable = cleanName(filename);
+	if (newtable) {
+        alasql(`drop table if exists ${newtable}`);
+        alasql(`create table ${newtable}`);
+    }
+    if(!data.length) return data;
+    const keys = Object.keys(data[0]); 
+
+    
+    const sum = {};
+    const sum2 = {};
+    const n = {};
+    for (let i = 0; i < keys.length; i++) {
+	    sum[keys[i]] = 0;
+	    sum2[keys[i]] = 0;
+        n[keys[i]] = 0;
+    }
+    
+    for(let row of data) {
+	    for (let i = 0; i < keys.length; i++) {
+		    if (row[keys[i]] != '.') {
+		    	sum[keys[i]] += row[keys[i]];
+				sum2[keys[i]] += row[keys[i]] * row[keys[i]];
+				n[keys[i]] += 1;
+			}
+	    }
+    }
+    
+    // console.log(sum);
+    // console.log(sum2);
+    // console.log(n);
+    
+    const avg = {};
+    const stdev = {};
+    for (let i = 0; i < keys.length; i++) {
+	    if (n[keys[i]]) {
+		    avg[keys[i]] =  sum[keys[i]]/n[keys[i]];
+		    stdev[keys[i]] = Math.sqrt( sum2[keys[i]]/n[keys[i]]  - avg[keys[i]] * avg[keys[i]]);
+		    if (!stdev[keys[i]]) stdev[keys[i]] = 1;
+		    
+	    } else {
+		    avg[keys[i]] = 0;
+		    stdev[keys[i]] = 0;
+	    }
+    }
+    
+    // console.log(avg);
+    // console.log(stdev);
+    
+    list = [];
+    for(let row of data) {
+	    item = {};
+	    for (let i = 0; i < keys.length; i++) {
+		     item[keys[i]] = ( row[keys[i]] - avg[keys[i]] ) / stdev[keys[i]] ;
+		}
+		
+        if (newtable) alasql(`insert into ${newtable} values ?`, [item]);
+        list.push(item);
+		
+	}        
+        
+    if (!newtable) res = list;
+	if (cb) {
+		res = cb(res);
+	}
+	return res;
+};
+
+
+
 alasql.into.PERCENTAGE = function (filename="", opts=100, data, columns, cb) { 
     let res = 1;
 	const newtable = cleanName(filename);
@@ -451,9 +869,8 @@ alasql.into.PERCENTAGE = function (filename="", opts=100, data, columns, cb) {
         	item[keys[parseInt(j)+1]+"_p"] = row.p;
         }
         
-        
-        list2.push(item);
        if (newtable) alasql(`insert into ${newtable} values ?`, [item]);
+       list2.push(item);
     } 
     if (!newtable) res = list2;
 	if (cb) {

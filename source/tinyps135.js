@@ -78,7 +78,8 @@ Version 1.3.4 2026-09-12
 - fixed positioning of TrueType fonts with 1000 geometry instead of 2024
 - PostScript strings can properly escape ) and ( with backslash
 - fixed nonbreaking hyphen bug in macRoman encoding
-
+Version 1.3.5 2026-10-13
+- Replaced Data URL with Blob URL (Safari 27 blocks Data URL)
 
 
 Renders a subset of PostScript to Canvas, SVG and PDF (as well as an obsucre raw rendering).
@@ -533,6 +534,7 @@ rpnPDFDevice = class {
         if (Number.isFinite(height*1)) this.height = height;
     }
     finalize(context, intern = false) {
+	    postMessage(["log", context.id, "intern " + intern, null]);
 	    if (!(context.device.pdf || context.device.pdfurl)) return context;
 	    
         const objects = [];
@@ -600,10 +602,14 @@ rpnPDFDevice = class {
         file += startxref + rpnEOL;
         file +='%%EOF' + rpnEOL;
         
-        const url = "data:application/pdf;base64," + btoa(file);
+        // const url = "data:application/pdf;base64," + btoa(file);
+         postMessage(["log", context.id, "intern2 " + intern, null]);
+
+        if (intern)  postMessage(["pdffile", context.id, file+":"+intern, null]);
+        else postMessage(["pdf", context.id, file, null]);
         
-        if (intern)  postMessage(["pdffile", context.id, url + "," + intern, null]);
-        else postMessage(["pdf", context.id, url, null]);
+       //  if (intern)  postMessage(["pdffile", context.id, url + "," + intern, null]);
+       //  else postMessage(["pdf", context.id, url, null]);
         
         return context;
 
@@ -5923,10 +5929,12 @@ class tinyPStag extends HTMLElement {
 							ctx.putImageData(data,0,0);
 							urlnode = shadow.querySelector('.jsrawurl');
 							if (urlnode) {
-								url = ctx.canvas.toDataURL();
-								urlnode.href = url;
+								// url = ctx.canvas.toDataURL();
+								// urlnode.href = url;
 								urlnode.setAttribute("download", "PS.png");
+								ctx.canvas.toBlob( (blob) => { urlnode.href = URL.createObjectURL(blob); } );
 							}
+							
 							break;
 			case "rawzip":  break;
 			case "canvas":  node = document.getElementById(id);
@@ -5938,17 +5946,22 @@ class tinyPStag extends HTMLElement {
 							ctx.putImageData(data,0,0);
 							urlnode = shadow.querySelector('.jscanvasurl');
 							if (urlnode) {
-								let url = ctx.canvas.toDataURL();
+								let url = ctx.canvas.toDataURL(); // we need that for zip later
+																
 								let oc = document.createElement("CANVAS");
 								oc.width = context.width*2;
 								oc.height = context.height*2;
 								let ctxo = oc.getContext("2d"); 
                                 ctxo.drawImage(canvasnode, 0, 0, oc.width, oc.height);
-								let urljpg = oc.toDataURL("image/jpeg", 0.8);
-								urlnode.href = url;
+								let urljpg = oc.toDataURL("image/png", 0.8);
                                 let d = new Date();
 	                            let fn = "PS" + '_' + d.toISOString().replaceAll("-", "").replaceAll(":", "").replaceAll("T", "_").substr(0, 13) + ".png";
                                 urlnode.setAttribute("download", fn);
+                                
+                                ctx.canvas.toBlob( (blob) => { urlnode.href = URL.createObjectURL(blob); } );
+                                
+                                
+                                
                                 if (context.device.zip) {
                                 	let urlnodez = shadow.querySelector('.jscanvasurlz');
 								    //rpnFrames[urlnodez.id].push(url);
@@ -6009,7 +6022,11 @@ class tinyPStag extends HTMLElement {
 							urlnode = shadow.querySelector('.svgurl');
 							if (urlnode) {
 								let file = rpnStartTag + "?xml version='1.0' encoding='UTF-8'?" + rpnEndTag + data;
-                                url = "data:image/svg+xml;base64," + rpnBbtoaUnicode(file);
+                               //  url = "data:image/svg+xml;base64," + rpnBbtoaUnicode(file);
+                                
+                                let blob = new Blob([file], { type: 'image/svg' });
+								url = URL.createObjectURL(blob);
+                                                                
                                 urlnode.href = url;
                                 let d = new Date();
 	                            let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13)+".svg";
@@ -6049,7 +6066,10 @@ class tinyPStag extends HTMLElement {
 							
 							    }
 								let file = rpnStartTag + "?xml version='1.0' encoding='UTF-8'?" + rpnEndTag + globalnode.outerHTML;
-							    url = "data:image/svg+xml;base64," + rpnBbtoaUnicode(file);
+							    // url = "data:image/svg+xml;base64," + rpnBbtoaUnicode(file);
+							    
+							    let blob = new Blob([file], { type: 'image/svg' });
+								url = URL.createObjectURL(blob);
 							    
                                 urlnodea.href = url;
                                 let d = new Date();
@@ -6068,7 +6088,10 @@ class tinyPStag extends HTMLElement {
                                 urlnode = shadow.querySelector('.gcodeurl');
                                 if (urlnode) { console.log("gcodeurl setting")
                                     let file =  data.join("\n");
-                                    url = "data:text/x-gcode;base64," + rpnBbtoaUnicode(file);
+                                    // url = "data:text/x-gcode;base64," + rpnBbtoaUnicode(file);
+                                    let blob = new Blob([file], { type: 'text/x-gcode' });
+								    url = URL.createObjectURL(blob);
+
                                     urlnode.href = url;
                                     let d = new Date();
                                     let fn = "PS" + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13)+".gcode";
@@ -6087,7 +6110,8 @@ class tinyPStag extends HTMLElement {
                             break;
 
 			
-			case "pdf":     node = document.getElementById(id);
+			case "pdf":     console.log("pdf");
+			                node = document.getElementById(id);
 				            shadow = node.shadowRoot; 
 							pdfnode = shadow.querySelector('.pdf');
 			                pdfnode.src = data;
@@ -6100,17 +6124,20 @@ class tinyPStag extends HTMLElement {
 								rpnPDFs[id] = null;
 
 							} else {
-								urlnode.href = data;
+								let blob = new Blob([data], { type: 'application/pdf' });
+								url = URL.createObjectURL(blob);
+								urlnode.href = url;
 								urlnode.setAttribute("download", "PS.pdf");
 							}
 			                
 			                urlnode.style.display = "inline";
 			                break;
 			
-			case "pdffile":  let blist = data.split(",");
-				            let b = atob(blist[1]);
-				            let filename = blist[2].replaceAll(/[^A-Za-z0-9]/g,"-").toLowerCase();
-				            
+			case "pdffile":  
+			                let blist = data.split(":");
+				            let filename = blist.pop().replaceAll(/[^A-Za-z0-9]/g,"-").toLowerCase();
+				            let b = blist.join(":");
+				            console.log("pdffile "+filename);
 				            
 				            if (!rpnPDFs[id]) {
 				            	let z = new rpnZip("PDF.zip");

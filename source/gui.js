@@ -18,7 +18,7 @@ function exportCSV(columns, values) {
 		}
 		lines.push(line.join(';'));
 	}
-	return lines.join("\n");
+	return '\ufeff'+lines.join("\n");
 }
 
 
@@ -716,6 +716,12 @@ function wikiText(s) {
         return "<style>#h1 {display:none}</style><h1>" + contents + "</h1>";
     });
     */
+    
+    //code
+    html = html.replaceAll(/^ (.*)/gm, function (match, contents) {
+        return '<code>' + contents.split("").map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("") + '</code>'; });	
+    html = html.replaceAll('</code>\n<code>','0A');
+
 		
     html = "\n" + html.replaceAll(/\r\n/g, "\n") + "\n";
 	html = html.replaceAll(/====(.*)====/gm, function (match, contents) {
@@ -749,12 +755,8 @@ function wikiText(s) {
     });
     // clean-up
     html = html.replaceAll('</ol>\n<ol>','');
-    html = html.replaceAll(/^ (.*)/gm, function (match, contents) {
-        return '<code>' + contents + '</code>';
-    });	
-    html = html.replaceAll('</code>\n<code>','\r');
-    //html = html.replaceAll('\n<code>','<code>');
-    // html = html.replaceAll('<code/>\n','<code>');
+    
+    
     
     //table
     html = html.replaceAll(/\n\{\|(.*?)(\n(\s|\S)*?)\|\}/g, function (match, parameters, contents) {
@@ -858,6 +860,11 @@ function wikiText(s) {
 	html = html.replaceAll(/<(h1|h2|h3|h4|ul|ol|li|p|br|table|caption|tr|th|td)/g, function (match, contents) { 
 		return "\n<" + contents;
 	});
+	
+	//recover code
+	html = html.replaceAll(/<code>(.*?)<\/code>/gm,function (match, contents) {
+        return '<code>' + contents.split(/(\w\w)/g).filter(p => !!p).map(c => String.fromCharCode(parseInt(c, 16))).join("") + '</code>'; });	
+	
 	return html;
 }
 
@@ -925,11 +932,22 @@ runner.sql = function(id, down = false) {
 			   s += table.outerHTML;
 			   
 			   let csv = exportCSV(cols, values);
+			   
 			   let url = "data:text/csv;base64,"+btoaUnicode(csv);
 			   const d = new Date();
 			   const ds = d. toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13);
-		       let a = '<p class="link"><a href="' + url + '" download="export ' + ds  + '.csv">CSV</a>';
-		       s += a;
+			   s += '<p class="link">';
+		       let a = '<a href="' + url + '" download="export_' + ds  + '.csv">CSV</a>';
+		       // s += a;
+		       
+		       const blob = new Blob([csv], { type: 'text/plain' });
+		       const a2 = document.createElement("A");
+		       a2.href = URL.createObjectURL(blob);
+		       a2.innerHTML = "CSV";
+		       a2.download = "export_"+ds+".csv";
+		       
+		       s+= a2.outerHTML;
+		       
 			   }
 		   }
 		}
@@ -1400,11 +1418,17 @@ runner.js = function(id, down = false) {
 	echo = function(s) {
 		output.innerHTML += s;
 	}
-	echocode = function(s) {
-		echo('<code class="js">' + s + '</code>');
+	echoline = function(s) { output.innerHTML += "<br>"; }
+	echowiki = function(s) {
+		echo(wikiText(s));
 	}
-	dump = function(fn, s = "") {
-		echo('<code class="js">' + (fn.name ? fn.name : s) + ' = ' + fn.toString() + '</code>');
+	dump = function(x) {
+		ob = eval(x);
+        if (typeof ob === 'function') {
+            echo(`<code>${x} = ${ob.toString()}</code>`)
+        } else {
+            echo(`<code>${x} = ${JSON.stringify(ob,null,2)}</code>`)
+        }
 	}
 	htmlTable = function(query) {
 		let first = query[0];
@@ -1508,9 +1532,8 @@ runner.ps = function(id, down = false) {
 	tabledump.push("rpnTables = []");
     for (t in alasql.tables) {
 	    if (t.substr(0,1)=="_") { 
-		    console.log("rpnTables");
+		    console.log("rpnTables "+t);
 	    	let j = JSON.stringify(  alasql.tables[t].data  , (k, v) => v === undefined ? null : v);
-	    	console.log(j);
 	    	let j2 = j.replaceAll('\\"',"&quote;");  // quotes don't survive messaging
 	    	console.log(j2);
 	    	tabledump.push(`rpnTables["${t}"] = ${j2} ;\n`);
@@ -1780,7 +1803,11 @@ function saveProject()
 		}
 	}
 	const link = document.createElement("a");
-	link.href = "data:application/json;base64,"+btoaUnicode(JSON.stringify(result, null, 4));
+	let blob = new Blob([JSON.stringify(result, null, 4)], { type: 'text/json' });
+	link.href = URL.createObjectURL(blob);
+
+	
+	// link.href = "data:application/json;base64,"+btoaUnicode(JSON.stringify(result, null, 4));
     const d = new Date();
 	link.download = suggestedTitle + '_'+d.toISOString().replaceAll("-","").replaceAll(":","").replaceAll("T","_").substr(0,13)+".json";
 	document.body.appendChild(link); // firefox needs this
