@@ -1327,12 +1327,12 @@ alasql.fn.hex = function(n) { return n.toString(16); }
 
 alasql.fn.bitcount = function(n) { return n.toString(2).split("").filter(x => x=="1").length; }
 
-alasql.fn.hasbit = function(n,b) { return (BigInt(n) & (BigInt(1) << BigInt(b))) > 0;}
+alasql.fn.hasbit = function(n,b) { return (BigInt(n) & (BigInt(1) << BigInt(b))) > BigInt(0);}
 
 alasql.fn.binary = function(n) { return n.toString(2);}
 
 
-alasql.fn.minimalSubsequence = function(haystack, needle) {
+alasql.fn.minimalsubsequence = function(haystack, needle) {
 const arr = haystack.split("-");
 const needlearray = needle.split("-");
 const bin = [];
@@ -1356,20 +1356,20 @@ for(let i = 0; i < arr.length; i++) {
 return arr.slice(start, ende+1).join("-");
 }
 
-alasql.fn.uniqueNeedle = function(needle) {
+alasql.fn.uniqueneedle = function(needle) {
 	return needle.split("-").filter( (value, index, self) => self.indexOf(value) === index).join("-")	
 }
 
-alasql.fn.needleFound = function(haystack, needle) {
+alasql.fn.needlefound = function(haystack, needle) {
 const arr = haystack.split("-");
 const sarr = needle.split("-");
 return sarr.filter(x => arr.indexOf(x) > -1 ).join("-");
 }
 
-alasql.fn.approximateScore = function(haystack, needle) {
-const needle2 = alasql.fn.uniqueNeedle(needle);
-const needle3 = alasql.fn.needleFound(haystack, needle2);
-const msq = alasql.fn.minimalSubsequence(haystack, needle3);
+alasql.fn.approximatescore = function(haystack, needle) {
+const needle2 = alasql.fn.uniqueneedle(needle);
+const needle3 = alasql.fn.needlefound(haystack, needle2);
+const msq = alasql.fn.minimalsubsequence(haystack, needle3);
 const score = Math.pow(needle3.length/needle2.length,0.75) * Math.pow(needle3.length / msq.length,0.25)
 return score;
 }
