@@ -6,7 +6,7 @@ function exportCSV(columns, values) {
 	for(let row of values) {
 		const line = [];
 		for(let field of row) {
-			if (parseFloat(field) != 0 || field === "0") {
+			if (!Number.isNaN(parseFloat(field))) {
 				line.push(field);
 			} else {
 			    if (field) {
@@ -804,6 +804,12 @@ function wikiText(s) {
     html = html.replaceAll(/''(.*?)''/g, function (match, contents) {
         return '<i>' + contents + '</i>';
     });
+    html = html.replaceAll(/___(.*?)___/g, function (match, contents) {
+        return '<u>' + contents + '</u>';
+    });
+    html = html.replaceAll(/---(.*?)---/g, function (match, contents) {
+        return '<s>' + contents + '</s>';
+    });
     
     html = html.replace(/\$\$\$(.*?)\$\$\$/g, function (match, contents) {
 	    let node = asciimath.parseMath(contents, false);
@@ -915,6 +921,7 @@ runner.sql = function(id, down = false) {
 	if (hidestats) cell.className += " hide";
 	alasql.promise(intolist.join(" ") + sourcevalue + "; SET dummy = 1;")
 	.then(function(results){ console.log((Date.now() - timerstart) +" ms sql");
+		console.log(results);
 		var s = "";
 		for(elem of results) { 
 		   if (Array.isArray(elem)) {
@@ -1056,6 +1063,7 @@ function parseNumber(s) {
 	if (typeof s == 'undefined') return undefined;
 	s = s.toString();
 	s = s.replaceAll(',','.');
+	s = s.replaceAll(/\u2212/g,"-");// unicode minus sign
 	s = s.replaceAll(/[^0-9-.]/g,"");
     if (s ==  '') return undefined;
     if (s ==  '-') return undefined;
@@ -1342,12 +1350,16 @@ runner.data = function(id, down = false, diskdata = null) {
 			for(let key in elem) {
 				const key2 = key.replace(/\s.*/,"");
 				const datatype = key.replace(/.*\s/,"");
+				console.log(elem[key]);
+				console.log(parseNumber(elem[key]));
 				if (datatype == "number")
 					elem2[key2] = parseNumber(elem[key]);
 				else
 					elem2[key2] = elem[key] ?? "";
+				console.log(elem2[key2]);
 			}
 			// console.log(elem2);
+			console.log(elem2);
 			alasql("INSERT INTO "+tablename+" VALUES ?", [elem2]);
 			if (Math.random() / list.length > 0.1) { output.innerHTML += "."; output.outerHTML = output.outerHTML; }
 		}

@@ -1084,7 +1084,7 @@ alasql.into.CHOW = function (filename="", opts=0.05, data0, columns, cb) {
       return item;    
     }
 
-    function chow(data,low,high) {
+   function chow(data,low,high) {
 // echo ("<br>low high "+low+" "+high);
 
 const limits = data.map( row => row.x);
@@ -1212,3 +1212,164 @@ if (!newtable)
  return res;
 }
 
+alasql.fn.cleantext = function(s) {
+   const brut = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+   const lower = brut.toLowerCase();
+   const clean = lower.replaceAll(/[^a-z0-9 ]/g,"").replaceAll(" ","-")
+   return clean.trim();
+}
+
+alasql.fn.sylgram = function(s) {
+   const brut = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+   const lower = brut.toLowerCase();
+   const clean = lower.replaceAll(/[^a-z0-9 ]/g,"").replace(" "," ")
+   // quite correct
+   const result = clean.replaceAll(/([^aeiouy][aeiouy]+)/g,"-$1");
+   // numbers
+   const result1 = result.replaceAll(/(\d{1,3})/g,"-$1-")
+   // missed words starting with consonants, we fix
+   const result2 = (" "+result1).replaceAll(/(\s[^aeiouy ]+)-([^aeiouy])/g,"$1$2")
+   // remove spaces and starting and ending -
+   const result3 = result2.replaceAll(" ","-").replaceAll(/-+/g,"-").replaceAll(/^-/g,"").replaceAll(/-$/g,"")
+   return result3;
+}
+
+alasql.fn.trigram = function(s) {
+   const brut = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+   const lower = brut.toLowerCase();
+   const clean = lower.replaceAll(/[^a-z0-9 ]/g,"").replace(" "," ")
+   const list =[];
+   for(let i=0; i<clean.length-2;i++) list.push(clean.substr(i,3));
+   return list.join("-");
+}
+
+alasql.fn.levenshtein =  function(a, b) {
+  const m = a.length;
+  const n = b.length;
+
+  // Initialize a matrix of size (m + 1) x (n + 1)
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+
+  // Populate base cases for the first column and row
+  for (let i = 0; i <= m; i++) {
+    dp[i][0] = i;
+  }
+  for (let j = 0; j <= n; j++) {
+    dp[0][j] = j;
+  }
+
+  // Compute the optimal edit distance
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = 1 + Math.min(
+          dp[i - 1][j],     // Deletion
+          dp[i][j - 1],     // Insertion
+          dp[i - 1][j - 1]  // Substitution
+        );
+      }
+    }
+  }
+
+  return dp[m][n];
+  
+}
+
+alasql.fn.hash64 = function(s){
+   const list = s.split("-");
+   var hash = BigInt(0);
+   for (elem of list) {
+      var [h1, h2, h3,h4,h5] = [0, 0, 0, 0,0];
+      for(let i = 0; i < elem.length; i++) {
+          const c = elem.charCodeAt(i);
+          h1 = (c + h1 * 67) % 61;
+          h2 = (c + h2 * 71) % 61;
+          h3 = (c + h3 * 79) % 61;
+          h4 = (c + h4 * 83) % 61;
+          h5 = (c + h5 * 89) % 61;
+      }
+      hash = hash | BigInt(1) << BigInt(h1);
+      if (elem.length>1) hash = hash | BigInt(1) << BigInt(h2);
+      if (elem.length>2) hash = hash | BigInt(1) << BigInt(h3);
+      if (elem.length>3) hash = hash | BigInt(1) << BigInt(h4)
+      if (elem.length>4) hash = hash | BigInt(1) << BigInt(h5)
+   }
+   return hash
+}
+
+alasql.fn.hash256 = function(s){
+   const list = s.split("-");
+   var hash = BigInt(0);
+   for (elem of list) {
+      var [h1, h2,h3,h4,h5] = [0, 0, 0, 0,0];
+      for(let i = 0; i < elem.length; i++) {
+          const c = elem.charCodeAt(i);
+          h1 = (c + h1 * 257) % 251;
+          h2 = (c + h2 * 263) % 251;
+          h3 = (c + h3 * 269) % 251;
+          h4 = (c + h4 * 271) % 251;
+          h5 = (c + h5 * 277) % 251;
+      }
+      hash = hash | BigInt(1) << BigInt(h1);
+      if (elem.length>1) hash = hash | BigInt(1) << BigInt(h2);
+      if (elem.length>2) hash = hash | BigInt(1) << BigInt(h3);
+      if (elem.length>3) hash = hash | BigInt(1) << BigInt(h4)
+      if (elem.length>4) hash = hash | BigInt(1) << BigInt(h5)
+   }
+   return hash
+}
+
+
+
+alasql.fn.hex = function(n) { return n.toString(16); }
+
+alasql.fn.bitcount = function(n) { return n.toString(2).split("").filter(x => x=="1").length; }
+
+alasql.fn.hasbit = function(n,b) { return (BigInt(n) & (BigInt(1) << BigInt(b))) > 0;}
+
+alasql.fn.binary = function(n) { return n.toString(2);}
+
+
+alasql.fn.minimalSubsequence = function(haystack, needle) {
+const arr = haystack.split("-");
+const needlearray = needle.split("-");
+const bin = [];
+var start = 0;
+var ende = arr.length;
+for(let s of needlearray) bin.push(-1);
+for(let i = 0; i < arr.length; i++) {
+  let c = arr[i]; 
+  let j = needlearray.indexOf(c);
+   if (j > -1) {  // found needle
+      bin[j] = Math.max(bin[j],i);
+      let pmin = bin.reduce((acc,c) => Math.min(acc,c), arr.length);
+      let pmax = bin.reduce((acc,c) => Math.max(acc,c), -1);
+      if (pmin > -1) { // all needles have been found
+         if (pmax - pmin <= ende - start) {
+            [start, ende] = [pmin, pmax];  
+         }
+      } 
+   } 
+}
+return arr.slice(start, ende+1).join("-");
+}
+
+alasql.fn.uniqueNeedle = function(needle) {
+	return needle.split("-").filter( (value, index, self) => self.indexOf(value) === index).join("-")	
+}
+
+alasql.fn.needleFound = function(haystack, needle) {
+const arr = haystack.split("-");
+const sarr = needle.split("-");
+return sarr.filter(x => arr.indexOf(x) > -1 ).join("-");
+}
+
+alasql.fn.approximateScore = function(haystack, needle) {
+const needle2 = alasql.fn.uniqueNeedle(needle);
+const needle3 = alasql.fn.needleFound(haystack, needle2);
+const msq = alasql.fn.minimalSubsequence(haystack, needle3);
+const score = Math.pow(needle3.length/needle2.length,0.75) * Math.pow(needle3.length / msq.length,0.25)
+return score;
+}
